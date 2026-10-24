@@ -1,0 +1,132 @@
+name: Build Apps (Windows, macOS, Android)
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - main
+    tags:
+      - 'v*'
+
+jobs:
+  build-desktop:
+    permissions:
+      contents: write
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - platform: 'windows-latest'
+            args: ''
+          - platform: 'macos-latest'
+            args: '--target universal-apple-darwin'
+
+    runs-on: ${{ matrix.platform }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Install Rust stable
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: ${{ matrix.platform == 'macos-latest' && 'aarch64-apple-darwin,x86_64-apple-darwin' || '' }}
+
+      - name: Install dependencies
+        run: npm install
+
+      - name: Build Tauri Desktop App
+        uses: tauri-apps/tauri-action@v0
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          tagName: v__VERSION__
+          releaseName: 'SMO BBA SHOP v__VERSION__'
+          releaseBody: 'ดาวน์โหลดไฟล์ติดตั้งสำหรับ Windows (.exe, .msi), macOS (.dmg), และ Android (.apk)'
+          releaseDraft: false
+          prerelease: false
+          args: ${{ matrix.args }}
+
+      - name: Upload installer artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.platform }}-installer
+          path: |
+            src-tauri/target/**/*.exe
+            src-tauri/target/**/*.msi
+            src-tauri/target/**/*.dmg
+
+  build-android:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Setup Java JDK
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'zulu'
+          java-version: '17'
+
+      - name: Setup Android NDK
+        uses: nttld/setup-ndk@v1
+        id: setup-ndk
+        with:
+          ndk-version: r26d
+          link-to-sdk: true
+
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: aarch64-linux-android,armv7-linux-androideabi
+
+      - name: Install dependencies
+        run: npm install
+
+      - name: Build Android APK
+        env:
+          NDK_HOME: ${{ steps.setup-ndk.outputs.ndk-path }}
+        run: |
+          npx tauri android init --ci
+          cp -rf src-tauri/icons/android/* src-tauri/gen/android/app/src/main/res/
+          npx tauri android build --apk --debug --target aarch64 --target armv7
+
+      - name: Upload Android APK Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: SMO-BBA-SHOP-Android-APK
+          path: src-tauri/gen/android/app/build/outputs/apk/**/*.apk
+
+  release-android:
+    needs: [build-desktop, build-android]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Download Android APK Artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: SMO-BBA-SHOP-Android-APK
+          path: apk-dist
+
+      - name: Attach APK to GitHub Release
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          VERSION="v$(node -p "require('./package.json').version")"
+          echo "Looking for APK files to attach to release $VERSION..."
+          find apk-dist -type f -name "*.apk" | while read -r f; do
+            echo "Uploading $f to $VERSION..."
+            gh release upload "$VERSION" "$f" --clobber
+          done
