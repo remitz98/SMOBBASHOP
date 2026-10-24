@@ -3,9 +3,9 @@
 <head>
   <base target="_top">
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
   <title>ระบบสั่งจองเสื้อสโมสรนักศึกษา | คณะบริหารธุรกิจและการจัดการ (BBA UBRU)</title>
-  <link rel="icon" type="image/png" href="https://i.postimg.cc/g0V05nHd/LOGO-SAMO-002-(1).png">
+  <link rel="icon" type="image/png" href="logo.png">
 
   <!-- Google Fonts: Prompt -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -53,6 +53,40 @@
   <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
 
   <style>
+    /* Modern Sleek Scrollbar for PC */
+    ::-webkit-scrollbar {
+      width: 7px;
+      height: 7px;
+    }
+    ::-webkit-scrollbar-track {
+      background: #f1f5f9;
+    }
+    ::-webkit-scrollbar-thumb {
+      background: #cbd5e1;
+      border-radius: 9999px;
+      border: 1.5px solid #f1f5f9;
+    }
+    ::-webkit-scrollbar-thumb:hover {
+      background: #94a3b8;
+    }
+    ::-webkit-scrollbar-thumb:active {
+      background: #64748b;
+    }
+    * {
+      scrollbar-width: thin;
+      scrollbar-color: #cbd5e1 #f1f5f9;
+    }
+
+    /* Android & Mobile Safe Area Status Bar Support */
+    html.is-android header {
+      padding-top: max(env(safe-area-inset-top, 0px), 30px) !important;
+    }
+    @supports (padding-top: env(safe-area-inset-top)) {
+      header {
+        padding-top: max(env(safe-area-inset-top, 0px), 0px);
+      }
+    }
+
     html, body {
       max-width: 100%;
       overflow-x: hidden;
@@ -114,6 +148,11 @@
       }
     }
   </style>
+  <script>
+    if (/Android/i.test(navigator.userAgent)) {
+      document.documentElement.classList.add('is-android');
+    }
+  </script>
 </head>
 <body class="text-slate-800 antialiased min-h-screen flex flex-col">
 
@@ -123,7 +162,7 @@
       
       <!-- Logo & Brand -->
       <div class="flex items-center gap-1.5 sm:gap-3 cursor-pointer min-w-0" onclick="switchView('shop')">
-        <img src="https://drive.google.com/thumbnail?id=11lMXnbog9-wdE28O3ax2LgzQJyFRxopi&sz=w200" alt="BBA UBRU Logo" class="w-8 h-8 sm:w-10 sm:h-10 rounded-lg sm:rounded-xl object-contain shadow-sm shrink-0">
+        <img src="logo.png" alt="BBA UBRU Logo" class="w-8 h-8 sm:w-10 sm:h-10 rounded-lg sm:rounded-xl object-contain shadow-sm shrink-0">
         <div class="min-w-0">
           <span id="navStoreName" class="font-bold text-xs sm:text-base lg:text-lg text-slate-900 tracking-tight block leading-tight truncate">สโมสรนักศึกษา BBA UBRU</span>
           <span class="hidden sm:block text-[11px] sm:text-xs text-indigo-700 font-medium truncate">คณะบริหารธุรกิจและการจัดการ มรภ.อุบลฯ</span>
@@ -841,7 +880,7 @@
           <!-- Header -->
           <div class="flex items-center justify-between pb-4 border-b border-slate-200 gap-3">
             <div class="flex items-center gap-2.5">
-              <img src="https://i.postimg.cc/g0V05nHd/LOGO-SAMO-002-(1).png" alt="BBA UBRU Logo" 
+              <img src="logo.png" alt="BBA UBRU Logo" 
                    class="w-12 h-12 object-contain rounded-lg shrink-0" 
                    crossorigin="anonymous"
                    onerror="this.src='https://placehold.co/100x100?text=BBA';">
@@ -2677,22 +2716,94 @@
             wrapper.parentNode.removeChild(wrapper);
           }
           Swal.close();
-          const imgData = canvas.toDataURL('image/png');
-          const link = document.createElement('a');
-          const orderId = (currentReceiptData && currentReceiptData.orderId) ? currentReceiptData.orderId : 'BBA_Receipt';
-          link.download = 'Receipt_' + orderId + '.png';
-          link.href = imgData;
-          document.body.appendChild(link);
-          link.click();
-          document.body.removeChild(link);
 
-          Swal.fire({
-            icon: 'success',
-            title: 'บันทึกรูปภาพใบเสร็จเรียบร้อยแล้ว!',
-            text: 'ดาวน์โหลดไฟล์ ' + link.download + ' ครบถ้วนทุกรายการแล้ว',
-            timer: 2500,
-            showConfirmButton: false
-          });
+          canvas.toBlob(async (blob) => {
+            const orderId = (currentReceiptData && currentReceiptData.orderId) ? currentReceiptData.orderId : 'BBA_Receipt';
+            const fileName = 'Receipt_' + orderId + '.png';
+            const imgData = canvas.toDataURL('image/png');
+
+            // 1. ตรวจสอบการแชร์แบบ Native บนมือถือ (Android / iOS)
+            let sharedSuccess = false;
+            if (blob && navigator.canShare) {
+              try {
+                const file = new File([blob], fileName, { type: 'image/png' });
+                if (navigator.canShare({ files: [file] })) {
+                  await navigator.share({
+                    files: [file],
+                    title: 'ใบเสร็จ ' + orderId,
+                    text: 'ใบเสร็จการสั่งจองเสื้อ BBA UBRU (' + orderId + ')'
+                  });
+                  sharedSuccess = true;
+                }
+              } catch (shareErr) {
+                if (shareErr.name === 'AbortError') return; // ผู้ใช้กดยกเลิก
+                console.log('Native share error, fallback to preview/download:', shareErr);
+              }
+            }
+
+            if (sharedSuccess) {
+              Swal.fire({
+                icon: 'success',
+                title: 'บันทึก / แชร์ใบเสร็จเรียบร้อยแล้ว',
+                timer: 2000,
+                showConfirmButton: false
+              });
+              return;
+            }
+
+            // 2. สำหรับ Desktop / PC ที่รองรับดาวน์โหลดปกติ
+            const isMobile = /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
+            if (!isMobile) {
+              const link = document.createElement('a');
+              link.download = fileName;
+              link.href = imgData;
+              document.body.appendChild(link);
+              link.click();
+              document.body.removeChild(link);
+
+              Swal.fire({
+                icon: 'success',
+                title: 'บันทึกรูปภาพใบเสร็จเรียบร้อยแล้ว!',
+                text: 'ดาวน์โหลดไฟล์ ' + fileName + ' เรียบร้อยแล้ว',
+                timer: 2500,
+                showConfirmButton: false
+              });
+              return;
+            }
+
+            // 3. สำหรับมือถือ Android WebView ที่บล็อก <a download> อัตโนมัติ: แสดง Popup พร้อมรูปภาพให้แตะค้างบันทึกได้ 100%
+            Swal.fire({
+              title: 'บันทึกใบเสร็จลงมือถือ',
+              html: `
+                <div class="text-left text-xs text-slate-600 mb-2.5 space-y-1">
+                  <p>💡 <b>วิธีบันทึกภาพลงเครื่องมือถือ:</b></p>
+                  <p>1. แตะค้างที่รูปภาพใบเสร็จด้านล่าง แล้วเลือก <b>"บันทึกรูปภาพ" (Save image)</b></p>
+                  <p>2. หรือกดปุ่ม <b>"แชร์ / บันทึกลงเครื่อง"</b> ด้านล่างนี้</p>
+                </div>
+                <div class="max-h-[50vh] overflow-y-auto rounded-xl border border-slate-200 p-1.5 bg-slate-50 flex justify-center">
+                  <img src="${imgData}" alt="Receipt" class="w-full h-auto rounded-lg shadow-sm" style="user-select: auto; -webkit-user-select: auto;" />
+                </div>
+              `,
+              showCancelButton: true,
+              confirmButtonText: '<i class="fa-solid fa-share-nodes"></i> แชร์ / บันทึกลงเครื่อง',
+              cancelButtonText: 'ปิด',
+              confirmButtonColor: '#059669',
+              cancelButtonColor: '#64748b'
+            }).then(async (res) => {
+              if (res.isConfirmed && blob && navigator.share) {
+                try {
+                  const file = new File([blob], fileName, { type: 'image/png' });
+                  await navigator.share({
+                    files: [file],
+                    title: 'ใบเสร็จ ' + orderId
+                  });
+                } catch (e) {
+                  const w = window.open();
+                  if (w) w.document.write('<img src="' + imgData + '" style="max-width:100%"/>');
+                }
+              }
+            });
+          }, 'image/png');
         }).catch(err => {
           if (wrapper && wrapper.parentNode) {
             wrapper.parentNode.removeChild(wrapper);
