@@ -300,29 +300,7 @@ fun ReceiptDialog(
                         Button(
                             onClick = {
                                 isSaving = true
-                                val textReceipt = buildString {
-                                    appendLine("==============================================")
-                                    appendLine("      สโมสรนักศึกษา คณะบริหารธุรกิจและการจัดการ")
-                                    appendLine("       มหาวิทยาลัยราชภัฏอุบลราชธานี (BBA UBRU)")
-                                    appendLine("    ใบเสร็จรับเงิน / ใบยืนยันการสั่งจองเสื้อ (E-Receipt)")
-                                    appendLine("==============================================")
-                                    appendLine("รหัสคำสั่งจอง: ${order.orderId}")
-                                    appendLine("วันที่สั่งจอง: ${order.orderDate}")
-                                    appendLine("รหัสนักศึกษา:  ${order.studentId}")
-                                    appendLine("ชื่อผู้สั่ง:    ${order.customerName}")
-                                    appendLine("เบอร์โทรศัพท์: ${order.phone}")
-                                    appendLine("อีเมล:        ${order.studentEmail}")
-                                    appendLine("----------------------------------------------")
-                                    appendLine("รายการสินค้า:")
-                                    appendLine(order.itemsSummary)
-                                    appendLine("----------------------------------------------")
-                                    appendLine("ยอดรวมสุทธิ:   ฿${order.totalAmount.toInt()} บาท")
-                                    appendLine("สถานะคำสั่งจอง: ${order.status}")
-                                    appendLine("สถานที่รับเสื้อ: ${order.pickupLocation}")
-                                    appendLine("เวลาทำการ:    วันจันทร์ - ศุกร์ เวลา 09:00 - 16:30 น.")
-                                    appendLine("==============================================")
-                                }
-                                saver.saveReceipt(order.orderId, textReceipt) { success, msg ->
+                                saver.saveReceipt(order) { success, msg ->
                                     isSaving = false
                                     saveStatusMessage = msg
                                 }
@@ -333,7 +311,7 @@ fun ReceiptDialog(
                         ) {
                             Icon(Icons.Default.Download, contentDescription = null, modifier = Modifier.size(18.dp))
                             Spacer(modifier = Modifier.width(6.dp))
-                            Text("บันทึกใบเสร็จลงเครื่อง", fontWeight = FontWeight.Bold, fontSize = 14.sp)
+                            Text("บันทึกรูปภาพใบเสร็จลงเครื่อง", fontWeight = FontWeight.Bold, fontSize = 14.sp)
                         }
 
                         OutlinedButton(

@@ -1,5 +1,7 @@
 package org.smobba.store
 
+import org.smobba.store.models.Order
+
 expect class PlatformReceiptSaver() {
-    fun saveReceipt(orderId: String, textContent: String, onComplete: (Boolean, String) -> Unit)
+    fun saveReceipt(order: Order, onComplete: (Boolean, String) -> Unit)
 }
