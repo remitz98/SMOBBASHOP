@@ -4,10 +4,8 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.AdminPanelSettings
 import androidx.compose.material.icons.filled.History
 import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.ShoppingBag
@@ -18,9 +16,11 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import coil3.compose.AsyncImage
 import kotlinx.coroutines.launch
 import org.smobba.store.api.BbaStoreApi
 import org.smobba.store.models.CartItem
@@ -28,7 +28,6 @@ import org.smobba.store.models.Order
 import org.smobba.store.models.Product
 import org.smobba.store.models.StoreResponse
 import org.smobba.store.theme.BbaStoreTheme
-import org.smobba.store.theme.EmeraldSuccess
 import org.smobba.store.theme.IndigoPrimary
 import org.smobba.store.theme.NavyDark
 import org.smobba.store.ui.*
@@ -78,110 +77,150 @@ fun App() {
     BbaStoreTheme {
         Scaffold(
             topBar = {
-                // Modern Desktop & Mobile Responsive Top Header
-                Surface(
-                    color = Color.White,
-                    shadowElevation = 2.dp,
-                    modifier = Modifier.fillMaxWidth().border(1.dp, Color(0xFFE2E8F0))
-                ) {
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(horizontal = 24.dp, vertical = 12.dp),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically
+                Column(modifier = Modifier.fillMaxWidth()) {
+                    // 1. Top Announcement Marquee Bar
+                    Surface(
+                        color = Color(0xFF1E1B4B),
+                        modifier = Modifier.fillMaxWidth()
                     ) {
-                        // Left: Store Brand Logo & Name
                         Row(
-                            verticalAlignment = Alignment.CenterVertically,
-                            modifier = Modifier.clickable { currentScreen = AppScreen.STORE }
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(horizontal = 20.dp, vertical = 6.dp),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
                         ) {
-                            Surface(
-                                color = NavyDark,
-                                shape = RoundedCornerShape(10.dp),
-                                modifier = Modifier.size(38.dp)
+                            Text(
+                                "📢 ประชาสัมพันธ์: สโมสรนักศึกษา คณะบริหารธุรกิจและการจัดการ มรภ.อุบลฯ เปิดระบบสั่งจองเสื้อกิจกรรมและเสื้อสโมสร BBA 2569 แล้ววันนี้",
+                                color = Color(0xFFE0E7FF),
+                                fontSize = 11.sp,
+                                fontWeight = FontWeight.Medium
+                            )
+                            Text(
+                                "📍 ห้องสโมสรนักศึกษา ชั้น 1",
+                                color = Color(0xFFA5B4FC),
+                                fontSize = 11.sp,
+                                fontWeight = FontWeight.SemiBold
+                            )
+                        }
+                    }
+
+                    // 2. Main Navbar with Official BBA Crest Logo
+                    Surface(
+                        color = Color.White,
+                        shadowElevation = 2.dp,
+                        modifier = Modifier.fillMaxWidth().border(1.dp, Color(0xFFE2E8F0))
+                    ) {
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(horizontal = 24.dp, vertical = 12.dp),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            // Left: Brand Logo & University Name
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                modifier = Modifier.clickable { currentScreen = AppScreen.STORE }
                             ) {
-                                Box(contentAlignment = Alignment.Center) {
+                                // Real Logo Image from Cloudflare
+                                AsyncImage(
+                                    model = "https://bba-store.smobba.workers.dev/logo.png",
+                                    contentDescription = "BBA UBRU Logo",
+                                    contentScale = ContentScale.Fit,
+                                    modifier = Modifier
+                                        .size(42.dp)
+                                        .clip(RoundedCornerShape(10.dp))
+                                        .border(1.dp, Color(0xFFE2E8F0), RoundedCornerShape(10.dp))
+                                )
+
+                                Spacer(modifier = Modifier.width(12.dp))
+
+                                Column {
                                     Text(
-                                        "BBA",
-                                        color = Color.White,
+                                        "สโมสรนักศึกษา BBA UBRU",
                                         fontWeight = FontWeight.ExtraBold,
-                                        fontSize = 12.sp
+                                        fontSize = 17.sp,
+                                        color = NavyDark
+                                    )
+                                    Text(
+                                        "คณะบริหารธุรกิจและการจัดการ มหาวิทยาลัยราชภัฏอุบลราชธานี",
+                                        fontSize = 11.sp,
+                                        color = IndigoPrimary,
+                                        fontWeight = FontWeight.SemiBold
                                     )
                                 }
                             }
 
-                            Spacer(modifier = Modifier.width(12.dp))
-
-                            Column {
-                                Text(
-                                    storeData?.storeName?.ifBlank { "SMO BBA SHOP" } ?: "SMO BBA SHOP",
-                                    fontWeight = FontWeight.ExtraBold,
-                                    fontSize = 16.sp,
-                                    color = NavyDark
-                                )
-                                Text(
-                                    "คณะบริหารธุรกิจและการจัดการ มรภ.อุบลฯ",
-                                    fontSize = 11.sp,
-                                    color = IndigoPrimary,
-                                    fontWeight = FontWeight.Medium
-                                )
-                            }
-                        }
-
-                        // Right: Navigation Action Pills
-                        Row(
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.spacedBy(8.dp)
-                        ) {
-                            // 1. Store
-                            NavPillButton(
-                                title = "เสื้อสโมสร",
-                                icon = Icons.Default.ShoppingBag,
-                                isSelected = currentScreen == AppScreen.STORE,
-                                onClick = { currentScreen = AppScreen.STORE }
-                            )
-
-                            // 2. Track
-                            NavPillButton(
-                                title = "เช็กสถานะ",
-                                icon = Icons.Default.History,
-                                isSelected = currentScreen == AppScreen.TRACK,
-                                onClick = { currentScreen = AppScreen.TRACK }
-                            )
-
-                            // 3. Admin
-                            NavPillButton(
-                                title = "ระบบแอดมิน",
-                                icon = Icons.Default.Lock,
-                                isSelected = currentScreen == AppScreen.ADMIN,
-                                onClick = { currentScreen = AppScreen.ADMIN }
-                            )
-
-                            // 4. Cart Button with Badge
-                            Surface(
-                                color = if (cart.isNotEmpty()) IndigoPrimary else Color(0xFFF1F5F9),
-                                shape = RoundedCornerShape(10.dp),
-                                modifier = Modifier
-                                    .clickable { showCartDialog = true }
+                            // Right: Navigation Action Pills
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(8.dp)
                             ) {
-                                Row(
-                                    modifier = Modifier.padding(horizontal = 14.dp, vertical = 8.dp),
-                                    verticalAlignment = Alignment.CenterVertically
+                                // 1. Store
+                                NavPillButton(
+                                    title = "เสื้อสโมสร",
+                                    icon = Icons.Default.ShoppingBag,
+                                    isSelected = currentScreen == AppScreen.STORE,
+                                    onClick = { currentScreen = AppScreen.STORE }
+                                )
+
+                                // 2. Track
+                                NavPillButton(
+                                    title = "เช็กสถานะรับเสื้อ",
+                                    icon = Icons.Default.History,
+                                    isSelected = currentScreen == AppScreen.TRACK,
+                                    onClick = { currentScreen = AppScreen.TRACK }
+                                )
+
+                                // 3. Admin
+                                NavPillButton(
+                                    title = "ระบบแอดมิน",
+                                    icon = Icons.Default.Lock,
+                                    isSelected = currentScreen == AppScreen.ADMIN,
+                                    onClick = { currentScreen = AppScreen.ADMIN }
+                                )
+
+                                // 4. Cart Button with Counter Badge
+                                Surface(
+                                    color = if (cart.isNotEmpty()) IndigoPrimary else Color(0xFF0F172A),
+                                    shape = RoundedCornerShape(12.dp),
+                                    modifier = Modifier
+                                        .clickable { showCartDialog = true }
                                 ) {
-                                    Icon(
-                                        Icons.Default.ShoppingCart,
-                                        contentDescription = "Cart",
-                                        tint = if (cart.isNotEmpty()) Color.White else Color(0xFF475569),
-                                        modifier = Modifier.size(16.dp)
-                                    )
-                                    Spacer(modifier = Modifier.width(6.dp))
-                                    Text(
-                                        "ตะกร้า (${cart.sumOf { it.qty }})",
-                                        fontSize = 13.sp,
-                                        fontWeight = FontWeight.Bold,
-                                        color = if (cart.isNotEmpty()) Color.White else Color(0xFF475569)
-                                    )
+                                    Row(
+                                        modifier = Modifier.padding(horizontal = 14.dp, vertical = 9.dp),
+                                        verticalAlignment = Alignment.CenterVertically
+                                    ) {
+                                        Icon(
+                                            Icons.Default.ShoppingCart,
+                                            contentDescription = "Cart",
+                                            tint = Color.White,
+                                            modifier = Modifier.size(16.dp)
+                                        )
+                                        Spacer(modifier = Modifier.width(6.dp))
+                                        Text(
+                                            "ตะกร้าสินค้า",
+                                            fontSize = 13.sp,
+                                            fontWeight = FontWeight.Bold,
+                                            color = Color.White
+                                        )
+                                        if (cart.isNotEmpty()) {
+                                            Spacer(modifier = Modifier.width(6.dp))
+                                            Surface(
+                                                color = Color(0xFFE11D48),
+                                                shape = RoundedCornerShape(10.dp)
+                                            ) {
+                                                Text(
+                                                    "${cart.sumOf { it.qty }}",
+                                                    color = Color.White,
+                                                    fontWeight = FontWeight.ExtraBold,
+                                                    fontSize = 11.sp,
+                                                    modifier = Modifier.padding(horizontal = 6.dp, vertical = 1.dp)
+                                                )
+                                            }
+                                        }
+                                    }
                                 }
                             }
                         }

@@ -63,8 +63,8 @@ android {
         applicationId = "org.smobba.store"
         minSdk = 24
         targetSdk = 34
-        versionCode = 2
-        versionName = "1.0.1"
+        versionCode = 3
+        versionName = "1.0.2"
     }
 
     compileOptions {
@@ -89,16 +89,18 @@ compose.desktop {
                 org.jetbrains.compose.desktop.application.dsl.TargetFormat.Exe
             )
             packageName = "SMO BBA SHOP"
-            packageVersion = "1.0.1"
+            packageVersion = "1.0.2"
             description = "SMO BBA SHOP Official Store Application"
             vendor = "SMO BBA UBRU"
             windows {
                 menuGroup = "SMO BBA SHOP"
                 shortcut = true
                 dirChooser = true
+                iconFile.set(project.file("src/desktopMain/resources/icon.ico"))
             }
             macOS {
                 bundleID = "org.smobba.store"
+                iconFile.set(project.file("src/desktopMain/resources/icon.icns"))
             }
         }
     }

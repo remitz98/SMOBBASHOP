@@ -52,7 +52,7 @@ fun CartAndCheckoutDialog(
         Card(
             modifier = Modifier
                 .fillMaxWidth(0.95f)
-                .fillMaxHeight(0.92f),
+                .fillMaxHeight(0.94f),
             shape = RoundedCornerShape(20.dp),
             colors = CardDefaults.cardColors(containerColor = Color.White)
         ) {
@@ -121,6 +121,31 @@ fun CartAndCheckoutDialog(
                     HorizontalDivider(color = Color(0xFFE2E8F0))
                     Spacer(modifier = Modifier.height(16.dp))
 
+                    // Payment details
+                    Surface(
+                        color = Color(0xFFEEF2FF),
+                        shape = RoundedCornerShape(12.dp),
+                        modifier = Modifier.fillMaxWidth().border(1.dp, Color(0xFFC7D2FE), RoundedCornerShape(12.dp))
+                    ) {
+                        Column(modifier = Modifier.padding(14.dp)) {
+                            Text("ช่องทางการชำระเงิน: พร้อมเพย์ (PromptPay)", fontWeight = FontWeight.Bold, fontSize = 13.sp, color = IndigoPrimary)
+                            Spacer(modifier = Modifier.height(4.dp))
+                            Text("หมายเลขพร้อมเพย์: 004999245434427", fontSize = 12.sp, color = NavyDark, fontWeight = FontWeight.Bold)
+                            Text("ชื่อบัญชี: สโมสรนักศึกษา คณะบริหารธุรกิจและการจัดการ", fontSize = 11.sp, color = Color(0xFF475569))
+                            Text("ธนาคารกสิกรไทย เลขบัญชี: 2343158184 (นายณธกรณัฐ จันทร์ราช และ น.ส. ฐิติพร บุญวัน)", fontSize = 11.sp, color = Color(0xFF475569))
+                            Spacer(modifier = Modifier.height(6.dp))
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Text("ยอดชำระทั้งสิ้น:", fontWeight = FontWeight.Bold, fontSize = 13.sp)
+                                Text("฿${totalAmount.toInt()}", fontWeight = FontWeight.ExtraBold, fontSize = 19.sp, color = EmeraldSuccess)
+                            }
+                        }
+                    }
+
+                    Spacer(modifier = Modifier.height(16.dp))
                     Text("ข้อมูลผู้สั่งจองเสื้อ", fontWeight = FontWeight.Bold, fontSize = 14.sp, color = NavyDark)
                     Spacer(modifier = Modifier.height(10.dp))
 
@@ -173,29 +198,6 @@ fun CartAndCheckoutDialog(
                         shape = RoundedCornerShape(10.dp),
                         singleLine = true
                     )
-
-                    Spacer(modifier = Modifier.height(16.dp))
-                    Surface(
-                        color = Color(0xFFEEF2FF),
-                        shape = RoundedCornerShape(12.dp),
-                        modifier = Modifier.fillMaxWidth()
-                    ) {
-                        Column(modifier = Modifier.padding(14.dp)) {
-                            Text("ช่องทางการชำระเงิน: พร้อมเพย์ (PromptPay)", fontWeight = FontWeight.Bold, fontSize = 13.sp, color = IndigoPrimary)
-                            Spacer(modifier = Modifier.height(4.dp))
-                            Text("หมายเลขพร้อมเพย์: 004999245434427", fontSize = 12.sp, color = NavyDark, fontWeight = FontWeight.SemiBold)
-                            Text("ชื่อบัญชี: สโมสรนักศึกษา คณะบริหารธุรกิจและการจัดการ", fontSize = 12.sp, color = Color(0xFF475569))
-                            Spacer(modifier = Modifier.height(6.dp))
-                            Row(
-                                modifier = Modifier.fillMaxWidth(),
-                                horizontalArrangement = Arrangement.SpaceBetween,
-                                verticalAlignment = Alignment.CenterVertically
-                            ) {
-                                Text("ยอดชำระทั้งสิ้น:", fontWeight = FontWeight.Bold, fontSize = 13.sp)
-                                Text("฿${totalAmount.toInt()}", fontWeight = FontWeight.ExtraBold, fontSize = 18.sp, color = EmeraldSuccess)
-                            }
-                        }
-                    }
 
                     errorMessage?.let { err ->
                         Spacer(modifier = Modifier.height(10.dp))

@@ -113,10 +113,10 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          TAG="v2.0.1-kotlin"
+          TAG="v2.0.2-kotlin"
           shopt -s globstar nullglob
           gh release create "$TAG" \
-            --title "SMO BBA SHOP v2.0.1 (Native Kotlin Edition)" \
-            --notes "แอปพลิเคชัน Native Kotlin เวอร์ชันอัปเกรด: แก้ปัญหาดึงรายการสินค้าจากเซิร์ฟเวอร์, ปรับแต่งหน้าตาดีไซน์ให้สวยงามสมบูรณ์แบบ, และรองรับการบันทึกใบเสร็จลงโฟลเดอร์ Downloads บน Android ทุกเวอร์ชัน" \
+            --title "SMO BBA SHOP v2.0.2 (Native Edition with Official BBA Logo & Enhanced UI)" \
+            --notes "เวอร์ชันใหม่สมบูรณ์แบบ: ติดตั้งไอคอนโลโก้สโมสร BBA UBRU แท้บน PC และ Android, ปรับแต่งหน้าตาและส่วนประกอบดึงมาจากเว็บต้นฉบับครบถ้วน พร้อมตารางเทียบไซส์เสื้อ ระบบใบเสร็จอย่างเป็นทางการ และระบบติดตามคำสั่งจอง" \
             all-dist/**/*.apk all-dist/**/*.msi all-dist/**/*.exe all-dist/**/*.dmg || \
           gh release upload "$TAG" all-dist/**/*.apk all-dist/**/*.msi all-dist/**/*.exe all-dist/**/*.dmg --clobber || true
