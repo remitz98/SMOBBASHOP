@@ -77,12 +77,12 @@ jobs:
           distribution: 'zulu'
           java-version: '17'
 
-      - name: Setup Android SDK
-        uses: android-actions/setup-android@v3
+      - name: Setup Android NDK
+        uses: nttld/setup-ndk@v1
+        id: setup-ndk
         with:
-          api-level: 34
-          build-tools-version: 34.0.0
-          ndk-version: 26.1.10909125
+          ndk-version: r26d
+          link-to-sdk: true
 
       - name: Install Rust
         uses: dtolnay/rust-toolchain@stable
@@ -94,10 +94,10 @@ jobs:
 
       - name: Build Android APK
         env:
-          NDK_HOME: ${{ env.ANDROID_HOME }}/ndk/26.1.10909125
+          NDK_HOME: ${{ steps.setup-ndk.outputs.ndk-path }}
         run: |
           npx tauri android init --ci
-          npx tauri android build --apk --debug --target aarch64,armv7
+          npx tauri android build --apk --debug --target aarch64 --target armv7
 
       - name: Upload Android APK Artifact
         uses: actions/upload-artifact@v4
@@ -125,10 +125,7 @@ jobs:
         run: |
           VERSION="v$(node -p "require('./package.json').version")"
           echo "Looking for APK files to attach to release $VERSION..."
-          shopt -s globstar nullglob
-          for f in apk-dist/**/*.apk apk-dist/*.apk; do
-            if [ -f "$f" ]; then
-              echo "Uploading $f to $VERSION..."
-              gh release upload "$VERSION" "$f" --clobber || true
-            fi
+          find apk-dist -type f -name "*.apk" | while read -r f; do
+            echo "Uploading $f to $VERSION..."
+            gh release upload "$VERSION" "$f" --clobber
           done
