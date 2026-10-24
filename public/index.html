@@ -1073,7 +1073,7 @@
     // ฟังก์ชันนำทางไปหน้าระบบแอดมินหลังบ้าน
     function goToAdmin(event) {
       if (event) event.preventDefault();
-      window.location.href = '/admin';
+      window.location.href = window.location.origin.includes('workers.dev') ? '/admin' : 'admin.html';
     }
 
     let storeCategories = ['เสื้อโปโล', 'เสื้อยืด Oversize', 'เสื้อกิจกรรม', 'เสื้อกันหนาว/แจ็คเก็ต'];

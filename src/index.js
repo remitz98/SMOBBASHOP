@@ -1075,7 +1075,7 @@ app.post('/api/admin/email/test', async (c) => {
 // เสิร์ฟหน้าหลัก (Shop)
 app.get('/', async (c) => {
   if (c.env.ASSETS) {
-    return c.env.ASSETS.fetch(new Request(new URL('/Index.html', c.req.url)));
+    return c.env.ASSETS.fetch(new Request(new URL('/index.html', c.req.url)));
   }
   return c.text('BBA Store Frontend');
 });
@@ -1083,7 +1083,7 @@ app.get('/', async (c) => {
 // เสิร์ฟหน้าแอดมิน (Admin)
 app.get('/admin', async (c) => {
   if (c.env.ASSETS) {
-    return c.env.ASSETS.fetch(new Request(new URL('/Admin.html', c.req.url)));
+    return c.env.ASSETS.fetch(new Request(new URL('/admin.html', c.req.url)));
   }
   return c.text('BBA Store Admin Dashboard');
 });
