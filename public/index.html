@@ -72,32 +72,36 @@
       user-drag: none;
     }
 
-    /* 3. Disable browser overscroll bounce */
-    html, body {
-      overscroll-behavior: none;
-      overscroll-behavior-y: none;
-      max-width: 100%;
+    /* 3. Smooth scrolling and fix mouse wheel container */
+    html {
       overflow-x: hidden;
+      overflow-y: auto;
+      scroll-behavior: smooth;
+    }
+    body {
+      min-height: 100vh;
+      max-width: 100%;
     }
 
-    /* 4. Sleek Overlay Floating Scrollbar for Native App */
+    /* 4. Sleek Modern Scrollbar for PC */
     ::-webkit-scrollbar {
-      width: 6px;
-      height: 6px;
+      width: 8px;
+      height: 8px;
     }
     ::-webkit-scrollbar-track {
-      background: transparent;
+      background: #f1f5f9;
     }
     ::-webkit-scrollbar-thumb {
-      background: rgba(148, 163, 184, 0.45);
+      background: #cbd5e1;
       border-radius: 9999px;
+      border: 2px solid #f1f5f9;
     }
     ::-webkit-scrollbar-thumb:hover {
-      background: rgba(100, 116, 139, 0.75);
+      background: #94a3b8;
     }
     * {
       scrollbar-width: thin;
-      scrollbar-color: rgba(148, 163, 184, 0.45) transparent;
+      scrollbar-color: #cbd5e1 #f1f5f9;
     }
 
     /* 5. Android & Mobile Safe Area Status Bar Support */
