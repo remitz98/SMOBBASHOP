@@ -50,31 +50,54 @@
   <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 
   <style>
-    /* Modern Sleek Scrollbar for PC */
+    /* ================= APP-LIKE NATIVE FEEL ================= */
+    /* 1. Prevent text highlighting across app like a native application */
+    *, *::before, *::after {
+      user-select: none;
+      -webkit-user-select: none;
+      -webkit-touch-callout: none;
+      -webkit-tap-highlight-color: transparent;
+    }
+    input, textarea, [contenteditable="true"], .selectable-text {
+      user-select: text !important;
+      -webkit-user-select: text !important;
+    }
+
+    /* 2. Prevent image dragging artifact */
+    img {
+      -webkit-user-drag: none;
+      user-drag: none;
+    }
+
+    /* 3. Disable browser overscroll bounce */
+    html, body {
+      overscroll-behavior: none;
+      overscroll-behavior-y: none;
+      max-width: 100%;
+      overflow-x: hidden;
+    }
+
+    /* 4. Sleek Overlay Floating Scrollbar for Native App */
     ::-webkit-scrollbar {
-      width: 7px;
-      height: 7px;
+      width: 6px;
+      height: 6px;
     }
     ::-webkit-scrollbar-track {
-      background: #f1f5f9;
+      background: transparent;
     }
     ::-webkit-scrollbar-thumb {
-      background: #cbd5e1;
+      background: rgba(148, 163, 184, 0.45);
       border-radius: 9999px;
-      border: 1.5px solid #f1f5f9;
     }
     ::-webkit-scrollbar-thumb:hover {
-      background: #94a3b8;
-    }
-    ::-webkit-scrollbar-thumb:active {
-      background: #64748b;
+      background: rgba(100, 116, 139, 0.75);
     }
     * {
       scrollbar-width: thin;
-      scrollbar-color: #cbd5e1 #f1f5f9;
+      scrollbar-color: rgba(148, 163, 184, 0.45) transparent;
     }
 
-    /* Android & Mobile Safe Area Status Bar Support */
+    /* 5. Android & Mobile Safe Area Status Bar Support */
     html.is-android header {
       padding-top: max(env(safe-area-inset-top, 0px), 30px) !important;
     }
@@ -84,10 +107,6 @@
       }
     }
 
-    html, body {
-      max-width: 100%;
-      overflow-x: hidden;
-    }
     .hidden { display: none !important; }
     .swal2-container { z-index: 10000 !important; }
     body {
@@ -103,9 +122,27 @@
     }
   </style>
   <script>
+    // 1. Detect Android for status bar safe area
     if (/Android/i.test(navigator.userAgent)) {
       document.documentElement.classList.add('is-android');
     }
+
+    // 2. App-like Behavior: Disable web browser context menu (except on inputs)
+    document.addEventListener('contextmenu', (e) => {
+      const tag = e.target.tagName;
+      if (tag !== 'INPUT' && tag !== 'TEXTAREA') {
+        e.preventDefault();
+      }
+    });
+
+    // 3. Prevent accidental browser reload via F5 or Ctrl+R when running in Desktop App
+    window.addEventListener('keydown', (e) => {
+      if ((e.key === 'F5') || (e.ctrlKey && e.key.toLowerCase() === 'r')) {
+        if (!window.location.origin.includes('workers.dev')) {
+          e.preventDefault();
+        }
+      }
+    });
   </script>
 </head>
 <body class="text-slate-800 antialiased min-h-screen flex flex-col">
