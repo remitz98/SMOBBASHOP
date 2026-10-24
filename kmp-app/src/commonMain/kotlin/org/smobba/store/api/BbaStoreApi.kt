@@ -9,7 +9,7 @@ import io.ktor.serialization.kotlinx.json.*
 import kotlinx.serialization.json.Json
 import org.smobba.store.models.*
 
-class BbaStoreApi(private val baseUrl: String = "https://bba-store.smobba.workers.dev") {
+class BbaStoreApi(val baseUrl: String = "https://bba-store.smobba.workers.dev") {
 
     val client = HttpClient {
         install(ContentNegotiation) {
@@ -21,14 +21,22 @@ class BbaStoreApi(private val baseUrl: String = "https://bba-store.smobba.worker
         }
     }
 
-    suspend fun getProducts(): List<Product> {
+    fun resolveImageUrl(url: String): String {
+        if (url.isBlank()) return ""
+        return if (url.startsWith("/")) baseUrl + url else url
+    }
+
+    suspend fun getStoreData(): StoreResponse {
         return try {
-            val response = client.get("$baseUrl/api/products")
-            val body = response.body<ProductsResponse>()
-            body.products
+            val response = client.get("$baseUrl/api/store")
+            val raw = response.body<StoreResponse>()
+            val fixedProducts = raw.products.map { p ->
+                p.copy(imageUrl = resolveImageUrl(p.imageUrl))
+            }
+            raw.copy(products = fixedProducts)
         } catch (e: Exception) {
-            println("Error fetching products: ${e.message}")
-            emptyList()
+            println("Error fetching store: ${e.message}")
+            StoreResponse(success = false)
         }
     }
 
@@ -46,11 +54,11 @@ class BbaStoreApi(private val baseUrl: String = "https://bba-store.smobba.worker
 
     suspend fun trackOrders(studentId: String, pin: String): List<Order> {
         return try {
-            val response = client.get("$baseUrl/api/orders/track") {
-                parameter("studentId", studentId)
-                parameter("pin", pin)
+            val response = client.post("$baseUrl/api/my-orders") {
+                contentType(ContentType.Application.Json)
+                setBody(MyOrdersRequest(studentId, pin))
             }
-            val body = response.body<TrackOrdersResponse>()
+            val body = response.body<MyOrdersResponse>()
             body.orders
         } catch (e: Exception) {
             emptyList()
@@ -70,20 +78,27 @@ class BbaStoreApi(private val baseUrl: String = "https://bba-store.smobba.worker
         }
     }
 
-    suspend fun getAdminData(): AdminDataResponse {
+    suspend fun getAdminData(pin: String): AdminDataResponse {
         return try {
-            val response = client.get("$baseUrl/api/admin/data")
-            response.body<AdminDataResponse>()
+            val response = client.post("$baseUrl/api/admin/data") {
+                contentType(ContentType.Application.Json)
+                setBody(AdminDataRequest(pin))
+            }
+            val raw = response.body<AdminDataResponse>()
+            val fixedProducts = raw.products.map { p ->
+                p.copy(imageUrl = resolveImageUrl(p.imageUrl))
+            }
+            raw.copy(products = fixedProducts)
         } catch (e: Exception) {
             AdminDataResponse(success = false, message = e.message ?: "Network error")
         }
     }
 
-    suspend fun updateOrderStatus(orderId: String, status: String, adminNotes: String = ""): Boolean {
+    suspend fun updateOrderStatus(pin: String, orderId: String, status: String, adminNotes: String = ""): Boolean {
         return try {
-            val response = client.post("$baseUrl/api/admin/order/status") {
+            val response = client.post("$baseUrl/api/admin/orders/status") {
                 contentType(ContentType.Application.Json)
-                setBody(UpdateStatusRequest(orderId, status, adminNotes))
+                setBody(AdminUpdateStatusRequest(pin, orderId, status, adminNotes))
             }
             val body = response.body<SimpleResponse>()
             body.success

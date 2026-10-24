@@ -1,6 +1,7 @@
 package org.smobba.store.ui
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -43,7 +44,7 @@ fun AdminScreen(
     fun refreshData() {
         isLoadingData = true
         coroutineScope.launch {
-            adminData = api.getAdminData()
+            adminData = api.getAdminData(pin.trim())
             isLoadingData = false
         }
     }
@@ -57,40 +58,51 @@ fun AdminScreen(
             Card(
                 shape = RoundedCornerShape(20.dp),
                 colors = CardDefaults.cardColors(containerColor = Color.White),
-                elevation = CardDefaults.cardElevation(defaultElevation = 4.dp),
-                modifier = Modifier.width(360.dp).padding(20.dp)
+                elevation = CardDefaults.cardElevation(defaultElevation = 3.dp),
+                modifier = Modifier.width(380.dp).padding(20.dp)
             ) {
                 Column(
-                    modifier = Modifier.padding(20.dp),
+                    modifier = Modifier.padding(24.dp),
                     horizontalAlignment = Alignment.CenterHorizontally
                 ) {
-                    Icon(
-                        Icons.Default.Lock,
-                        contentDescription = null,
-                        tint = IndigoPrimary,
-                        modifier = Modifier.size(40.dp)
-                    )
-                    Spacer(modifier = Modifier.height(10.dp))
+                    Surface(
+                        color = Color(0xFFEEF2FF),
+                        shape = RoundedCornerShape(16.dp),
+                        modifier = Modifier.size(60.dp)
+                    ) {
+                        Box(contentAlignment = Alignment.Center) {
+                            Icon(
+                                Icons.Default.Lock,
+                                contentDescription = null,
+                                tint = IndigoPrimary,
+                                modifier = Modifier.size(30.dp)
+                            )
+                        }
+                    }
+
+                    Spacer(modifier = Modifier.height(14.dp))
                     Text("เข้าสู่ระบบแอดมิน", fontWeight = FontWeight.Bold, fontSize = 18.sp, color = NavyDark)
-                    Text("เฉพาะกรรมการสโมสรนักศึกษา BBA UBRU", fontSize = 11.sp, color = Color.Gray)
-                    Spacer(modifier = Modifier.height(16.dp))
+                    Text("เฉพาะกรรมการสโมสรนักศึกษา BBA UBRU", fontSize = 12.sp, color = Color(0xFF64748B))
+                    Spacer(modifier = Modifier.height(18.dp))
 
                     OutlinedTextField(
                         value = pin,
                         onValueChange = { pin = it },
                         label = { Text("รหัส PIN แอดมิน") },
                         modifier = Modifier.fillMaxWidth(),
-                        shape = RoundedCornerShape(10.dp)
+                        shape = RoundedCornerShape(12.dp),
+                        singleLine = true
                     )
 
                     loginError?.let { err ->
-                        Spacer(modifier = Modifier.height(6.dp))
-                        Text(err, color = Color.Red, fontSize = 12.sp)
+                        Spacer(modifier = Modifier.height(8.dp))
+                        Text(err, color = Color(0xFFE11D48), fontSize = 12.sp)
                     }
 
-                    Spacer(modifier = Modifier.height(16.dp))
+                    Spacer(modifier = Modifier.height(18.dp))
                     Button(
                         onClick = {
+                            if (pin.isBlank()) return@Button
                             isLoggingIn = true
                             loginError = null
                             coroutineScope.launch {
@@ -105,13 +117,13 @@ fun AdminScreen(
                             }
                         },
                         colors = ButtonDefaults.buttonColors(containerColor = IndigoPrimary),
-                        modifier = Modifier.fillMaxWidth(),
-                        shape = RoundedCornerShape(10.dp)
+                        modifier = Modifier.fillMaxWidth().height(46.dp),
+                        shape = RoundedCornerShape(12.dp)
                     ) {
                         if (isLoggingIn) {
                             CircularProgressIndicator(color = Color.White, modifier = Modifier.size(18.dp))
                         } else {
-                            Text("เข้าสู่ระบบ", fontWeight = FontWeight.Bold)
+                            Text("เข้าสู่ระบบ", fontWeight = FontWeight.Bold, fontSize = 14.sp)
                         }
                     }
                 }
@@ -125,7 +137,7 @@ fun AdminScreen(
         modifier = Modifier
             .fillMaxSize()
             .background(Color(0xFFF8FAFC))
-            .padding(16.dp)
+            .padding(horizontal = 24.dp, vertical = 20.dp)
     ) {
         Row(
             modifier = Modifier.fillMaxWidth(),
@@ -133,88 +145,115 @@ fun AdminScreen(
             verticalAlignment = Alignment.CenterVertically
         ) {
             Column {
-                Text("ระบบจัดการหลังบ้าน (Admin Portal)", fontWeight = FontWeight.Bold, fontSize = 18.sp, color = NavyDark)
-                Text("ตรวจสอบยอดเงิน ดูสลิป และดูใบเสร็จของนักศึกษา", fontSize = 12.sp, color = Color.Gray)
+                Text("ระบบจัดการหลังบ้าน (Admin Portal)", fontWeight = FontWeight.Bold, fontSize = 20.sp, color = NavyDark)
+                Text("ตรวจสอบยอดเงิน ยืนยันสถานะ และดูใบเสร็จของนักศึกษา", fontSize = 12.sp, color = Color(0xFF64748B))
             }
-            IconButton(onClick = { refreshData() }) {
+            IconButton(
+                onClick = { refreshData() },
+                modifier = Modifier.border(1.dp, Color(0xFFE2E8F0), RoundedCornerShape(10.dp))
+            ) {
                 Icon(Icons.Default.Refresh, contentDescription = "Refresh", tint = IndigoPrimary)
             }
         }
 
-        Spacer(modifier = Modifier.height(12.dp))
+        Spacer(modifier = Modifier.height(16.dp))
 
         // Stats Row
         adminData?.stats?.let { stats ->
             Row(
                 modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(8.dp)
+                horizontalArrangement = Arrangement.spacedBy(12.dp)
             ) {
                 Card(
                     modifier = Modifier.weight(1f),
                     colors = CardDefaults.cardColors(containerColor = Color.White),
-                    shape = RoundedCornerShape(12.dp)
+                    shape = RoundedCornerShape(14.dp),
+                    elevation = CardDefaults.cardElevation(defaultElevation = 1.dp)
                 ) {
-                    Column(modifier = Modifier.padding(12.dp)) {
-                        Text("ยอดขายรวม", fontSize = 11.sp, color = Color.Gray)
-                        Text("฿${stats.totalSales}", fontWeight = FontWeight.Bold, fontSize = 16.sp, color = IndigoPrimary)
+                    Column(modifier = Modifier.padding(14.dp)) {
+                        Text("ยอดขายรวม", fontSize = 11.sp, color = Color(0xFF64748B))
+                        Spacer(modifier = Modifier.height(4.dp))
+                        Text("฿${stats.totalSales.toInt()}", fontWeight = FontWeight.ExtraBold, fontSize = 18.sp, color = IndigoPrimary)
                     }
                 }
                 Card(
                     modifier = Modifier.weight(1f),
                     colors = CardDefaults.cardColors(containerColor = Color.White),
-                    shape = RoundedCornerShape(12.dp)
+                    shape = RoundedCornerShape(14.dp),
+                    elevation = CardDefaults.cardElevation(defaultElevation = 1.dp)
                 ) {
-                    Column(modifier = Modifier.padding(12.dp)) {
-                        Text("รอตรวจสอบ", fontSize = 11.sp, color = Color.Gray)
-                        Text("${stats.pendingCount} รายการ", fontWeight = FontWeight.Bold, fontSize = 16.sp, color = Color(0xFFD97706))
+                    Column(modifier = Modifier.padding(14.dp)) {
+                        Text("รอตรวจสอบ", fontSize = 11.sp, color = Color(0xFF64748B))
+                        Spacer(modifier = Modifier.height(4.dp))
+                        Text("${stats.pendingCount} รายการ", fontWeight = FontWeight.ExtraBold, fontSize = 18.sp, color = Color(0xFFD97706))
                     }
                 }
                 Card(
                     modifier = Modifier.weight(1f),
                     colors = CardDefaults.cardColors(containerColor = Color.White),
-                    shape = RoundedCornerShape(12.dp)
+                    shape = RoundedCornerShape(14.dp),
+                    elevation = CardDefaults.cardElevation(defaultElevation = 1.dp)
                 ) {
-                    Column(modifier = Modifier.padding(12.dp)) {
-                        Text("พร้อมรับเสื้อ", fontSize = 11.sp, color = Color.Gray)
-                        Text("${stats.readyCount} รายการ", fontWeight = FontWeight.Bold, fontSize = 16.sp, color = EmeraldSuccess)
+                    Column(modifier = Modifier.padding(14.dp)) {
+                        Text("พร้อมรับเสื้อ", fontSize = 11.sp, color = Color(0xFF64748B))
+                        Spacer(modifier = Modifier.height(4.dp))
+                        Text("${stats.readyCount} รายการ", fontWeight = FontWeight.ExtraBold, fontSize = 18.sp, color = EmeraldSuccess)
+                    }
+                }
+                Card(
+                    modifier = Modifier.weight(1f),
+                    colors = CardDefaults.cardColors(containerColor = Color.White),
+                    shape = RoundedCornerShape(14.dp),
+                    elevation = CardDefaults.cardElevation(defaultElevation = 1.dp)
+                ) {
+                    Column(modifier = Modifier.padding(14.dp)) {
+                        Text("รับเสื้อแล้ว", fontSize = 11.sp, color = Color(0xFF64748B))
+                        Spacer(modifier = Modifier.height(4.dp))
+                        Text("${stats.completedCount} รายการ", fontWeight = FontWeight.ExtraBold, fontSize = 18.sp, color = NavyDark)
                     }
                 }
             }
         }
 
-        Spacer(modifier = Modifier.height(16.dp))
-        Text("รายการคำสั่งจองทั้งหมด (${adminData?.orders?.size ?: 0} รายการ)", fontWeight = FontWeight.Bold, fontSize = 14.sp)
-        Spacer(modifier = Modifier.height(8.dp))
+        Spacer(modifier = Modifier.height(20.dp))
+        Text(
+            "รายการคำสั่งจองทั้งหมด (${adminData?.orders?.size ?: 0} รายการ)",
+            fontWeight = FontWeight.Bold,
+            fontSize = 15.sp,
+            color = NavyDark
+        )
+        Spacer(modifier = Modifier.height(10.dp))
 
         if (isLoadingData) {
-            Box(modifier = Modifier.fillMaxWidth().padding(24.dp), contentAlignment = Alignment.Center) {
+            Box(modifier = Modifier.fillMaxWidth().padding(40.dp), contentAlignment = Alignment.Center) {
                 CircularProgressIndicator(color = IndigoPrimary)
             }
         } else {
             LazyColumn(
-                verticalArrangement = Arrangement.spacedBy(10.dp),
+                verticalArrangement = Arrangement.spacedBy(12.dp),
                 modifier = Modifier.fillMaxSize()
             ) {
                 items(adminData?.orders ?: emptyList()) { order ->
                     Card(
-                        shape = RoundedCornerShape(12.dp),
+                        shape = RoundedCornerShape(14.dp),
                         colors = CardDefaults.cardColors(containerColor = Color.White),
                         elevation = CardDefaults.cardElevation(defaultElevation = 1.dp),
-                        modifier = Modifier.fillMaxWidth()
+                        modifier = Modifier.fillMaxWidth().border(1.dp, Color(0xFFE2E8F0), RoundedCornerShape(14.dp))
                     ) {
-                        Column(modifier = Modifier.padding(14.dp)) {
+                        Column(modifier = Modifier.padding(16.dp)) {
                             Row(
                                 modifier = Modifier.fillMaxWidth(),
                                 horizontalArrangement = Arrangement.SpaceBetween,
                                 verticalAlignment = Alignment.CenterVertically
                             ) {
                                 Column {
-                                    Text(order.orderId, fontWeight = FontWeight.Bold, fontSize = 13.sp, color = IndigoPrimary)
-                                    Text("${order.customerName} (${order.studentId})", fontSize = 12.sp, fontWeight = FontWeight.SemiBold)
-                                    Text("โทร: ${order.phone}", fontSize = 11.sp, color = Color.Gray)
+                                    Text(order.orderId, fontWeight = FontWeight.Bold, fontSize = 14.sp, color = IndigoPrimary)
+                                    Text("${order.customerName} (${order.studentId})", fontSize = 13.sp, fontWeight = FontWeight.SemiBold)
+                                    Text("โทร: ${order.phone} | วันที่: ${order.orderDate}", fontSize = 11.sp, color = Color(0xFF64748B))
                                 }
                                 Column(horizontalAlignment = Alignment.End) {
-                                    Text("฿${order.totalAmount}", fontWeight = FontWeight.ExtraBold, fontSize = 14.sp)
+                                    Text("฿${order.totalAmount.toInt()}", fontWeight = FontWeight.ExtraBold, fontSize = 16.sp, color = NavyDark)
+                                    Spacer(modifier = Modifier.height(4.dp))
                                     Surface(
                                         color = if (order.status.contains("เรียบร้อย") || order.status.contains("พร้อมรับ")) Color(0xFFD1FAE5) else Color(0xFFFEF3C7),
                                         shape = RoundedCornerShape(8.dp)
@@ -224,27 +263,38 @@ fun AdminScreen(
                                             fontSize = 10.sp,
                                             fontWeight = FontWeight.Bold,
                                             color = if (order.status.contains("เรียบร้อย") || order.status.contains("พร้อมรับ")) EmeraldSuccess else Color(0xFFD97706),
-                                            modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
+                                            modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp)
                                         )
                                     }
                                 }
                             }
 
                             Spacer(modifier = Modifier.height(8.dp))
-                            Text(order.itemsSummary, fontSize = 11.sp, color = Color.DarkGray)
+                            Surface(
+                                color = Color(0xFFF8FAFC),
+                                shape = RoundedCornerShape(8.dp),
+                                modifier = Modifier.fillMaxWidth()
+                            ) {
+                                Text(
+                                    order.itemsSummary,
+                                    fontSize = 12.sp,
+                                    color = Color(0xFF334155),
+                                    modifier = Modifier.padding(10.dp)
+                                )
+                            }
 
-                            Spacer(modifier = Modifier.height(10.dp))
+                            Spacer(modifier = Modifier.height(12.dp))
                             Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.fillMaxWidth()) {
                                 // View Receipt Button
                                 OutlinedButton(
                                     onClick = { onViewReceipt(order) },
                                     modifier = Modifier.weight(1f),
-                                    shape = RoundedCornerShape(8.dp),
-                                    contentPadding = PaddingValues(vertical = 4.dp, horizontal = 8.dp)
+                                    shape = RoundedCornerShape(10.dp),
+                                    contentPadding = PaddingValues(vertical = 6.dp, horizontal = 10.dp)
                                 ) {
-                                    Icon(Icons.Default.Receipt, contentDescription = null, modifier = Modifier.size(14.dp))
-                                    Spacer(modifier = Modifier.width(4.dp))
-                                    Text("ดูใบเสร็จ", fontSize = 11.sp)
+                                    Icon(Icons.Default.Receipt, contentDescription = null, modifier = Modifier.size(15.dp))
+                                    Spacer(modifier = Modifier.width(6.dp))
+                                    Text("ดูใบเสร็จ", fontSize = 12.sp, fontWeight = FontWeight.SemiBold)
                                 }
 
                                 // Quick Status Action
@@ -252,48 +302,48 @@ fun AdminScreen(
                                     Button(
                                         onClick = {
                                             coroutineScope.launch {
-                                                api.updateOrderStatus(order.orderId, "ชำระเงินเรียบร้อย")
+                                                api.updateOrderStatus(pin.trim(), order.orderId, "ชำระเงินเรียบร้อย")
                                                 refreshData()
                                             }
                                         },
                                         colors = ButtonDefaults.buttonColors(containerColor = IndigoPrimary),
                                         modifier = Modifier.weight(1f),
-                                        shape = RoundedCornerShape(8.dp),
-                                        contentPadding = PaddingValues(vertical = 4.dp, horizontal = 8.dp)
+                                        shape = RoundedCornerShape(10.dp),
+                                        contentPadding = PaddingValues(vertical = 6.dp, horizontal = 10.dp)
                                     ) {
-                                        Text("อนุมัติยอด", fontSize = 11.sp)
+                                        Text("อนุมัติยอด", fontSize = 12.sp, fontWeight = FontWeight.Bold)
                                     }
                                 } else if (order.status == "ชำระเงินเรียบร้อย") {
                                     Button(
                                         onClick = {
                                             coroutineScope.launch {
-                                                api.updateOrderStatus(order.orderId, "พร้อมรับเสื้อที่ห้องสโมสร")
+                                                api.updateOrderStatus(pin.trim(), order.orderId, "พร้อมรับเสื้อที่ห้องสโมสร")
                                                 refreshData()
                                             }
                                         },
                                         colors = ButtonDefaults.buttonColors(containerColor = EmeraldSuccess),
                                         modifier = Modifier.weight(1f),
-                                        shape = RoundedCornerShape(8.dp),
-                                        contentPadding = PaddingValues(vertical = 4.dp, horizontal = 8.dp)
+                                        shape = RoundedCornerShape(10.dp),
+                                        contentPadding = PaddingValues(vertical = 6.dp, horizontal = 10.dp)
                                     ) {
-                                        Text("แจ้งพร้อมรับ", fontSize = 11.sp)
+                                        Text("แจ้งพร้อมรับ", fontSize = 12.sp, fontWeight = FontWeight.Bold)
                                     }
                                 } else if (order.status == "พร้อมรับเสื้อที่ห้องสโมสร") {
                                     Button(
                                         onClick = {
                                             coroutineScope.launch {
-                                                api.updateOrderStatus(order.orderId, "รับเสื้อแล้ว")
+                                                api.updateOrderStatus(pin.trim(), order.orderId, "รับเสื้อแล้ว")
                                                 refreshData()
                                             }
                                         },
                                         colors = ButtonDefaults.buttonColors(containerColor = NavyDark),
                                         modifier = Modifier.weight(1f),
-                                        shape = RoundedCornerShape(8.dp),
-                                        contentPadding = PaddingValues(vertical = 4.dp, horizontal = 8.dp)
+                                        shape = RoundedCornerShape(10.dp),
+                                        contentPadding = PaddingValues(vertical = 6.dp, horizontal = 10.dp)
                                     ) {
-                                        Icon(Icons.Default.Check, contentDescription = null, modifier = Modifier.size(14.dp))
+                                        Icon(Icons.Default.Check, contentDescription = null, modifier = Modifier.size(15.dp))
                                         Spacer(modifier = Modifier.width(4.dp))
-                                        Text("รับเสื้อแล้ว", fontSize = 11.sp)
+                                        Text("รับเสื้อแล้ว", fontSize = 12.sp, fontWeight = FontWeight.Bold)
                                     }
                                 }
                             }

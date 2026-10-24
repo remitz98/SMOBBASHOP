@@ -13,7 +13,21 @@ data class Product(
     val stock: Int = 0,
     val imageUrl: String = "",
     val description: String = "",
-    val status: String = "เปิดพรีออเดอร์"
+    val status: String = "พร้อมจำหน่าย",
+    val sizeGuide: String = ""
+)
+
+@Serializable
+data class StoreResponse(
+    val success: Boolean = false,
+    val storeName: String = "SMO BBA SHOP",
+    val clubLocation: String = "ห้องสโมสรนักศึกษา คณะบริหารธุรกิจและการจัดการ มรภ.อุบลฯ",
+    val clubSchedule: String = "วันจันทร์ - ศุกร์ เวลา 09:00 - 16:30 น.",
+    val promptPay: String = "004999245434427",
+    val bankDetails: String = "",
+    val allowedDomain: String = "@ubru.ac.th",
+    val categories: List<String> = emptyList(),
+    val products: List<Product> = emptyList()
 )
 
 @Serializable
@@ -49,39 +63,51 @@ data class CartItem(
     val selectedColor: String,
     var qty: Int
 ) {
+    val unitPrice: Double
+        get() {
+            val extra = when (selectedSize.trim().uppercase()) {
+                "2XL", "XXL" -> 20.0
+                "3XL", "XXXL" -> 40.0
+                "4XL", "XXXXL" -> 60.0
+                else -> 0.0
+            }
+            return product.price + extra
+        }
+
     val subtotal: Double
-        get() = product.price * qty
+        get() = unitPrice * qty
 }
 
 @Serializable
-data class ProductsResponse(
-    val success: Boolean = false,
-    val products: List<Product> = emptyList(),
-    val message: String? = null
-)
-
-@Serializable
 data class CreateOrderRequest(
-    val customerName: String,
-    val studentId: String,
-    val studentEmail: String,
-    val phone: String,
-    val studentPin: String,
-    val items: List<OrderItem>,
+    val customerName: String = "",
+    val studentId: String = "",
+    val studentEmail: String = "",
+    val phone: String = "",
+    val studentPin: String = "",
+    val items: List<OrderItem> = emptyList(),
     val paymentMethod: String = "พร้อมเพย์ (QR PromptPay)",
     val pickupLocation: String = "ห้องสโมสรนักศึกษา คณะบริหารธุรกิจและการจัดการ มรภ.อุบลฯ",
-    val slipUrl: String = ""
+    val slipUrl: String = "",
+    val notes: String = ""
 )
 
 @Serializable
 data class CreateOrderResponse(
     val success: Boolean = false,
     val orderId: String = "",
+    val totalAmount: Double = 0.0,
     val message: String = ""
 )
 
 @Serializable
-data class TrackOrdersResponse(
+data class MyOrdersRequest(
+    val studentId: String = "",
+    val pin: String = ""
+)
+
+@Serializable
+data class MyOrdersResponse(
     val success: Boolean = false,
     val orders: List<Order> = emptyList(),
     val message: String = ""
@@ -89,13 +115,18 @@ data class TrackOrdersResponse(
 
 @Serializable
 data class AdminLoginRequest(
-    val pin: String
+    val pin: String = ""
 )
 
 @Serializable
 data class AdminLoginResponse(
     val success: Boolean = false,
     val message: String = ""
+)
+
+@Serializable
+data class AdminDataRequest(
+    val pin: String = ""
 )
 
 @Serializable
@@ -118,9 +149,10 @@ data class AdminDataResponse(
 )
 
 @Serializable
-data class UpdateStatusRequest(
-    val orderId: String,
-    val status: String,
+data class AdminUpdateStatusRequest(
+    val pin: String = "",
+    val orderId: String = "",
+    val newStatus: String = "",
     val adminNotes: String = ""
 )
 
