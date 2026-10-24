@@ -75,6 +75,9 @@ jobs:
           distribution: 'zulu'
           java-version: '17'
 
+      - name: Setup Android SDK
+        uses: android-actions/setup-android@v3
+
       - name: Setup Gradle
         uses: gradle/actions/setup-gradle@v4
         with:
@@ -110,8 +113,16 @@ jobs:
         run: |
           TAG="v2.1.0"
           shopt -s globstar nullglob
-          gh release create "$TAG" \
-            --title "SMO BBA SHOP v2.1.0 (Official Native Release)" \
-            --notes "เวอร์ชันใหม่สมบูรณ์แบบ 100%: ปรับปรุงให้เหมาะกับ Windows, macOS และ Android โดยดึงหน้าตา ดีไซน์ ฟอนต์ และระบบทั้งหมดจากเว็บมาใช้งาน 100% พร้อมระบบบันทึกใบเสร็จลงเครื่องอัตโนมัติ และไอคอนสโมสร BBA UBRU แท้" \
-            all-dist/**/*.apk all-dist/**/*.msi all-dist/**/*.exe all-dist/**/*.dmg || \
-          gh release upload "$TAG" all-dist/**/*.apk all-dist/**/*.msi all-dist/**/*.exe all-dist/**/*.dmg --clobber || true
+          FILES=(all-dist/**/*.apk all-dist/**/*.msi all-dist/**/*.exe all-dist/**/*.dmg)
+          echo "Release files found:"
+          ls -lh "${FILES[@]}"
+          if gh release view "$TAG" >/dev/null 2>&1; then
+            echo "Release $TAG exists, uploading assets..."
+            gh release upload "$TAG" "${FILES[@]}" --clobber
+          else
+            echo "Creating release $TAG..."
+            gh release create "$TAG" \
+              --title "SMO BBA SHOP v2.1.0 (Official Native Release)" \
+              --notes "เวอร์ชันใหม่สมบูรณ์แบบ 100%: ปรับปรุงให้เหมาะกับ Windows, macOS และ Android โดยดึงหน้าตา ดีไซน์ ฟอนต์ และระบบทั้งหมดจากเว็บมาใช้งาน 100% พร้อมระบบบันทึกใบเสร็จลงเครื่องอัตโนมัติ และไอคอนสโมสร BBA UBRU แท้" \
+              "${FILES[@]}"
+          fi

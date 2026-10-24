@@ -31,6 +31,7 @@ class MainActivity : ComponentActivity() {
     @SuppressLint("SetJavaScriptEnabled")
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        AppContextHolder.context = applicationContext
 
         webView = WebView(this).apply {
             layoutParams = FrameLayout.LayoutParams(
