@@ -1,0 +1,2984 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <base target="_top">
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ระบบสั่งจองเสื้อสโมสรนักศึกษา | คณะบริหารธุรกิจและการจัดการ (BBA UBRU)</title>
+  <link rel="icon" type="image/png" href="https://i.postimg.cc/g0V05nHd/LOGO-SAMO-002-(1).png">
+
+  <!-- Google Fonts: Prompt -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com">
+  <link href="https://fonts.googleapis.com/css2?family=Prompt:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    window.tailwind = window.tailwind || {};
+    tailwind.config = {
+      theme: {
+        extend: {
+          fontFamily: {
+            sans: ['Prompt', 'sans-serif'],
+          },
+          colors: {
+            ubru: {
+              50: '#fdf2f8',
+              100: '#fce7f3',
+              500: '#ec4899',
+              600: '#db2777',
+              700: '#be185d',
+              800: '#9d174d',
+              900: '#831843',
+            },
+            navy: {
+              800: '#1e293b',
+              900: '#0f172a',
+              950: '#020617',
+            }
+          }
+        }
+      }
+    }
+  </script>
+
+  <!-- Font Awesome 6 Icons -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  
+  <!-- SweetAlert2 -->
+  <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+
+  <!-- html2canvas for saving receipt as image -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+
+  <style>
+    html, body {
+      max-width: 100%;
+      overflow-x: hidden;
+    }
+    .hidden { display: none !important; }
+    .swal2-container { z-index: 10000 !important; }
+    body {
+      font-family: 'Prompt', sans-serif;
+      background-color: #f8fafc;
+    }
+    .hide-scrollbar::-webkit-scrollbar {
+      display: none;
+    }
+    .hide-scrollbar {
+      -ms-overflow-style: none;
+      scrollbar-width: none;
+    }
+    .thumbnail-card {
+      transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+    .thumbnail-card.active {
+      border-color: #4338ca !important;
+      box-shadow: 0 0 0 2px rgba(67, 56, 202, 0.3);
+      transform: scale(1.03);
+    }
+
+    /* Print Stylesheet for Receipt */
+    @media print {
+      body * {
+        visibility: hidden !important;
+      }
+      #receiptModal, #receiptPaper, #receiptPaper * {
+        visibility: visible !important;
+      }
+      #receiptModal {
+        position: absolute !important;
+        inset: 0 !important;
+        background: #ffffff !important;
+        padding: 0 !important;
+        margin: 0 !important;
+        display: block !important;
+        overflow: visible !important;
+        z-index: 99999 !important;
+      }
+      .no-print {
+        display: none !important;
+      }
+      #receiptPaper {
+        border: none !important;
+        box-shadow: none !important;
+        padding: 20px !important;
+        max-width: 100% !important;
+        width: 100% !important;
+        margin: 0 auto !important;
+      }
+      #receiptTableContainer {
+        max-height: none !important;
+        overflow: visible !important;
+      }
+    }
+  </style>
+</head>
+<body class="text-slate-800 antialiased min-h-screen flex flex-col">
+
+  <!-- ==================== 1. TOP NAVBAR ==================== -->
+  <header class="sticky top-0 z-40 bg-white/95 backdrop-blur shadow-sm border-b border-slate-100">
+    <div class="max-w-7xl mx-auto px-2.5 sm:px-6 lg:px-8 h-14 sm:h-16 flex items-center justify-between gap-1.5 sm:gap-3">
+      
+      <!-- Logo & Brand -->
+      <div class="flex items-center gap-1.5 sm:gap-3 cursor-pointer min-w-0" onclick="switchView('shop')">
+        <img src="https://drive.google.com/thumbnail?id=11lMXnbog9-wdE28O3ax2LgzQJyFRxopi&sz=w200" alt="BBA UBRU Logo" class="w-8 h-8 sm:w-10 sm:h-10 rounded-lg sm:rounded-xl object-contain shadow-sm shrink-0">
+        <div class="min-w-0">
+          <span id="navStoreName" class="font-bold text-xs sm:text-base lg:text-lg text-slate-900 tracking-tight block leading-tight truncate">สโมสรนักศึกษา BBA UBRU</span>
+          <span class="hidden sm:block text-[11px] sm:text-xs text-indigo-700 font-medium truncate">คณะบริหารธุรกิจและการจัดการ มรภ.อุบลฯ</span>
+        </div>
+      </div>
+
+      <!-- Navigation & Auth -->
+      <nav class="flex items-center gap-1 sm:gap-2 shrink-0">
+        <button onclick="switchView('shop')" id="btnNavShop" title="เสื้อสโมสร" class="p-1.5 sm:px-3 sm:py-1.5 rounded-lg text-xs sm:text-sm font-medium text-indigo-700 bg-indigo-50 transition flex items-center gap-1.5">
+          <i class="fa-solid fa-shirt"></i>
+          <span class="hidden md:inline">เสื้อสโมสร</span>
+        </button>
+
+        <button onclick="openMyOrdersHistory()" id="btnNavHistory" title="ประวัติการสั่งซื้อ" class="p-1.5 sm:px-3 sm:py-1.5 rounded-lg text-xs sm:text-sm font-medium text-slate-600 hover:text-slate-900 hover:bg-slate-100 transition flex items-center gap-1.5">
+          <i class="fa-solid fa-clock-rotate-left"></i>
+          <span class="hidden md:inline">ประวัติการสั่งซื้อ</span>
+        </button>
+
+        <button onclick="switchView('track')" id="btnNavTrack" title="เช็กสถานะรับเสื้อ" class="p-1.5 sm:px-3 sm:py-1.5 rounded-lg text-xs sm:text-sm font-medium text-slate-600 hover:text-slate-900 hover:bg-slate-100 transition flex items-center gap-1.5">
+          <i class="fa-solid fa-clipboard-check"></i>
+          <span class="hidden md:inline">เช็กสถานะรับเสื้อ</span>
+        </button>
+
+        <a href="javascript:void(0)" onclick="goToAdmin(event)" id="btnNavAdmin" title="ระบบจัดการหลังบ้าน (สำหรับแอดมิน)" class="p-1.5 sm:px-2.5 sm:py-1.5 rounded-lg text-xs sm:text-sm font-medium text-slate-500 hover:text-indigo-700 hover:bg-indigo-50 border border-slate-200 bg-white transition flex items-center gap-1.5 shadow-sm cursor-pointer">
+          <i class="fa-solid fa-lock text-xs text-indigo-600"></i>
+          <span class="hidden md:inline">ระบบแอดมิน</span>
+        </a>
+
+        <!-- Student Auth Button / Profile Badge -->
+        <div id="studentAuthArea" class="flex items-center gap-1 sm:gap-1.5">
+          <button onclick="openLoginModal()" id="btnOpenLogin" class="px-2 py-1.5 sm:px-3 sm:py-1.5 rounded-lg sm:rounded-xl bg-slate-900 hover:bg-slate-800 text-white text-[11px] sm:text-xs font-bold transition flex items-center gap-1 sm:gap-1.5 shadow-sm">
+            <i class="fa-solid fa-right-to-bracket text-[11px] sm:text-xs"></i>
+            <span class="hidden sm:inline">เข้าสู่ระบบ</span>
+            <span class="inline sm:hidden">เข้าสู่ระบบ</span>
+          </button>
+
+          <button onclick="openRegisterModal()" id="btnOpenRegister" class="px-2 py-1.5 sm:px-3 sm:py-1.5 rounded-lg sm:rounded-xl bg-amber-500 hover:bg-amber-600 text-white text-[11px] sm:text-xs font-bold transition flex items-center gap-1 sm:gap-1.5 shadow-sm">
+            <i class="fa-solid fa-user-plus text-[11px] sm:text-xs"></i>
+            <span class="hidden sm:inline">ลงทะเบียน</span>
+            <span class="inline sm:hidden">ลงทะเบียน</span>
+          </button>
+
+          <div id="studentProfilePill" class="hidden flex items-center gap-1.5 sm:gap-2 bg-slate-100 pl-2 sm:pl-3 pr-1 sm:pr-1.5 py-1 rounded-xl text-xs border border-slate-200 max-w-[105px] sm:max-w-[180px]">
+            <div onclick="openMyOrdersHistory()" class="text-left min-w-0 cursor-pointer" title="คลิกเพื่อดูประวัติการสั่งซื้อของคุณ">
+              <span id="profileStudentName" class="font-bold text-slate-800 block text-[10px] sm:text-[11px] leading-tight truncate"></span>
+              <span id="profileStudentId" class="text-[9px] sm:text-[10px] text-slate-500 font-mono truncate block"></span>
+            </div>
+            <button onclick="logoutStudent()" title="ออกจากระบบ" class="w-5 h-5 sm:w-6 sm:h-6 shrink-0 rounded-lg bg-slate-200 hover:bg-rose-100 hover:text-rose-600 text-slate-600 flex items-center justify-center transition">
+              <i class="fa-solid fa-power-off text-[9px] sm:text-[10px]"></i>
+            </button>
+          </div>
+        </div>
+
+        <!-- Cart Button -->
+        <button onclick="openCartDrawer()" title="ตะกร้าสินค้า" class="relative p-2 sm:p-2.5 rounded-lg sm:rounded-xl bg-slate-900 text-white hover:bg-indigo-900 transition flex items-center gap-1.5 sm:gap-2 shadow-sm">
+          <i class="fa-solid fa-bag-shopping text-sm sm:text-base"></i>
+          <span id="cartCountBadge" class="inline-flex items-center justify-center bg-rose-500 text-white text-[10px] sm:text-xs font-bold rounded-full h-4 sm:h-5 min-w-[16px] sm:min-w-[20px] px-1">0</span>
+        </button>
+      </nav>
+
+    </div>
+  </header>
+
+  <!-- ==================== 2. MAIN CONTAINER ==================== -->
+  <main class="flex-1 max-w-7xl mx-auto w-full px-4 sm:px-6 lg:px-8 py-6">
+
+    <!-- ========== VIEW A: SHOP (รายการเสื้อสโมสร) ========== -->
+    <section id="viewShop">
+      
+      <!-- Hero Banner -->
+      <div class="relative overflow-hidden rounded-2xl bg-gradient-to-r from-slate-900 via-indigo-950 to-slate-900 text-white p-6 sm:p-10 mb-8 shadow-xl">
+        <div class="relative z-10 max-w-2xl">
+          <span class="inline-flex items-center gap-1.5 sm:gap-2 px-2.5 sm:px-3 py-1 rounded-full text-[11px] sm:text-xs font-semibold bg-indigo-500/30 text-indigo-200 border border-indigo-400/30 mb-3 max-w-full">
+            <i class="fa-solid fa-building-columns shrink-0"></i> <span class="truncate">สโมสรนักศึกษา คณะบริหารธุรกิจและการจัดการ มหาวิทยาลัยราชภัฏอุบลราชธานี</span>
+          </span>
+          <h1 class="text-2xl sm:text-4xl font-extrabold tracking-tight leading-tight mb-2">
+            เปิดจองเสื้อสโมสรนักศึกษา BBA UBRU
+          </h1>
+          <p class="text-xs sm:text-sm text-slate-300 mb-4">
+            สั่งจองและชำระเงินออนไลน์ จากนั้นนำหลักฐานใบเสร็จมารับเสื้อได้ด้วยตนเองที่ห้องสโมสรนักศึกษา คณะบริหารธุรกิจและการจัดการ
+          </p>
+
+          <!-- Pickup Notice Card -->
+          <div class="bg-white/10 backdrop-blur-md rounded-xl p-3 sm:p-4 border border-white/20 text-xs sm:text-sm text-amber-200 space-y-1">
+            <div class="flex items-center gap-2 font-semibold text-white">
+              <i class="fa-solid fa-location-dot text-amber-400"></i>
+              <span id="bannerClubLocation">ห้องสโมสรนักศึกษา คณะบริหารธุรกิจและการจัดการ มรภ.อุบลฯ</span>
+            </div>
+            <div class="flex items-center gap-2 text-[11px] sm:text-xs text-slate-300">
+              <i class="fa-solid fa-clock text-amber-400"></i>
+              <span id="bannerClubSchedule">เปิดรับเสื้อ: วันจันทร์ - ศุกร์ เวลา 09:00 - 16:30 น.</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="absolute -right-10 -bottom-10 opacity-10 text-white text-[180px] pointer-events-none select-none">
+          <i class="fa-solid fa-shirt"></i>
+        </div>
+      </div>
+
+      <!-- Filter & Search Toolbar -->
+      <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
+        <!-- Category Pills -->
+        <div class="flex items-center gap-2 overflow-x-auto hide-scrollbar pb-1 text-sm" id="categoryPills">
+          <button onclick="filterCategory('ทั้งหมด')" class="category-btn active px-4 py-2 rounded-full font-medium whitespace-nowrap transition bg-slate-900 text-white">ทั้งหมด</button>
+          <button onclick="filterCategory('เสื้อโปโล')" class="category-btn px-4 py-2 rounded-full font-medium whitespace-nowrap transition bg-white text-slate-600 hover:bg-slate-100 border border-slate-200">เสื้อโปโล</button>
+          <button onclick="filterCategory('เสื้อยืด Oversize')" class="category-btn px-4 py-2 rounded-full font-medium whitespace-nowrap transition bg-white text-slate-600 hover:bg-slate-100 border border-slate-200">เสื้อยืด Oversize</button>
+          <button onclick="filterCategory('เสื้อกิจกรรม')" class="category-btn px-4 py-2 rounded-full font-medium whitespace-nowrap transition bg-white text-slate-600 hover:bg-slate-100 border border-slate-200">เสื้อกิจกรรม</button>
+          <button data-category="เสื้อกันหนาว/แจ็คเก็ต" onclick="filterCategory('เสื้อกันหนาว/แจ็คเก็ต')" class="category-btn px-4 py-2 rounded-full font-medium whitespace-nowrap transition bg-white text-slate-600 hover:bg-slate-100 border border-slate-200">แจ็คเก็ต</button>
+        </div>
+
+        <!-- Search Input -->
+        <div class="relative w-full sm:w-72">
+          <i class="fa-solid fa-magnifying-glass absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 text-sm"></i>
+          <input type="text" id="searchInput" oninput="debouncedProductSearch()" placeholder="ค้นหาชื่อเสื้อ, ประเภท..." 
+                 class="w-full pl-9 pr-4 py-2 text-sm rounded-xl border border-slate-200 bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition">
+        </div>
+      </div>
+
+      <!-- Product Grid -->
+      <div id="productGrid" class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 sm:gap-6">
+        <div class="col-span-full py-20 text-center text-slate-400">
+          <i class="fa-solid fa-circle-notch fa-spin text-3xl text-indigo-600 mb-3"></i>
+          <p class="text-sm">กำลังโหลดรายการเสื้อสโมสร...</p>
+        </div>
+      </div>
+
+    </section>
+
+    <!-- ========== VIEW B: TRACK ORDER (ประวัติการสั่งซื้อของฉัน) ========== -->
+    <section id="viewTrack" class="hidden max-w-2xl mx-auto py-4">
+      <div class="bg-white rounded-2xl shadow-sm border border-slate-200 p-6 sm:p-8">
+        
+        <div class="text-center mb-6">
+          <div class="w-12 h-12 rounded-2xl bg-indigo-50 text-indigo-700 flex items-center justify-center mx-auto mb-3 text-xl shadow-inner">
+            <i class="fa-solid fa-clipboard-user"></i>
+          </div>
+          <h2 class="text-xl font-bold text-slate-900" id="trackHeaderTitle">ประวัติการสั่งซื้อของฉัน</h2>
+          <p class="text-xs sm:text-sm text-slate-500 mt-1" id="trackHeaderDesc">ตรวจสอบประวัติการสั่งซื้อและสถานะการรับเสื้อเฉพาะบัญชีของคุณ (ประวัติรวมตรวจได้เฉพาะหลังบ้าน)</p>
+        </div>
+
+        <!-- กรณีที่ยังไม่ได้เข้าสู่ระบบ: บังคับให้ล็อกอินก่อน จึงจะดูประวัติของตนเองได้ -->
+        <div id="trackNotLoggedInBox" class="py-10 px-4 text-center bg-slate-50 rounded-2xl border border-slate-200 space-y-4">
+          <div class="w-14 h-14 rounded-2xl bg-amber-50 text-amber-600 flex items-center justify-center mx-auto text-2xl shadow-sm border border-amber-200">
+            <i class="fa-solid fa-user-lock"></i>
+          </div>
+          <div class="max-w-md mx-auto">
+            <h3 class="text-base font-bold text-slate-900">กรุณาเข้าสู่ระบบเพื่อดูประวัติการสั่งซื้อของคุณ</h3>
+            <p class="text-xs text-slate-500 mt-1.5 leading-relaxed">
+              ประวัติการสั่งซื้อเป็นข้อมูลส่วนบุคคล สามารถตรวจสอบได้เฉพาะเจ้าของบัญชีเท่านั้น<br>
+              <span class="text-indigo-600 font-semibold">* หากเป็นกรรมการสโมสรที่ต้องการตรวจประวัติการสั่งซื้อรวม กรุณาเข้าสู่ระบบหลังบ้าน</span>
+            </p>
+          </div>
+          <div class="flex items-center justify-center gap-2.5 pt-1">
+            <button onclick="openLoginModal()" type="button" class="px-5 py-2.5 rounded-xl bg-slate-900 hover:bg-slate-800 text-white font-bold text-xs transition shadow-sm flex items-center gap-1.5">
+              <i class="fa-solid fa-right-to-bracket"></i> เข้าสู่ระบบ
+            </button>
+            <button onclick="openRegisterModal()" type="button" class="px-5 py-2.5 rounded-xl bg-amber-500 hover:bg-amber-600 text-white font-bold text-xs transition shadow-sm flex items-center gap-1.5">
+              <i class="fa-solid fa-user-plus"></i> ลงทะเบียน
+            </button>
+          </div>
+        </div>
+
+        <!-- กรณีเข้าสู่ระบบแล้ว: แสดงประวัติเฉพาะของตนเอง -->
+        <div id="trackLoggedInContent" class="hidden space-y-5">
+          <!-- Logged-in Profile Banner -->
+          <div class="p-3.5 sm:p-4 rounded-xl bg-indigo-50 border border-indigo-200 flex flex-col sm:flex-row items-center justify-between gap-3 text-xs sm:text-sm">
+            <div class="flex items-center gap-2.5 text-indigo-950 text-left">
+              <div class="w-9 h-9 rounded-xl bg-indigo-600 text-white flex items-center justify-center shrink-0 shadow-sm">
+                <i class="fa-solid fa-circle-user text-lg"></i>
+              </div>
+              <div>
+                <span class="font-bold block" id="loggedInTrackName">นักศึกษา</span>
+                <span class="text-xs text-indigo-700 font-mono" id="loggedInTrackId">รหัสนักศึกษา: -</span>
+              </div>
+            </div>
+            <button onclick="handleTrackSearch()" type="button" class="w-full sm:w-auto px-3.5 py-1.5 bg-indigo-700 hover:bg-indigo-800 text-white font-semibold rounded-lg shadow-sm transition flex items-center justify-center gap-1.5 text-xs shrink-0">
+              <i class="fa-solid fa-rotate-right"></i> รีเฟรชประวัติ
+            </button>
+          </div>
+
+          <!-- Search Filter within own orders -->
+          <div class="flex gap-2">
+            <div class="relative flex-1">
+              <i class="fa-solid fa-magnifying-glass absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 text-xs"></i>
+              <input type="text" id="trackInput" placeholder="ค้นหารหัสคำสั่งจอง (BBA-...) หรือชื่อเสื้อของคุณ..." 
+                     class="w-full pl-9 pr-4 py-2 text-xs sm:text-sm rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent">
+            </div>
+            <button onclick="handleTrackSearch()" class="px-4 py-2 rounded-xl bg-slate-900 text-white text-xs sm:text-sm font-semibold hover:bg-indigo-900 transition flex items-center gap-1.5">
+              <i class="fa-solid fa-filter"></i> ค้นหา
+            </button>
+          </div>
+
+          <!-- Track Result Area -->
+          <div id="trackResultArea" class="space-y-4"></div>
+        </div>
+
+      </div>
+    </section>
+
+    
+
+  </main>
+
+  <!-- ==================== 3. MODALS ==================== -->
+
+  <!-- Modal 1: เข้าสู่ระบบนักศึกษา BBA UBRU -->
+  <div id="studentLoginModal" class="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-sm items-center justify-center p-4" style="display: none;">
+    <div class="bg-white rounded-2xl max-w-md w-full overflow-hidden shadow-2xl p-6 animate-fade-in space-y-4">
+      
+      <div class="text-center">
+        <div class="w-12 h-12 rounded-2xl bg-indigo-50 text-indigo-700 flex items-center justify-center mx-auto mb-3 text-xl shadow-inner">
+          <i class="fa-solid fa-right-to-bracket"></i>
+        </div>
+        <h3 class="text-lg font-bold text-slate-900">เข้าสู่ระบบนักศึกษา BBA UBRU</h3>
+        <p class="text-xs text-slate-500 mt-1">คณะบริหารธุรกิจและการจัดการ มหาวิทยาลัยราชภัฏอุบลราชธานี</p>
+      </div>
+
+      <div class="space-y-3.5 text-xs sm:text-sm">
+        <div>
+          <label class="block text-slate-700 font-semibold mb-1">รหัสนักศึกษา (Student ID): <span class="text-rose-500">*</span></label>
+          <input type="text" id="loginStudentId" placeholder="เช่น 651463001" maxlength="15"
+                 class="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-indigo-500 font-mono font-bold text-slate-800">
+        </div>
+
+        <div>
+          <div class="flex items-center justify-between mb-1">
+            <label class="block text-slate-700 font-semibold">รหัส PIN 4 หลัก: <span class="text-rose-500">*</span></label>
+            <span class="text-[10px] text-slate-400">รหัส PIN ที่ตั้งไว้ตอนลงทะเบียน</span>
+          </div>
+          <input type="password" id="loginStudentPin" placeholder="ตัวเลข 4 หลัก" maxlength="4" pattern="[0-9]*" inputmode="numeric"
+                 class="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-indigo-500 font-mono font-bold tracking-widest text-center text-base text-slate-800">
+        </div>
+
+        <div class="pt-2">
+          <button onclick="handleStudentLogin()" id="btnLoginSubmit" type="button" class="w-full py-3 rounded-xl bg-indigo-700 text-white font-bold hover:bg-indigo-800 transition flex items-center justify-center gap-2 shadow-md">
+            <i class="fa-solid fa-right-to-bracket text-xs"></i> <span>เข้าสู่ระบบ</span>
+          </button>
+        </div>
+
+        <div class="text-center pt-2 border-t border-slate-100">
+          <p class="text-xs text-slate-500">
+            ยังไม่ได้ลงทะเบียน? 
+            <button type="button" onclick="switchToRegisterModal()" class="text-amber-600 font-bold hover:underline ml-1">
+              กดลงทะเบียนที่นี่
+            </button>
+          </p>
+        </div>
+      </div>
+
+      <div class="text-center pt-1">
+        <button onclick="closeLoginModal()" type="button" class="text-xs text-slate-400 hover:text-slate-600">
+          ปิดหน้าต่าง
+        </button>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- Modal 1.5: ลงทะเบียนนักศึกษา BBA UBRU -->
+  <div id="studentRegisterModal" class="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-sm items-center justify-center p-4" style="display: none;">
+    <div class="bg-white rounded-2xl max-w-md w-full overflow-hidden shadow-2xl p-6 animate-fade-in space-y-4">
+      
+      <div class="text-center">
+        <div class="w-12 h-12 rounded-2xl bg-amber-50 text-amber-600 flex items-center justify-center mx-auto mb-3 text-xl shadow-inner">
+          <i class="fa-solid fa-user-plus"></i>
+        </div>
+        <h3 class="text-lg font-bold text-slate-900">ลงทะเบียนนักศึกษา BBA UBRU</h3>
+        <p class="text-xs text-slate-500 mt-1">คณะบริหารธุรกิจและการจัดการ มหาวิทยาลัยราชภัฏอุบลราชธานี</p>
+      </div>
+
+      <div class="space-y-3.5 text-xs sm:text-sm">
+        <div>
+          <label class="block text-slate-700 font-semibold mb-1">รหัสนักศึกษา (Student ID): <span class="text-rose-500">*</span></label>
+          <input type="text" id="regStudentId" placeholder="เช่น 651463001" maxlength="15" oninput="syncStudentRegEmail()"
+                 class="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-indigo-500 font-mono font-bold text-slate-800">
+        </div>
+
+        <div>
+          <label class="block text-slate-700 font-semibold mb-1">ชื่อ - นามสกุล นักศึกษา: <span class="text-rose-500">*</span></label>
+          <input type="text" id="regStudentName" placeholder="เช่น สมชาย ใจดี" 
+                 class="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-indigo-500 text-slate-800">
+        </div>
+
+        <div>
+          <label class="block text-slate-700 font-semibold mb-1">เบอร์โทรศัพท์ติดต่อ: <span class="text-rose-500">*</span></label>
+          <input type="tel" id="regStudentPhone" placeholder="เช่น 0812345678" maxlength="12" 
+                 class="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-indigo-500 font-mono text-slate-800">
+        </div>
+
+        <div>
+          <label class="block text-slate-500 font-medium mb-1">อีเมลนักศึกษา (@ubru.ac.th):</label>
+          <div class="px-3.5 py-2.5 rounded-xl bg-slate-50 border border-slate-200 text-slate-700 font-mono text-xs flex items-center justify-between">
+            <span id="regStudentEmailDisplay" class="font-bold text-indigo-700">std.รหัสนักศึกษา@ubru.ac.th</span>
+            <span class="text-[10px] text-slate-500 bg-white px-2 py-0.5 rounded-md border border-slate-200">สร้างให้อัตโนมัติ</span>
+          </div>
+        </div>
+
+        <div>
+          <div class="flex items-center justify-between mb-1">
+            <label class="block text-slate-700 font-semibold">สร้างรหัส PIN 4 หลัก: <span class="text-rose-500">*</span></label>
+            <span class="text-[10px] text-amber-600 font-medium">สำหรับใช้เข้าสู่ระบบครั้งถัดไป</span>
+          </div>
+          <input type="password" id="regStudentPin" placeholder="กำหนดเลข 4 หลัก เช่น 1234" maxlength="4" pattern="[0-9]*" inputmode="numeric"
+                 class="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-indigo-500 font-mono font-bold tracking-widest text-center text-base text-slate-800">
+        </div>
+
+        <div class="pt-2">
+          <button onclick="handleStudentRegister()" id="btnRegSubmit" type="button" class="w-full py-3 rounded-xl bg-amber-500 hover:bg-amber-600 text-white font-bold transition flex items-center justify-center gap-2 shadow-md">
+            <i class="fa-solid fa-user-plus text-xs"></i> <span>ลงทะเบียนและเข้าสู่ระบบ</span>
+          </button>
+        </div>
+
+        <div class="text-center pt-2 border-t border-slate-100">
+          <p class="text-xs text-slate-500">
+            มีบัญชีอยู่แล้ว? 
+            <button type="button" onclick="switchToLoginModal()" class="text-indigo-600 font-bold hover:underline ml-1">
+              เข้าสู่ระบบที่นี่
+            </button>
+          </p>
+        </div>
+      </div>
+
+      <div class="text-center pt-1">
+        <button onclick="closeRegisterModal()" type="button" class="text-xs text-slate-400 hover:text-slate-600">
+          ปิดหน้าต่าง
+        </button>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- Modal 2: ดูรายละเอียดเสื้อ & เลือกไซส์/สี (Product Detail Modal) -->
+  <div id="productModal" class="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-sm items-center justify-center p-3 sm:p-4 overflow-y-auto" style="display: none;">
+    <div class="bg-white rounded-2xl sm:rounded-3xl max-w-4xl w-full my-auto overflow-hidden shadow-2xl animate-fade-in relative">
+      
+      <!-- Close Button -->
+      <button onclick="closeProductModal()" class="absolute top-3.5 right-3.5 z-20 w-8 h-8 rounded-full bg-slate-100 hover:bg-slate-200 text-slate-500 hover:text-slate-800 flex items-center justify-center transition">
+        <i class="fa-solid fa-xmark text-sm"></i>
+      </button>
+
+      <!-- 2-Column Content Area -->
+      <div class="p-5 sm:p-7">
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6 lg:gap-8 items-start">
+          
+          <!-- ฝั่งซ้าย: รูปภาพสินค้ามองเห็นเต็มตัว -->
+          <div class="space-y-3">
+            <div class="relative aspect-square w-full bg-slate-50 rounded-2xl border border-slate-200 overflow-hidden flex items-center justify-center group cursor-pointer"
+                 onclick="openFullImageViewer(event)" title="คลิกเพื่อดูรูปเต็มจอ">
+              
+              <img id="modalProductImg" src="" alt="เสื้อสโมสร BBA UBRU" 
+                   class="w-full h-full object-contain p-4 transition-transform duration-300 group-hover:scale-105 select-none"
+                   onerror="this.onerror=null; this.src='https://placehold.co/400x500?text=BBA+Shirt';">
+              
+              <span id="modalProductBadge" class="absolute top-3 left-3 px-2.5 py-1 rounded-md text-xs font-semibold bg-white/95 backdrop-blur text-slate-800 shadow border border-slate-100"></span>
+
+              <!-- Hover zoom hint -->
+              <div class="absolute bottom-3 right-3 opacity-90 group-hover:opacity-100 transition">
+                <span class="px-2.5 py-1 rounded-lg bg-slate-900/80 text-white text-[11px] font-medium backdrop-blur shadow flex items-center gap-1">
+                  <i class="fa-solid fa-expand text-[10px]"></i> ดูรูปเต็มจอ / ซูม
+                </span>
+              </div>
+            </div>
+
+            <!-- Thumbnail Strip -->
+            <div class="flex items-center gap-2 overflow-x-auto hide-scrollbar py-1" id="modalThumbnailsStrip"></div>
+          </div>
+
+          <!-- ฝั่งขวา: รายละเอียดสินค้า -->
+          <div class="flex flex-col justify-between space-y-4">
+            
+            <div>
+              <h3 id="modalProductTitle" class="text-xl sm:text-2xl font-bold text-slate-900"></h3>
+              <p id="modalProductDesc" class="text-xs sm:text-sm text-slate-500 mt-1.5 leading-relaxed"></p>
+              <div class="text-2xl sm:text-3xl font-extrabold text-indigo-700 mt-2" id="modalProductPrice"></div>
+
+              <!-- Pickup info card -->
+              <div class="mt-3 p-3 bg-indigo-50/70 border border-indigo-100 rounded-xl text-xs text-indigo-950 flex items-start gap-2">
+                <i class="fa-solid fa-location-dot text-indigo-600 mt-0.5 text-xs"></i>
+                <div>
+                  <b>จุดรับเสื้อ:</b> ห้องสโมสรนักศึกษา คณะบริหารธุรกิจและการจัดการ มรภ.อุบลฯ
+                  <span class="block text-[11px] text-slate-500 mt-0.5">* วันจันทร์ - ศุกร์ 09:00 - 16:30 น. (ไม่มีค่าจัดส่ง รับด้วยตนเองเท่านั้น)</span>
+                </div>
+              </div>
+            </div>
+
+            <!-- Size Guide Box -->
+            <div id="modalSizeGuideBox" class="hidden mt-3 p-3 bg-amber-50/70 border border-amber-200/80 rounded-xl text-xs text-amber-950">
+              <div class="font-bold text-amber-900 mb-1 flex items-center gap-1.5">
+                <i class="fa-solid fa-ruler-combined text-amber-700"></i> รายละเอียดขนาด / รอบอกเสื้อ:
+              </div>
+              <div class="text-amber-900/80 whitespace-pre-line text-[11px] leading-relaxed" id="modalSizeGuideContent"></div>
+            </div>
+
+            <!-- เลือกไซส์ (Size) -->
+            <div>
+              <div class="flex items-center justify-between text-xs font-semibold text-slate-700 uppercase tracking-wider mb-2">
+                <span>เลือกไซส์ (Size): <b id="modalSelectedSizeDisplay" class="text-indigo-700 font-bold ml-1"></b></span>
+                <span class="text-[11px] text-amber-600 font-medium">* 2XL ขึ้นไป บวกเพิ่มไซส์ละ 20฿</span>
+              </div>
+              <div class="flex flex-wrap gap-2" id="modalSizeOptions"></div>
+            </div>
+
+            <!-- เลือกสี (Color) -->
+            <div>
+              <label class="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-2">
+                เลือกสี (Color): <b id="modalSelectedColorDisplay" class="text-indigo-700 font-bold ml-1"></b>
+              </label>
+              <div class="flex flex-wrap gap-2" id="modalColorOptions"></div>
+            </div>
+
+            <!-- จำนวนที่จอง & คงเหลือ -->
+            <div class="flex items-center justify-between pt-3 border-t border-slate-100">
+              <div>
+                <span class="block text-xs text-slate-500 font-medium">จำนวนที่จอง:</span>
+                <span class="text-xs text-slate-400">คงเหลือในไซส์นี้: <span id="modalStockText" class="font-bold text-indigo-700"></span> ตัว</span>
+              </div>
+              <div class="flex items-center border border-slate-200 rounded-xl bg-slate-50 p-1">
+                <button type="button" onclick="changeModalQty(-1)" class="w-8 h-8 rounded-lg bg-white text-slate-700 hover:bg-slate-200 flex items-center justify-center font-bold shadow-sm transition">-</button>
+                <span id="modalQtyDisplay" class="w-10 text-center font-bold text-sm text-slate-800">1</span>
+                <button type="button" onclick="changeModalQty(1)" class="w-8 h-8 rounded-lg bg-white text-slate-700 hover:bg-slate-200 flex items-center justify-center font-bold shadow-sm transition">+</button>
+              </div>
+            </div>
+
+            <!-- ปุ่มดำเนินการ -->
+            <div class="flex gap-2.5 pt-2">
+              <button onclick="addToCartFromModal()" id="btnModalAddToCart" 
+                      class="flex-1 py-3 rounded-xl bg-slate-900 text-white font-semibold hover:bg-indigo-900 transition flex items-center justify-center gap-2 shadow-lg shadow-slate-900/10 text-xs sm:text-sm">
+                <i class="fa-solid fa-cart-plus"></i> เพิ่มลงรายการจอง
+              </button>
+              <button onclick="buyNowFromModal()" id="btnModalBuyNow" 
+                      class="px-5 py-3 rounded-xl bg-indigo-700 text-white font-semibold hover:bg-indigo-800 transition flex items-center justify-center gap-1.5 shadow-md text-xs sm:text-sm shrink-0">
+                <i class="fa-solid fa-bolt text-xs"></i> <span>จองทันที</span>
+              </button>
+            </div>
+
+          </div>
+
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal: ดูรูปสินค้าขนาดเต็ม (Lightbox) -->
+  <div id="fullImageModal" class="fixed inset-0 z-50 bg-black/95 backdrop-blur-md items-center justify-center p-2 sm:p-4" style="display: none;">
+    <div class="relative w-full h-full max-w-6xl max-h-[95vh] flex flex-col justify-between">
+      
+      <!-- Top controls -->
+      <div class="flex items-center justify-between text-white p-2 sm:p-4 z-20">
+        <div class="flex items-center gap-3">
+          <span class="font-bold text-sm sm:base text-white" id="lightboxTitle">รูปสินค้า BBA UBRU</span>
+          <span class="text-xs text-slate-400 bg-white/10 px-2.5 py-0.5 rounded-full" id="lightboxIndexBadge">1 / 4</span>
+        </div>
+
+        <div class="flex items-center gap-2">
+          <button type="button" onclick="zoomLightboxImage(0.25)" title="ซูมเข้า" class="w-9 h-9 rounded-xl bg-white/10 hover:bg-white/20 text-white flex items-center justify-center transition">
+            <i class="fa-solid fa-magnifying-glass-plus text-sm"></i>
+          </button>
+          <button type="button" onclick="zoomLightboxImage(-0.25)" title="ซูมออก" class="w-9 h-9 rounded-xl bg-white/10 hover:bg-white/20 text-white flex items-center justify-center transition">
+            <i class="fa-solid fa-magnifying-glass-minus text-sm"></i>
+          </button>
+          <button type="button" onclick="resetLightboxZoom()" title="รีเซ็ตขนาด" class="w-9 h-9 rounded-xl bg-white/10 hover:bg-white/20 text-white flex items-center justify-center transition">
+            <i class="fa-solid fa-arrows-rotate text-sm"></i>
+          </button>
+          <button type="button" onclick="closeFullImageViewer()" title="ปิด" class="w-9 h-9 rounded-xl bg-rose-600 hover:bg-rose-700 text-white flex items-center justify-center transition ml-2">
+            <i class="fa-solid fa-xmark text-base"></i>
+          </button>
+        </div>
+      </div>
+
+      <!-- Main viewport -->
+      <div class="flex-1 relative flex items-center justify-center overflow-hidden p-2">
+        <button type="button" onclick="navigateLightbox(-1)" 
+                class="absolute left-2 sm:left-4 z-20 w-11 h-11 rounded-full bg-white/20 hover:bg-white/40 text-white flex items-center justify-center backdrop-blur transition shadow-lg">
+          <i class="fa-solid fa-chevron-left text-base"></i>
+        </button>
+
+        <div class="max-w-full max-h-full flex items-center justify-center overflow-auto cursor-grab" id="lightboxImageWrapper">
+          <img id="lightboxMainImg" src="" alt="Full view" 
+               class="max-w-full max-h-[76vh] object-contain transition-transform duration-200 select-none shadow-2xl">
+        </div>
+
+        <button type="button" onclick="navigateLightbox(1)" 
+                class="absolute right-2 sm:right-4 z-20 w-11 h-11 rounded-full bg-white/20 hover:bg-white/40 text-white flex items-center justify-center backdrop-blur transition shadow-lg">
+          <i class="fa-solid fa-chevron-right text-base"></i>
+        </button>
+      </div>
+
+      <!-- Bottom thumbnails row -->
+      <div class="p-2 sm:p-3 flex justify-center z-20">
+        <div id="lightboxThumbnailsStrip" class="flex gap-2 overflow-x-auto hide-scrollbar max-w-full bg-white/10 backdrop-blur-md p-2 rounded-2xl border border-white/10"></div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- Drawer 3: รายการจองในตะกร้า (Cart Drawer) -->
+  <div id="cartDrawer" class="fixed inset-0 z-50" style="display: none;">
+    <div class="absolute inset-0 bg-slate-900/50 backdrop-blur-sm transition-opacity" onclick="closeCartDrawer()"></div>
+    
+    <div class="absolute inset-y-0 right-0 max-w-md w-full bg-white shadow-2xl flex flex-col z-10">
+      
+      <div class="p-4 sm:p-5 border-b border-slate-200 flex items-center justify-between bg-slate-50">
+        <div class="flex items-center gap-2">
+          <i class="fa-solid fa-bag-shopping text-indigo-700"></i>
+          <h3 class="font-bold text-slate-900">รายการเสื้อที่เลือกไว้</h3>
+        </div>
+        <button onclick="closeCartDrawer()" class="w-8 h-8 rounded-full text-slate-400 hover:text-slate-700 hover:bg-slate-200/50 flex items-center justify-center">
+          <i class="fa-solid fa-xmark"></i>
+        </button>
+      </div>
+
+      <!-- Items List -->
+      <div id="cartItemsContainer" class="flex-1 overflow-y-auto p-4 sm:p-5 space-y-3">
+      </div>
+
+      <!-- Drawer Footer -->
+      <div class="p-5 border-t border-slate-200 bg-slate-50 space-y-3">
+        <!-- Pickup notice -->
+        <div class="bg-indigo-50 border border-indigo-200 rounded-xl p-3 text-xs text-indigo-900 flex items-start gap-2">
+          <i class="fa-solid fa-location-dot text-indigo-600 mt-0.5"></i>
+          <div>
+            <b>สถานที่รับเสื้อ:</b>
+            <div id="cartPickupLocText">ห้องสโมสรนักศึกษา คณะบริหารธุรกิจและการจัดการ มรภ.อุบลฯ</div>
+            <span class="text-[10px] text-slate-500 block mt-0.5">* ไม่มีบริการจัดส่งพัสดุ รับด้วยตนเองเท่านั้น</span>
+          </div>
+        </div>
+
+        <div class="flex justify-between text-base font-bold text-slate-900 pt-2 border-t border-slate-200">
+          <span>ยอดรวมสุทธิ:</span>
+          <span id="cartTotal" class="text-xl text-indigo-700 font-extrabold">฿0</span>
+        </div>
+
+        <button onclick="goToCheckout()" id="btnGoCheckout" class="w-full py-3.5 rounded-xl bg-indigo-700 text-white font-bold hover:bg-indigo-800 transition flex items-center justify-center gap-2 shadow-lg shadow-indigo-700/20 text-sm">
+          <span>ดำเนินการสั่งจองเสื้อ</span> <i class="fa-solid fa-arrow-right text-xs"></i>
+        </button>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- Modal 4: แบบฟอร์มสั่งจอง & แนบสลิป (Checkout Modal) -->
+  <div id="checkoutModal" class="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-sm items-center justify-center p-3 sm:p-4 overflow-y-auto" style="display: none;">
+    <div class="bg-white rounded-2xl max-w-2xl w-full my-6 overflow-hidden shadow-2xl animate-fade-in flex flex-col max-h-[92vh]">
+      
+      <div class="p-4 sm:p-5 border-b border-slate-200 flex items-center justify-between bg-slate-900 text-white">
+        <div class="flex items-center gap-2">
+          <i class="fa-solid fa-clipboard-check text-indigo-400"></i>
+          <h3 class="font-bold text-base sm:text-lg">ข้อมูลผู้สั่งจอง & ชำระเงิน</h3>
+        </div>
+        <button onclick="closeCheckoutModal()" class="w-8 h-8 rounded-full text-slate-300 hover:text-white hover:bg-white/10 flex items-center justify-center">
+          <i class="fa-solid fa-xmark"></i>
+        </button>
+      </div>
+
+      <div class="p-5 sm:p-6 overflow-y-auto space-y-6 flex-1 text-xs sm:text-sm">
+        
+        <!-- Summary Strip -->
+        <div class="bg-slate-50 rounded-xl p-4 border border-slate-200 flex items-center justify-between">
+          <div>
+            <div class="text-xs text-slate-500">ยอดที่ต้องชำระ:</div>
+            <div id="checkoutSummaryItems" class="text-xs text-slate-700 font-medium"></div>
+          </div>
+          <div class="text-right">
+            <span class="text-xs text-slate-400 block">ยอดรวมสุทธิ</span>
+            <span id="checkoutTotalAmount" class="text-xl sm:text-2xl font-extrabold text-indigo-700">฿0</span>
+          </div>
+        </div>
+
+        <!-- 1) Student Info Form -->
+        <div>
+          <h4 class="font-bold text-slate-800 mb-3 flex items-center gap-1.5 text-sm sm:text-base">
+            <i class="fa-solid fa-id-card text-indigo-700"></i> 1. ข้อมูลนักศึกษาผู้สั่งจอง
+          </h4>
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div>
+              <label class="block text-slate-600 mb-1">รหัสนักศึกษา <span class="text-rose-500">*</span></label>
+              <input type="text" id="custStudentId" readonly 
+                     class="w-full px-3.5 py-2 rounded-xl border border-slate-200 bg-slate-100 font-mono font-bold text-slate-800">
+            </div>
+            <div>
+              <label class="block text-slate-600 mb-1">ชื่อ-นามสกุล <span class="text-rose-500">*</span></label>
+              <input type="text" id="custName" readonly 
+                     class="w-full px-3.5 py-2 rounded-xl border border-slate-200 bg-slate-100 font-medium text-slate-800">
+            </div>
+            <div>
+              <label class="block text-slate-600 mb-1">อีเมลนักศึกษา (@ubru.ac.th) <span class="text-rose-500">*</span></label>
+              <input type="text" id="custEmail" readonly 
+                     class="w-full px-3.5 py-2 rounded-xl border border-slate-200 bg-slate-100 text-indigo-800 font-mono">
+            </div>
+            <div>
+              <label class="block text-slate-600 mb-1">เบอร์โทรศัพท์ (สำหรับติดต่อรับเสื้อ) <span class="text-rose-500">*</span></label>
+              <input type="tel" id="custPhone" placeholder="เช่น 0812345678" maxlength="12" required 
+                     class="w-full px-3.5 py-2 rounded-xl border border-slate-300 focus:outline-none focus:ring-2 focus:ring-indigo-500 bg-white">
+            </div>
+            <div class="sm:col-span-2">
+              <label class="block text-slate-600 mb-1">หมายเหตุเพิ่มเติม (ถ้ามี เช่น คณะ / สาขา)</label>
+              <input type="text" id="custNotes" placeholder="เช่น คณะบริหารธุรกิจและการจัดการ หรือ สาขาการตลาด" 
+                     class="w-full px-3.5 py-2 rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-indigo-500">
+            </div>
+          </div>
+        </div>
+
+        <!-- 2) Pickup Reminder -->
+        <div class="p-3.5 bg-amber-50 border border-amber-200 rounded-xl text-xs space-y-1">
+          <div class="font-bold text-amber-900 flex items-center gap-1.5">
+            <i class="fa-solid fa-location-dot text-amber-600"></i> สถานที่รับเสื้อ:
+          </div>
+          <div class="text-amber-800 pl-5" id="checkoutPickupLocation">ห้องสโมสรนักศึกษา คณะบริหารธุรกิจและการจัดการ มรภ.อุบลฯ</div>
+          <div class="text-[11px] text-amber-700 pl-5">* นำบัตรนักศึกษา หรือใบเสร็จคำสั่งจองมาแสดงในวันรับเสื้อ</div>
+        </div>
+
+        <!-- 3) Payment Info & PromptPay QR -->
+        <div class="pt-4 border-t border-slate-200">
+          <h4 class="font-bold text-slate-800 mb-3 flex items-center gap-1.5 text-sm sm:text-base">
+            <i class="fa-solid fa-qrcode text-indigo-700"></i> 2. โอนเงินเข้าบัญชีสโมสรนักศึกษา
+          </h4>
+
+          <div class="bg-indigo-50/70 border border-indigo-200 rounded-2xl p-4 flex flex-col sm:flex-row items-center gap-4">
+            <div class="text-center bg-white p-2.5 rounded-xl shadow-sm border border-indigo-100 shrink-0">
+              <img id="promptPayQrImg" src="" alt="PromptPay QR" class="w-36 h-36 mx-auto object-contain"
+                   onerror="this.classList.add('hidden');">
+              <span class="text-[10px] text-slate-400 block mt-1">สแกนจ่ายด้วย Mobile Banking</span>
+            </div>
+
+            <div class="space-y-2 text-center sm:text-left flex-1">
+              <div>
+                <span class="text-xs text-slate-500">พร้อมเพย์สโมสร:</span>
+                <div class="flex items-center justify-center sm:justify-start gap-2">
+                  <span id="promptPayDisplay" class="font-mono text-base font-bold text-slate-900"></span>
+                  <button type="button" onclick="copyPromptPay()" class="text-xs text-indigo-700 hover:text-indigo-900 bg-indigo-100 px-2 py-0.5 rounded">คัดลอก</button>
+                </div>
+              </div>
+              <div class="text-xs text-slate-600" id="bankDetailsDisplay"></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- 4) Upload Slip -->
+        <div class="pt-4 border-t border-slate-200">
+          <h4 class="font-bold text-slate-800 mb-2 flex items-center justify-between text-sm sm:text-base">
+            <span class="flex items-center gap-1.5"><i class="fa-solid fa-image text-indigo-700"></i> 3. แนบหลักฐานสลิปการโอนเงิน</span>
+            <span class="text-[11px] font-bold text-rose-600 bg-rose-50 px-2.5 py-0.5 rounded-full border border-rose-200 flex items-center gap-1">
+              <i class="fa-solid fa-circle-exclamation text-[10px]"></i> จำเป็นต้องแนบสลิป
+            </span>
+          </h4>
+          
+          <div class="mt-2">
+            <label for="slipFileInput" class="flex flex-col items-center justify-center w-full h-32 border-2 border-slate-300 border-dashed rounded-xl cursor-pointer bg-slate-50 hover:bg-slate-100 transition relative overflow-hidden">
+              <div id="slipUploadPlaceholder" class="flex flex-col items-center justify-center pt-5 pb-6">
+                <i class="fa-solid fa-cloud-arrow-up text-2xl text-slate-400 mb-1"></i>
+                <p class="text-xs text-slate-600 font-medium">กดเลือกรูปภาพ หรือ ถ่ายภาพสลิป</p>
+                <p class="text-[10px] text-slate-400">รองรับไฟล์ JPG, PNG, WEBP (บีบอัดอัตโนมัติ)</p>
+              </div>
+              <img id="slipPreviewImg" class="hidden absolute inset-0 w-full h-full object-contain bg-white" alt="Slip Preview">
+              <input id="slipFileInput" type="file" accept="image/*" class="hidden" onchange="handleSlipSelected(event)">
+            </label>
+            <div id="slipRemoveBtnArea" class="hidden mt-1.5 text-right">
+              <button onclick="removeSelectedSlip()" type="button" class="text-xs text-rose-600 hover:underline">
+                <i class="fa-solid fa-trash"></i> เปลี่ยนรูปสลิป
+              </button>
+            </div>
+          </div>
+        </div>
+
+      </div>
+
+      <div class="p-4 sm:p-5 border-t border-slate-200 bg-slate-50 flex items-center justify-end gap-3">
+        <button onclick="closeCheckoutModal()" class="px-4 py-2.5 rounded-xl border border-slate-300 text-slate-700 font-medium hover:bg-slate-100 transition text-xs sm:text-sm">
+          ยกเลิก
+        </button>
+        <button onclick="submitOrderFinal()" id="btnSubmitOrder" class="px-6 py-2.5 rounded-xl bg-indigo-700 text-white font-bold hover:bg-indigo-800 transition flex items-center gap-2 text-xs sm:text-sm shadow-md">
+          <i class="fa-solid fa-check"></i> ยืนยันการสั่งจองเสื้อ
+        </button>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- ==================== Modal 7: ใบเสร็จการสั่งจองเสื้อ (Receipt Modal) ==================== -->
+  <div id="receiptModal" class="fixed inset-0 z-50 bg-slate-900/70 backdrop-blur-sm items-center justify-center p-2 sm:p-4 overflow-y-auto" style="display: none;">
+    <div class="bg-white rounded-2xl sm:rounded-3xl max-w-xl w-full my-auto overflow-hidden shadow-2xl animate-fade-in flex flex-col max-h-[96vh]">
+      
+      <!-- Modal Top Toolbar -->
+      <div class="p-3.5 sm:p-4 border-b border-slate-200 flex items-center justify-between bg-slate-900 text-white shrink-0 no-print">
+        <div class="flex items-center gap-2">
+          <div class="w-8 h-8 rounded-lg bg-indigo-600 text-white flex items-center justify-center text-sm shadow-sm">
+            <i class="fa-solid fa-file-invoice"></i>
+          </div>
+          <div>
+            <h3 class="font-bold text-xs sm:text-sm leading-tight">ใบเสร็จการสั่งจองเสื้อ BBA UBRU</h3>
+            <span class="text-[10px] text-slate-300">สามารถบันทึกรูปภาพหรือพิมพ์เก็บเป็นหลักฐานได้</span>
+          </div>
+        </div>
+
+        <div class="flex items-center gap-1.5 sm:gap-2">
+          <button onclick="downloadReceiptImage()" type="button" class="px-2.5 sm:px-3 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white text-[11px] sm:text-xs font-semibold shadow transition flex items-center gap-1" title="บันทึกรูปภาพลงเครื่อง">
+            <i class="fa-solid fa-download"></i> <span class="hidden sm:inline">บันทึกรูปภาพ</span><span class="inline sm:hidden">รูปภาพ</span>
+          </button>
+          <button onclick="printReceipt()" type="button" class="px-2.5 sm:px-3 py-1.5 rounded-lg bg-indigo-600 hover:bg-indigo-700 text-white text-[11px] sm:text-xs font-semibold shadow transition flex items-center gap-1" title="พิมพ์หรือบันทึกเป็น PDF">
+            <i class="fa-solid fa-print"></i> <span class="hidden sm:inline">พิมพ์ / PDF</span><span class="inline sm:hidden">พิมพ์</span>
+          </button>
+          <button onclick="closeReceiptModal()" type="button" class="w-7 h-7 sm:w-8 sm:h-8 rounded-full text-slate-300 hover:text-white hover:bg-white/10 flex items-center justify-center transition" title="ปิด">
+            <i class="fa-solid fa-xmark text-sm"></i>
+          </button>
+        </div>
+      </div>
+
+      <!-- Receipt Body Viewport -->
+      <div class="p-3 sm:p-5 overflow-y-auto flex-1 bg-slate-100 flex justify-center">
+        
+        <!-- ==================== RECEIPT PAPER CONTAINER ==================== -->
+        <div id="receiptPaper" class="bg-white p-5 sm:p-7 rounded-2xl shadow-sm border border-slate-200 w-full text-slate-800 text-xs sm:text-sm">
+          
+          <!-- Header -->
+          <div class="flex items-center justify-between pb-4 border-b border-slate-200 gap-3">
+            <div class="flex items-center gap-2.5">
+              <img src="https://i.postimg.cc/g0V05nHd/LOGO-SAMO-002-(1).png" alt="BBA UBRU Logo" 
+                   class="w-12 h-12 object-contain rounded-lg shrink-0" 
+                   crossorigin="anonymous"
+                   onerror="this.src='https://placehold.co/100x100?text=BBA';">
+              <div>
+                <h4 class="font-bold text-xs sm:text-sm text-slate-900 leading-tight">สโมสรนักศึกษา คณะบริหารธุรกิจและการจัดการ</h4>
+                <p class="text-[10px] sm:text-xs text-indigo-700 font-semibold">มหาวิทยาลัยราชภัฏอุบลราชธานี (BBA UBRU)</p>
+                <p class="text-[9px] sm:text-[10px] text-slate-400 mt-0.5">ใบเสร็จรับเงิน / ใบยืนยันการสั่งจองเสื้อ (E-Receipt)</p>
+              </div>
+            </div>
+          </div>
+
+          <!-- Order & Customer Meta Info -->
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 py-3.5 border-b border-slate-100 text-xs">
+            <div class="space-y-1">
+              <div>
+                <span class="text-slate-400">รหัสคำสั่งจอง:</span>
+                <span id="receiptOrderId" class="font-mono font-bold text-indigo-950 text-xs sm:text-sm ml-1"></span>
+              </div>
+              <div>
+                <span class="text-slate-400">วันที่ทำการสั่งจอง:</span>
+                <span id="receiptOrderDate" class="font-medium text-slate-700 ml-1"></span>
+              </div>
+              <div>
+                <span class="text-slate-400">วิธีการชำระ:</span>
+                <span class="font-medium text-slate-700 ml-1">โอนผ่านพร้อมเพย์ (แนบสลิปแล้ว)</span>
+              </div>
+            </div>
+
+            <div class="space-y-1 sm:text-right">
+              <div>
+                <span class="text-slate-400">รหัสนักศึกษา:</span>
+                <span id="receiptStudentId" class="font-mono font-bold text-slate-900 ml-1"></span>
+              </div>
+              <div>
+                <span class="text-slate-400">ชื่อผู้สั่งจอง:</span>
+                <span id="receiptStudentName" class="font-semibold text-slate-800 ml-1"></span>
+              </div>
+              <div>
+                <span class="text-slate-400">เบอร์โทรศัพท์:</span>
+                <span id="receiptStudentPhone" class="font-mono text-slate-700 ml-1"></span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Items Table -->
+          <div class="py-3">
+            <h5 class="font-bold text-slate-800 text-xs mb-2 flex items-center justify-between">
+              <span class="flex items-center gap-1.5"><i class="fa-solid fa-shirt text-indigo-700"></i> รายการเสื้อสโมสรที่สั่งจอง:</span>
+              <span id="receiptItemCountBadge" class="text-[11px] text-slate-500 font-normal"></span>
+            </h5>
+            <div id="receiptTableContainer" class="overflow-x-auto rounded-xl border border-slate-200" style="max-height: 240px; overflow-y: auto;">
+              <table class="w-full text-left text-xs border-collapse">
+                <thead class="bg-slate-50 text-slate-600 font-semibold border-b border-slate-200 text-[11px] sticky top-0 z-10 shadow-sm">
+                  <tr>
+                    <th class="p-2 sm:p-2.5 text-center w-8 bg-slate-50">#</th>
+                    <th class="p-2 sm:p-2.5 bg-slate-50">รายการเสื้อ / ไซส์ / สี</th>
+                    <th class="p-2 sm:p-2.5 text-right w-16 sm:w-20 bg-slate-50">ราคา</th>
+                    <th class="p-2 sm:p-2.5 text-center w-12 bg-slate-50">จำนวน</th>
+                    <th class="p-2 sm:p-2.5 text-right w-20 sm:w-24 bg-slate-50">รวม (บาท)</th>
+                  </tr>
+                </thead>
+                <tbody id="receiptItemsTbody" class="divide-y divide-slate-100">
+                </tbody>
+                <tfoot class="bg-slate-50/95 border-t border-slate-200 font-bold sticky bottom-0 z-10 shadow-sm">
+                  <tr>
+                    <td colspan="3" class="p-2 sm:p-2.5 text-right text-slate-600 text-xs bg-slate-50/95">ยอดรวมสุทธิ:</td>
+                    <td id="receiptTotalQty" class="p-2 sm:p-2.5 text-center text-slate-800 text-xs bg-slate-50/95">0</td>
+                    <td id="receiptGrandTotal" class="p-2 sm:p-2.5 text-right text-indigo-700 text-sm sm:text-base font-extrabold bg-slate-50/95">฿0</td>
+                  </tr>
+                </tfoot>
+              </table>
+            </div>
+          </div>
+
+          <!-- Pickup Information Box -->
+          <div class="bg-indigo-50/70 border border-indigo-200 rounded-xl p-3 sm:p-3.5 space-y-1 text-xs">
+            <div class="font-bold text-indigo-950 flex items-center gap-1.5">
+              <i class="fa-solid fa-location-dot text-indigo-700"></i> สถานที่รับเสื้อ:
+            </div>
+            <div id="receiptPickupLoc" class="text-indigo-900 font-medium pl-4">ห้องสโมสรนักศึกษา คณะบริหารธุรกิจและการจัดการ มรภ.อุบลฯ</div>
+            <div id="receiptPickupSchedule" class="text-[11px] text-indigo-700 pl-4">วันจันทร์ - ศุกร์ เวลา 09:00 - 16:30 น.</div>
+            <div class="text-[11px] text-amber-700 font-semibold pt-1 border-t border-indigo-100 mt-1 pl-4">
+              * โปรดบันทึกภาพใบเสร็จนี้ หรือนำบัตรประจำตัวนักศึกษามาแสดงต่อกรรมการสโมสรในวันรับเสื้อ
+            </div>
+          </div>
+
+          <!-- Footer Stamp & Note -->
+          <div class="mt-4 pt-3 border-t border-dashed border-slate-200 flex flex-col sm:flex-row items-center justify-between text-[11px] text-slate-400 gap-2">
+            <div>
+              <span>ออกเอกสารโดยระบบอัตโนมัติ สโมสรนักศึกษา BBA UBRU</span>
+            </div>
+            <div class="font-mono text-indigo-700 font-bold text-[10px] bg-slate-50 px-2 py-0.5 rounded border border-slate-200">
+              OFFICIAL RECEIPT
+            </div>
+          </div>
+
+        </div>
+        <!-- ==================== END RECEIPT PAPER ==================== -->
+
+      </div>
+
+      <!-- Modal Bottom Actions Bar -->
+      <div class="p-3.5 sm:p-4 border-t border-slate-200 bg-white flex flex-col sm:flex-row items-center justify-between gap-2.5 shrink-0 no-print">
+        <div class="text-[11px] text-slate-500 flex items-center gap-1.5">
+          <i class="fa-solid fa-circle-info text-indigo-600"></i>
+          <span>สามารถกดปุ่ม "บันทึกรูปภาพ" เพื่อเก็บไว้ในเครื่องโทรศัพท์หรือคอมพิวเตอร์</span>
+        </div>
+
+        <div class="flex items-center gap-2 w-full sm:w-auto">
+          <button onclick="downloadReceiptImage()" type="button" class="flex-1 sm:flex-none px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold transition flex items-center justify-center gap-1.5 shadow-sm">
+            <i class="fa-solid fa-floppy-disk"></i> <span>บันทึกใบเสร็จ (รูปภาพ)</span>
+          </button>
+          <button onclick="closeReceiptModalAndGoTrack()" type="button" class="flex-1 sm:flex-none px-4 py-2 rounded-xl bg-slate-900 hover:bg-indigo-900 text-white text-xs font-bold transition flex items-center justify-center gap-1.5 shadow-sm">
+            <span>ไปหน้าเช็กสถานะ</span> <i class="fa-solid fa-arrow-right text-[10px]"></i>
+          </button>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- ==================== 4. FOOTER ==================== -->
+  <footer class="bg-white border-t border-slate-200 mt-12 py-8 text-center text-xs text-slate-500 no-print">
+    <div class="max-w-7xl mx-auto px-4 space-y-2">
+      <div class="flex items-center justify-center gap-2 font-bold text-slate-800 text-sm">
+        <i class="fa-solid fa-graduation-cap text-indigo-700"></i> <span>สโมสรนักศึกษา คณะบริหารธุรกิจและการจัดการ มหาวิทยาลัยราชภัฏอุบลราชธานี (BBA UBRU)</span>
+      </div>
+      <p>รับเสื้อได้ที่ห้องสโมสรนักศึกษา คณะบริหารธุรกิจและการจัดการ มรภ.อุบลฯ</p>
+      <p class="text-[11px] text-slate-400">© 2026 BBA UBRU Student Union. All Rights Reserved.</p>
+    </div>
+  </footer>
+
+  <!-- ==================== 5. JAVASCRIPT LOGIC ==================== -->
+  <script>
+    // Helper: XSS Protection
+    function escapeHtml(str) {
+      if (str === null || str === undefined) return '';
+      return String(str)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#039;');
+    }
+
+    // Helper: จัดการรหัส PIN 4 หลัก ไม่ให้เลข 0 ด้านหน้าหายไป
+    function normalizePin(val) {
+      if (val === null || val === undefined) return '';
+      let s = String(val).trim();
+      if (s.startsWith("'")) s = s.substring(1).trim();
+      s = s.replace(/[^0-9]/g, '');
+      if (!s) return '';
+      if (s.length < 4) s = s.padStart(4, '0');
+      return s;
+    }
+
+    // Helper: จัดการเบอร์โทรศัพท์ ไม่ให้เลข 0 ด้านหน้าหายไป (เช่น 812345678 -> 0812345678)
+    function normalizePhone(val) {
+      if (val === null || val === undefined) return '';
+      let s = String(val).trim();
+      if (s.startsWith("'")) s = s.substring(1).trim();
+      s = s.replace(/[^0-9]/g, '');
+      if (!s) return '';
+      if (s.length === 9 && !s.startsWith('0')) s = '0' + s;
+      return s;
+    }
+
+    // Helper: จัดการรหัสนักศึกษา
+    function normalizeStudentId(val) {
+      if (val === null || val === undefined) return '';
+      let s = String(val).trim();
+      if (s.startsWith("'")) s = s.substring(1).trim();
+      return s;
+    }
+
+    // คำนวณส่วนเพิ่มราคาสำหรับเสื้อไซส์ 2XL ขึ้นไป (เพิ่มไซส์ละ 20 บาท)
+    function getSizeExtraCharge(size) {
+      if (!size) return 0;
+      const s = String(size).trim().toUpperCase();
+      const m = s.match(/^(\d+)XL$/);
+      if (m) {
+        const num = parseInt(m[1], 10);
+        if (num >= 2) return (num - 1) * 20;
+      }
+      if (s === 'XXL') return 20;
+      if (s === 'XXXL') return 40;
+      if (s === 'XXXXL') return 60;
+      return 0;
+    }
+
+    // Base API URL: ถ้าเปิดผ่านเว็บ Worker ใช้ relative path แต่ถ้าเปิดเป็น Tauri App หรืออื่นๆ ให้ชี้ไปยัง Cloudflare Worker
+    const API_BASE = (window.location.origin && window.location.origin.includes('workers.dev')) ? '' : 'https://bba-store.smobba.workers.dev';
+
+    // State Variables
+    let storeSettings = {
+      storeName: 'SMO BBA SHOP',
+      clubLocation: 'ห้องสโมสรนักศึกษา คณะบริหารธุรกิจและการจัดการ มรภ.อุบลฯ',
+      clubSchedule: 'วันจันทร์ - ศุกร์ เวลา 09:00 - 16:30 น.',
+      promptPay: '004999245434427',
+      bankDetails: '',
+      allowedDomain: '@ubru.ac.th',
+      isStoreOpen: true,
+      storeClosedNotice: 'ขณะนี้ปิดรับการสั่งจองเสื้อรอบนี้แล้ว เจอกันใหม่ในรอบถัดไปครับ/ค่ะ'
+    };
+    let currentStudent = null; // { studentId, name, email }
+    let allProducts = [];
+    let cart = [];
+    let selectedProduct = null;
+    let selectedSize = '';
+    let selectedColor = '';
+    let modalQty = 1;
+    let slipBase64 = '';
+    let slipMimeType = '';
+    let modalGalleryImages = [];
+    let activeGalleryIndex = 0;
+    let lightboxZoomLevel = 1;
+    let isSubmittingOrder = false;
+    let currentOrderRequestId = null;
+    let storeRequestPending = false;
+    let activeCategory = 'ทั้งหมด';
+    let appInitialized = false;
+
+    // ข้อมูลใบเสร็จปัจจุบัน สำหรับกดบันทึกหรือพิมพ์
+    let currentReceiptData = null;
+    let trackOrdersCache = [];
+    let simulatedOrdersSession = [];
+    let serverWebAppUrl = '';
+
+    // ฟังก์ชันนำทางไปหน้าระบบแอดมินหลังบ้าน
+    function goToAdmin(event) {
+      if (event) event.preventDefault();
+      window.location.href = '/admin';
+    }
+
+    let storeCategories = ['เสื้อโปโล', 'เสื้อยืด Oversize', 'เสื้อกิจกรรม', 'เสื้อกันหนาว/แจ็คเก็ต'];
+
+    const defaultSampleProducts = [
+      {
+        productId: 'BBA-01',
+        name: 'เสื้อโปโลสโมสรนักศึกษา BBA UBRU คณะบริหารธุรกิจและการจัดการ',
+        category: 'เสื้อโปโล',
+        price: 350,
+        sizes: ['S', 'M', 'L', 'XL', '2XL', '3XL'],
+        colors: ['ฟ้าคราม-ทอง', 'กรมท่า-ขาว'],
+        stock: 100,
+        imageUrl: 'https://images.unsplash.com/photo-1586363104862-3a5e2ab60d99?w=800&q=80',
+        description: 'ผ้าเนื้อดี นุ่มระบายเหงื่อ ปักตราสโมสรนักศึกษาคณะบริหารธุรกิจและการจัดการ สวยหรู เรียบร้อย ใส่ทางการได้',
+        status: 'พร้อมจำหน่าย'
+      },
+      {
+        productId: 'BBA-02',
+        name: 'เสื้อยืด Oversize BBA UBRU สไตล์ Streetwear',
+        category: 'เสื้อยืด Oversize',
+        price: 290,
+        sizes: ['M', 'L', 'XL', '2XL'],
+        colors: ['ดำฟอก', 'ขาวออฟไวท์'],
+        stock: 80,
+        imageUrl: 'https://images.unsplash.com/photo-1503342217505-b0a15ec3261c?w=800&q=80',
+        description: 'ผ้า Cotton 100% สกรีนลายกราฟิก BBA UBRU STUDENT UNION ลุคเท่ ใส่ร่วมกิจกรรมได้ทุกวัน',
+        status: 'พร้อมจำหน่าย'
+      },
+      {
+        productId: 'BBA-03',
+        name: 'เสื้อยืดกิจกรรม Freshy BBA UBRU บริหารธุรกิจสัมพันธ์',
+        category: 'เสื้อกิจกรรม',
+        price: 200,
+        sizes: ['S', 'M', 'L', 'XL', '2XL'],
+        colors: ['ฟ้า', 'เหลือง', 'ขาว'],
+        stock: 150,
+        imageUrl: 'https://images.unsplash.com/photo-1521572267360-ee0c2909d518?w=800&q=80',
+        description: 'เสื้อยืดรุ่นพิเศษใส่สบาย สีสันสดใส ลายสกรีนต้อนรับน้องใหม่คณะบริหารธุรกิจและการจัดการ',
+        status: 'พร้อมจำหน่าย'
+      }
+    ];
+
+    // LocalStorage Helper
+    function readStoredJson(key, fallback) {
+      try {
+        const raw = localStorage.getItem(key);
+        return raw ? JSON.parse(raw) : fallback;
+      } catch (error) { return fallback; }
+    }
+
+    function writeStoredJson(key, value) {
+      try {
+        if (value === null) localStorage.removeItem(key);
+        else localStorage.setItem(key, JSON.stringify(value));
+      } catch (error) {
+        console.warn('Browser storage unavailable; keeping data for this session.');
+      }
+    }
+
+    function loadStudentFromStorage() {
+      const saved = readStoredJson('ubru_student', null);
+      if (saved && typeof saved === 'object' && saved.studentId && saved.name) {
+        const sId = normalizeStudentId(saved.studentId);
+        currentStudent = {
+          studentId: sId,
+          name: String(saved.name).trim(),
+          phone: normalizePhone(saved.phone),
+          email: 'std.' + sId + '@ubru.ac.th',
+          pin: normalizePin(saved.pin)
+        };
+      } else {
+        currentStudent = null;
+      }
+      updateStudentUI();
+    }
+
+    function saveStudentToStorage() {
+      writeStoredJson('ubru_student', currentStudent);
+    }
+
+    function debounce(fn, delay) {
+      let timer;
+      return function (...args) {
+        clearTimeout(timer);
+        timer = setTimeout(() => fn.apply(this, args), delay);
+      };
+    }
+
+    const debouncedProductSearch = debounce(searchProducts, 150);
+
+    function showStoreLoadError(message) {
+      const grid = document.getElementById('productGrid');
+      if (allProducts.length) return;
+      grid.innerHTML = '<div class="col-span-full text-center py-12"><p id="storeLoadError" class="text-rose-600 mb-3"></p><button type="button" onclick="fetchStoreData()" class="rounded-xl bg-slate-900 text-white px-4 py-2 text-xs font-semibold hover:bg-indigo-700 transition">ลองใหม่อีกครั้ง</button></div>';
+      const errEl = document.getElementById('storeLoadError');
+      if (errEl) errEl.textContent = message;
+    }
+
+    async function fetchStoreData() {
+      if (storeRequestPending) return;
+      storeRequestPending = true;
+      try {
+        const res = await fetch(API_BASE + '/api/store');
+        const data = await res.json();
+        storeRequestPending = false;
+        if (data && data.success) {
+          storeSettings.storeName = String(data.storeName || storeSettings.storeName);
+          storeSettings.clubLocation = String(data.clubLocation || storeSettings.clubLocation);
+          storeSettings.clubSchedule = String(data.clubSchedule || storeSettings.clubSchedule);
+          storeSettings.promptPay = String(data.promptPay || storeSettings.promptPay || '004999245434427');
+          storeSettings.bankDetails = String(data.bankDetails || storeSettings.bankDetails);
+          storeSettings.allowedDomain = String(data.allowedDomain || '@ubru.ac.th');
+          allProducts = Array.isArray(data.products) ? data.products : [];
+
+          if (data.categories && Array.isArray(data.categories) && data.categories.length > 0) {
+            storeCategories = data.categories;
+          } else if (allProducts.length > 0) {
+            const extracted = [...new Set(allProducts.map(p => p.category).filter(Boolean))];
+            if (extracted.length > 0) storeCategories = extracted;
+          }
+          renderCategoryPills(storeCategories);
+
+          updateStoreUI();
+          searchProducts();
+        } else {
+          showStoreLoadError((data && data.message) || 'ไม่สามารถโหลดข้อมูลร้านค้าได้');
+        }
+      } catch (err) {
+        storeRequestPending = false;
+        showStoreLoadError(err.message || 'ไม่สามารถเชื่อมต่อร้านค้าได้ กรุณาลองอีกครั้ง');
+      }
+    }
+
+    function updateStoreUI() {
+      const setTxt = (id, val) => {
+        const el = document.getElementById(id);
+        if (el) el.textContent = val;
+      };
+      setTxt('navStoreName', storeSettings.storeName);
+      setTxt('bannerClubLocation', storeSettings.clubLocation);
+      setTxt('bannerClubSchedule', storeSettings.clubSchedule);
+      setTxt('cartPickupLocText', storeSettings.clubLocation);
+      setTxt('checkoutPickupLocation', storeSettings.clubLocation);
+      setTxt('promptPayDisplay', storeSettings.promptPay || '004999245434427');
+      setTxt('bankDetailsDisplay', storeSettings.bankDetails || 'โอนผ่านพร้อมเพย์ข้างต้น');
+    }
+
+    let pendingOpenHistory = false;
+
+    function updateStudentUI() {
+      const btnOpenLogin = document.getElementById('btnOpenLogin');
+      const btnOpenRegister = document.getElementById('btnOpenRegister');
+      const profilePill = document.getElementById('studentProfilePill');
+      const trackNotLoggedInBox = document.getElementById('trackNotLoggedInBox');
+      const trackLoggedInContent = document.getElementById('trackLoggedInContent');
+      const trackName = document.getElementById('loggedInTrackName');
+      const trackId = document.getElementById('loggedInTrackId');
+
+      if (currentStudent) {
+        if (btnOpenLogin) btnOpenLogin.classList.add('hidden');
+        if (btnOpenRegister) btnOpenRegister.classList.add('hidden');
+        if (profilePill) profilePill.classList.remove('hidden');
+        const nameEl = document.getElementById('profileStudentName');
+        const idEl = document.getElementById('profileStudentId');
+        if (nameEl) nameEl.textContent = currentStudent.name || 'นักศึกษา';
+        if (idEl) idEl.textContent = currentStudent.email || ('std.' + currentStudent.studentId + '@ubru.ac.th');
+
+        if (trackNotLoggedInBox) trackNotLoggedInBox.classList.add('hidden');
+        if (trackLoggedInContent) trackLoggedInContent.classList.remove('hidden');
+        if (trackName) trackName.textContent = currentStudent.name || 'นักศึกษา';
+        if (trackId) trackId.textContent = 'รหัสนักศึกษา: ' + currentStudent.studentId;
+      } else {
+        if (btnOpenLogin) btnOpenLogin.classList.remove('hidden');
+        if (btnOpenRegister) btnOpenRegister.classList.remove('hidden');
+        if (profilePill) profilePill.classList.add('hidden');
+
+        if (trackNotLoggedInBox) trackNotLoggedInBox.classList.remove('hidden');
+        if (trackLoggedInContent) trackLoggedInContent.classList.add('hidden');
+      }
+    }
+
+    function openMyOrdersHistory() {
+      if (!currentStudent) {
+        pendingOpenHistory = true;
+        Swal.fire({
+          icon: 'info',
+          title: 'เข้าสู่ระบบนักศึกษา',
+          text: 'ประวัติการสั่งซื้อสามารถดูได้เฉพาะของตัวเองเท่านั้น กรุณาเข้าสู่ระบบด้วยรหัสนักศึกษาของคุณ (ประวัติรวมตรวจได้เฉพาะหลังบ้าน)',
+          confirmButtonText: 'เข้าสู่ระบบ',
+          confirmButtonColor: '#4338ca',
+          showCancelButton: true,
+          cancelButtonText: 'ยกเลิก'
+        }).then(result => {
+          if (result.isConfirmed) {
+            openLoginModal();
+          }
+        });
+        return;
+      }
+
+      const trackInput = document.getElementById('trackInput');
+      if (trackInput) {
+        trackInput.value = '';
+      }
+      switchView('track');
+    }
+
+    function trackMyOrders() {
+      if (!currentStudent) {
+        openLoginModal();
+        return;
+      }
+      handleTrackSearch();
+    }
+
+    function openLoginModal() {
+      const modal = document.getElementById('studentLoginModal');
+      if (!modal) return;
+      closeRegisterModal();
+      const idInp = document.getElementById('loginStudentId');
+      const pinInp = document.getElementById('loginStudentPin');
+      if (idInp && currentStudent) idInp.value = currentStudent.studentId || '';
+      if (pinInp) pinInp.value = '';
+      modal.style.display = 'flex';
+    }
+
+    function closeLoginModal() {
+      const modal = document.getElementById('studentLoginModal');
+      if (modal) modal.style.display = 'none';
+    }
+
+    function openRegisterModal() {
+      const modal = document.getElementById('studentRegisterModal');
+      if (!modal) return;
+      closeLoginModal();
+      const idInp = document.getElementById('regStudentId');
+      const nameInp = document.getElementById('regStudentName');
+      const phoneInp = document.getElementById('regStudentPhone');
+      const pinInp = document.getElementById('regStudentPin');
+      if (idInp) idInp.value = '';
+      if (nameInp) nameInp.value = '';
+      if (phoneInp) phoneInp.value = '';
+      if (pinInp) pinInp.value = '';
+      syncStudentRegEmail();
+      modal.style.display = 'flex';
+    }
+
+    function closeRegisterModal() {
+      const modal = document.getElementById('studentRegisterModal');
+      if (modal) modal.style.display = 'none';
+    }
+
+    function switchToRegisterModal() {
+      closeLoginModal();
+      openRegisterModal();
+    }
+
+    function switchToLoginModal() {
+      closeRegisterModal();
+      openLoginModal();
+    }
+
+    function syncStudentRegEmail() {
+      const inputEl = document.getElementById('regStudentId');
+      const stdId = inputEl ? inputEl.value.trim() : '';
+      const display = document.getElementById('regStudentEmailDisplay');
+      if (display) {
+        display.textContent = stdId ? ('std.' + stdId + '@ubru.ac.th') : 'std.รหัสนักศึกษา@ubru.ac.th';
+      }
+    }
+
+    async function handleStudentLogin() {
+      const idInp = document.getElementById('loginStudentId');
+      const pinInp = document.getElementById('loginStudentPin');
+
+      const studentId = normalizeStudentId(idInp ? idInp.value : '');
+      const pin = normalizePin(pinInp ? pinInp.value : '');
+
+      if (!studentId) {
+        Swal.fire('กรุณาระบุข้อมูล', 'กรุณากรอกรหัสนักศึกษา', 'warning');
+        return;
+      }
+      if (!pin || pin.length !== 4) {
+        Swal.fire('กรุณาระบุข้อมูล', 'กรุณากรอกรหัส PIN เป็นตัวเลข 4 หลัก (เช่น 0123)', 'warning');
+        return;
+      }
+
+      const btn = document.getElementById('btnLoginSubmit');
+      if (btn) {
+        btn.disabled = true;
+        btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin text-xs"></i> <span>กำลังเข้าสู่ระบบ...</span>';
+      }
+
+      try {
+        const res = await fetch(API_BASE + '/api/login', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ studentId, pin })
+        });
+        const resData = await res.json();
+        if (btn) {
+          btn.disabled = false;
+          btn.innerHTML = '<i class="fa-solid fa-right-to-bracket text-xs"></i> <span>เข้าสู่ระบบ</span>';
+        }
+        if (resData && resData.success && resData.student) {
+          currentStudent = {
+            studentId: normalizeStudentId(resData.student.studentId),
+            name: String(resData.student.name || '').trim(),
+            phone: normalizePhone(resData.student.phone),
+            email: String(resData.student.email || ('std.' + resData.student.studentId + '@ubru.ac.th')).trim(),
+            pin: pin
+          };
+          saveStudentToStorage();
+          updateStudentUI();
+          closeLoginModal();
+          Swal.fire({
+            icon: 'success',
+            title: 'เข้าสู่ระบบสำเร็จ!',
+            text: 'ยินดีต้อนรับ คุณ' + currentStudent.name + ' (' + currentStudent.studentId + ')',
+            timer: 2000,
+            showConfirmButton: false
+          });
+          if (pendingOpenHistory) {
+            pendingOpenHistory = false;
+            setTimeout(() => { openMyOrdersHistory(); }, 400);
+          }
+        } else {
+          Swal.fire('เข้าสู่ระบบไม่สำเร็จ', (resData && resData.message) || 'รหัสนักศึกษาหรือรหัส PIN ไม่ถูกต้อง', 'error');
+        }
+      } catch (err) {
+        if (btn) {
+          btn.disabled = false;
+          btn.innerHTML = '<i class="fa-solid fa-right-to-bracket text-xs"></i> <span>เข้าสู่ระบบ</span>';
+        }
+        Swal.fire('เกิดข้อผิดพลาด', err.message || 'ไม่สามารถเชื่อมต่อเซิร์ฟเวอร์ได้', 'error');
+      }
+    }
+
+    async function handleStudentRegister() {
+      const idInp = document.getElementById('regStudentId');
+      const nameInp = document.getElementById('regStudentName');
+      const phoneInp = document.getElementById('regStudentPhone');
+      const pinInp = document.getElementById('regStudentPin');
+
+      const studentId = normalizeStudentId(idInp ? idInp.value : '');
+      const studentName = nameInp ? nameInp.value.trim() : '';
+      const studentPhone = normalizePhone(phoneInp ? phoneInp.value : '');
+      const pin = normalizePin(pinInp ? pinInp.value : '');
+
+      if (!studentId) {
+        Swal.fire('กรุณาระบุข้อมูล', 'กรุณากรอกรหัสนักศึกษา', 'warning');
+        return;
+      }
+      if (!studentName) {
+        Swal.fire('กรุณาระบุข้อมูล', 'กรุณากรอกชื่อ-นามสกุล', 'warning');
+        return;
+      }
+      if (!studentPhone || studentPhone.length < 9) {
+        Swal.fire('กรุณาระบุข้อมูล', 'กรุณากรอกเบอร์โทรศัพท์ติดต่อที่ถูกต้อง (เช่น 0812345678)', 'warning');
+        return;
+      }
+      if (!pin || pin.length !== 4) {
+        Swal.fire('กรุณาระบุข้อมูล', 'กรุณาสร้างรหัส PIN 4 หลัก (เช่น 0123)', 'warning');
+        return;
+      }
+
+      const email = 'std.' + studentId + '@ubru.ac.th';
+
+      const btn = document.getElementById('btnRegSubmit');
+      if (btn) {
+        btn.disabled = true;
+        btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin text-xs"></i> <span>กำลังลงทะเบียน...</span>';
+      }
+
+      try {
+        const res = await fetch(API_BASE + '/api/register', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            studentId: studentId,
+            name: studentName,
+            email: email,
+            phone: studentPhone,
+            pin: pin
+          })
+        });
+        const resData = await res.json();
+        if (btn) {
+          btn.disabled = false;
+          btn.innerHTML = '<i class="fa-solid fa-user-plus text-xs"></i> <span>ลงทะเบียนและเข้าสู่ระบบ</span>';
+        }
+        if (resData && resData.success && resData.student) {
+          currentStudent = {
+            studentId: studentId,
+            name: studentName,
+            phone: studentPhone,
+            email: email,
+            pin: pin
+          };
+          saveStudentToStorage();
+          updateStudentUI();
+          closeRegisterModal();
+          Swal.fire({
+            icon: 'success',
+            title: 'ลงทะเบียนสำเร็จ!',
+            text: 'ยินดีต้อนรับ คุณ ' + studentName + ' (' + studentId + ') สามารถสั่งจองเสื้อได้ทันที',
+            timer: 2000,
+            showConfirmButton: false
+          });
+        } else {
+          Swal.fire('ลงทะเบียนไม่สำเร็จ', (resData && resData.message) || 'เกิดข้อผิดพลาดในการลงทะเบียน', 'error');
+        }
+      } catch (err) {
+        if (btn) {
+          btn.disabled = false;
+          btn.innerHTML = '<i class="fa-solid fa-user-plus text-xs"></i> <span>ลงทะเบียนและเข้าสู่ระบบ</span>';
+        }
+        Swal.fire('เกิดข้อผิดพลาด', err.message || 'ไม่สามารถเชื่อมต่อเซิร์ฟเวอร์ได้', 'error');
+      }
+    }
+
+    function logoutStudent() {
+      Swal.fire({
+        title: 'ยืนยันการออกจากระบบ?',
+        icon: 'question',
+        showCancelButton: true,
+        confirmButtonText: 'ออกจากระบบ',
+        cancelButtonText: 'ยกเลิก',
+        confirmButtonColor: '#e11d48'
+      }).then(res => {
+        if (res.isConfirmed) {
+          currentStudent = null;
+          saveStudentToStorage();
+          updateStudentUI();
+          Swal.fire({
+            icon: 'info',
+            title: 'ออกจากระบบเรียบร้อยแล้ว',
+            timer: 1500,
+            showConfirmButton: false
+          });
+        }
+      });
+    }
+
+    // Helper สำหรับแยกรูปภาพ (รองรับทั้ง URL ภายนอก และ Base64 Data URL)
+    function splitProductImages(raw) {
+      if (!raw) return [];
+      const str = String(raw).trim();
+      if (!str) return [];
+      const resolveApi = u => (u.startsWith('/api/') ? API_BASE + u : u);
+      if (str.includes('|||')) {
+        return str.split('|||').map(s => s.trim()).filter(Boolean).map(resolveApi);
+      }
+      if (str.includes('data:image/')) {
+        const matches = str.match(/(?:data:image\/[a-zA-Z0-9.+_-]+;base64,[A-Za-z0-9+/=]+)|(?:https?:\/\/[^\s,]+)|(?:\/api\/images\/[^\s,]+)/g);
+        if (matches && matches.length > 0) return matches.map(resolveApi);
+      }
+      return str.split(/[\n,]+/).map(s => s.trim()).filter(Boolean).map(resolveApi);
+    }
+
+    function renderProducts(products) {
+      const grid = document.getElementById('productGrid');
+      if (!products || products.length === 0) {
+        grid.innerHTML = '<div class="col-span-full py-16 text-center text-slate-400"><i class="fa-solid fa-box-open text-4xl mb-2"></i><p>ไม่พบรายการเสื้อที่ค้นหา</p></div>';
+        return;
+      }
+
+      grid.innerHTML = products.map(p => {
+        const isOutOfStock = p.stock <= 0 || p.status === 'สินค้าหมด';
+        const isPreorderClosed = p.status === 'ปิดรับการสั่งจอง';
+        const imgList = splitProductImages(p.imageUrl);
+        const cardImg = imgList[0] || 'https://placehold.co/400x500?text=BBA+Shirt';
+        const safeName = escapeHtml(p.name);
+        const safeDesc = escapeHtml(p.description);
+        const safeCat = escapeHtml(p.category);
+        const safeId = escapeHtml(p.productId);
+
+        let overlayBadge = '';
+        if (isPreorderClosed) {
+          overlayBadge = '<div class="absolute inset-0 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center"><span class="px-3 py-1 bg-amber-500 text-white text-xs font-bold rounded-full uppercase tracking-wider flex items-center gap-1.5 shadow-sm"><i class="fa-solid fa-clock"></i> ปิดรับจอง</span></div>';
+        } else if (isOutOfStock) {
+          overlayBadge = '<div class="absolute inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center"><span class="px-3 py-1 bg-rose-600 text-white text-xs font-bold rounded-full uppercase tracking-wider">สินค้าหมด</span></div>';
+        }
+
+        let btnHtml = '';
+        if (isPreorderClosed) {
+          btnHtml = '<button onclick="openProductModal(\'' + safeId + '\')" class="px-3 py-1.5 rounded-xl text-xs font-semibold bg-amber-50 text-amber-700 border border-amber-200 hover:bg-amber-100 transition flex items-center gap-1 shadow-sm"><i class="fa-solid fa-clock text-[11px]"></i> ปิดรับจอง</button>';
+        } else if (isOutOfStock) {
+          btnHtml = '<button onclick="openProductModal(\'' + safeId + '\')" class="px-3 py-1.5 rounded-xl text-xs font-semibold bg-slate-100 text-slate-400 cursor-not-allowed transition flex items-center gap-1 shadow-sm" disabled><i class="fa-solid fa-ban text-[11px]"></i> หมด</button>';
+        } else {
+          btnHtml = '<button onclick="openProductModal(\'' + safeId + '\')" class="px-3 py-1.5 rounded-xl text-xs font-semibold bg-slate-900 text-white hover:bg-indigo-700 transition flex items-center gap-1 shadow-sm"><i class="fa-solid fa-shirt text-[11px]"></i> เลือกจอง</button>';
+        }
+
+        return '<div class="bg-white rounded-2xl overflow-hidden border border-slate-200 shadow-sm hover:shadow-md transition flex flex-col group">' +
+          '<div class="relative overflow-hidden aspect-[4/5] bg-slate-100 cursor-pointer" onclick="openProductModal(\'' + safeId + '\')">' +
+            '<img loading="lazy" decoding="async" src="' + cardImg + '" alt="' + safeName + '" class="w-full h-full object-cover group-hover:scale-105 transition duration-300" onerror="this.onerror=null; this.src=\'https://placehold.co/400x500?text=BBA+Shirt\';">' +
+            '<span class="absolute top-2.5 left-2.5 px-2 py-0.5 rounded-md text-[11px] font-semibold bg-white/90 backdrop-blur text-slate-800 shadow-sm">' + safeCat + '</span>' +
+            overlayBadge +
+          '</div>' +
+          '<div class="p-3.5 sm:p-4 flex flex-col flex-1 justify-between">' +
+            '<div><h3 class="font-bold text-slate-900 text-sm sm:text-base line-clamp-1 group-hover:text-indigo-700 transition cursor-pointer" onclick="openProductModal(\'' + safeId + '\')">' + safeName + '</h3>' +
+            '<p class="text-xs text-slate-400 mt-0.5 line-clamp-1">' + safeDesc + '</p></div>' +
+            '<div class="mt-3 pt-3 border-t border-slate-100 flex items-center justify-between">' +
+              '<div><span class="text-xs text-slate-400 block leading-tight">ราคาเริ่มต้น</span><span class="font-extrabold text-base sm:text-lg text-slate-900">฿' + Number(p.price).toLocaleString() + '</span></div>' +
+              btnHtml +
+            '</div>' +
+          '</div>' +
+        '</div>';
+      }).join('');
+    }
+
+    function renderCategoryPills(categoriesList) {
+      const container = document.getElementById('categoryPills');
+      if (!container) return;
+
+      if (Array.isArray(categoriesList) && categoriesList.length > 0) {
+        storeCategories = categoriesList;
+      }
+
+      let html = '<button onclick="filterCategory(\'ทั้งหมด\')" class="category-btn ' + (activeCategory === 'ทั้งหมด' ? 'active bg-slate-900 text-white shadow-sm' : 'bg-white text-slate-600 hover:bg-slate-100 border border-slate-200') + ' px-4 py-2 rounded-full font-medium whitespace-nowrap transition shadow-sm">ทั้งหมด</button>';
+
+      storeCategories.forEach(cat => {
+        const isActive = activeCategory === cat;
+        const cls = isActive
+          ? 'category-btn active px-4 py-2 rounded-full font-medium whitespace-nowrap transition bg-slate-900 text-white shadow-sm'
+          : 'category-btn px-4 py-2 rounded-full font-medium whitespace-nowrap transition bg-white text-slate-600 hover:bg-slate-100 border border-slate-200';
+        html += '<button data-category="' + escapeHtml(cat) + '" onclick="filterCategory(\'' + escapeHtml(cat) + '\')" class="' + cls + '">' + escapeHtml(cat) + '</button>';
+      });
+
+      container.innerHTML = html;
+    }
+
+    function filterCategory(category) {
+      activeCategory = category;
+      document.querySelectorAll('.category-btn').forEach(btn => {
+        if ((btn.dataset.category || btn.textContent.trim()) === category) {
+          btn.className = 'category-btn active px-4 py-2 rounded-full font-medium whitespace-nowrap transition bg-slate-900 text-white';
+        } else {
+          btn.className = 'category-btn px-4 py-2 rounded-full font-medium whitespace-nowrap transition bg-white text-slate-600 hover:bg-slate-100 border border-slate-200';
+        }
+      });
+      searchProducts();
+    }
+
+    function searchProducts() {
+      const q = document.getElementById('searchInput').value.trim().toLowerCase();
+      renderProducts(allProducts.filter(p =>
+        (activeCategory === 'ทั้งหมด' || p.category === activeCategory) &&
+        [p.name, p.category, p.description].some(value => String(value || '').toLowerCase().includes(q))
+      ));
+    }
+
+    function buildProductGallery(p) {
+      const gallery = [];
+      if (p.imageUrl) {
+        const rawUrls = splitProductImages(p.imageUrl);
+        rawUrls.forEach((u, i) => {
+          gallery.push({
+            url: u,
+            label: i === 0 ? 'รูปหลัก' : ('มุมที่ ' + (i + 1)),
+            type: 'photo'
+          });
+        });
+      }
+
+      if (gallery.length === 0) {
+        gallery.push({
+          url: 'https://placehold.co/400x500?text=BBA+Shirt',
+          label: 'รูปสินค้า',
+          type: 'photo'
+        });
+      }
+
+      return gallery;
+    }
+
+    function updateModalPrice() {
+      if (!selectedProduct) return;
+      const extra = getSizeExtraCharge(selectedSize);
+      const currentPrice = selectedProduct.price + extra;
+      const priceEl = document.getElementById('modalProductPrice');
+      if (priceEl) {
+        priceEl.innerHTML = '฿' + currentPrice.toLocaleString() + (extra > 0 ? ' <span class="text-xs text-amber-600 font-semibold">(ไซส์ ' + escapeHtml(selectedSize) + ' + ' + extra + '฿)</span>' : '');
+      }
+    }
+
+    function openProductModal(productId) {
+      const p = allProducts.find(item => item.productId === productId);
+      if (!p) return;
+
+      if (!Array.isArray(p.sizes)) {
+        p.sizes = String(p.sizes || '').split(',').map(s => s.trim()).filter(Boolean);
+      }
+      if (!Array.isArray(p.colors)) {
+        p.colors = String(p.colors || '').split(',').map(s => s.trim()).filter(Boolean);
+      }
+
+      selectedProduct = p;
+      if (p.sizes && p.sizes.length > 0) {
+        const sizeStock = p.sizeStock || {};
+        const availableSize = p.sizes.find(sz => (sizeStock[sz] !== undefined ? Number(sizeStock[sz]) > 0 : Number(p.stock) > 0));
+        selectedSize = availableSize || p.sizes[0];
+      } else {
+        selectedSize = 'Free Size';
+      }
+      selectedColor = p.colors && p.colors.length > 0 ? p.colors[0] : 'มาตรฐาน';
+      modalQty = 1;
+
+      modalGalleryImages = buildProductGallery(p);
+      activeGalleryIndex = 0;
+
+      document.getElementById('modalProductTitle').textContent = p.name;
+      document.getElementById('modalProductDesc').textContent = p.description;
+      updateModalPrice();
+
+      const sizeGuideBox = document.getElementById('modalSizeGuideBox');
+      const sizeGuideContent = document.getElementById('modalSizeGuideContent');
+      if (sizeGuideBox && sizeGuideContent) {
+        if (p.sizeGuide && p.sizeGuide.trim()) {
+          sizeGuideContent.textContent = p.sizeGuide.trim();
+          sizeGuideBox.classList.remove('hidden');
+        } else {
+          sizeGuideBox.classList.add('hidden');
+        }
+      }
+
+      const badgeEl = document.getElementById('modalProductBadge');
+      if (badgeEl) badgeEl.textContent = p.category;
+
+      document.getElementById('modalQtyDisplay').textContent = modalQty;
+      document.getElementById('modalProductImg').src = modalGalleryImages[0].url;
+
+      renderThumbnailsStrip();
+      renderModalColorOptions();
+      renderModalSizeOptions();
+      updateModalStockDisplay();
+
+      document.getElementById('productModal').style.display = 'flex';
+    }
+
+    function closeProductModal() {
+      const modal = document.getElementById('productModal');
+      if (modal) modal.style.display = 'none';
+    }
+
+    function renderThumbnailsStrip() {
+      const container = document.getElementById('modalThumbnailsStrip');
+      if (!container) return;
+
+      if (modalGalleryImages.length <= 1) {
+        container.innerHTML = '';
+        return;
+      }
+
+      container.innerHTML = modalGalleryImages.map((img, idx) => {
+        return '<button type="button" onclick="switchProductImage(' + idx + ')" ' +
+          'class="thumbnail-card ' + (idx === activeGalleryIndex ? 'active' : '') + ' w-12 h-12 sm:w-14 sm:h-14 rounded-xl border-2 border-slate-200 bg-white p-1 overflow-hidden shrink-0 flex items-center justify-center relative">' +
+          '<img src="' + img.url + '" alt="' + img.label + '" class="w-full h-full object-contain" onerror="this.onerror=null; this.src=\'https://placehold.co/100x100?text=Thumb\';">' +
+          '<span class="absolute bottom-0 inset-x-0 bg-slate-900/80 text-[7px] sm:text-[8px] text-white text-center py-0.5 truncate px-0.5 leading-tight">' + img.label + '</span>' +
+        '</button>';
+      }).join('');
+    }
+
+    function switchProductImage(index) {
+      if (!modalGalleryImages[index]) return;
+      activeGalleryIndex = index;
+      document.getElementById('modalProductImg').src = modalGalleryImages[index].url;
+      renderThumbnailsStrip();
+
+      const fullModal = document.getElementById('fullImageModal');
+      if (fullModal && fullModal.style.display === 'flex') {
+        document.getElementById('lightboxMainImg').src = modalGalleryImages[index].url;
+        document.getElementById('lightboxIndexBadge').textContent = (index + 1) + ' / ' + modalGalleryImages.length;
+        renderLightboxThumbnails();
+      }
+    }
+
+    function renderModalColorOptions() {
+      const container = document.getElementById('modalColorOptions');
+      if (!container) return;
+      const label = document.getElementById('modalSelectedColorDisplay');
+      if (label) label.textContent = selectedColor;
+
+      let colors = (selectedProduct && selectedProduct.colors) || [];
+      if (!Array.isArray(colors)) {
+        colors = String(colors || '').split(',').map(s => s.trim()).filter(Boolean);
+      }
+      container.innerHTML = colors.map(col => {
+        const isSelected = col === selectedColor;
+        const safeCol = escapeHtml(col);
+        return '<button type="button" onclick="selectModalColor(\'' + safeCol + '\')" ' +
+          'class="color-pill px-3.5 py-1.5 rounded-xl border text-xs font-semibold transition ' + (isSelected ? 'bg-indigo-700 text-white border-indigo-700 shadow-sm' : 'bg-white text-slate-700 border-slate-200 hover:border-slate-400') + '">' +
+          safeCol +
+        '</button>';
+      }).join('');
+    }
+
+    function selectModalColor(color) {
+      selectedColor = color;
+      renderModalColorOptions();
+    }
+
+    function getSelectedSizeStock() {
+      if (!selectedProduct) return 0;
+      const sizeStock = selectedProduct.sizeStock || {};
+      if (Object.keys(sizeStock).length > 0 && selectedSize && sizeStock[selectedSize] !== undefined) {
+        return Math.max(0, parseInt(sizeStock[selectedSize], 10) || 0);
+      }
+      return Math.max(0, parseInt(selectedProduct.stock, 10) || 0);
+    }
+
+    function updateModalStockDisplay() {
+      if (!selectedProduct) return;
+      const availableForSize = getSelectedSizeStock();
+      const stockEl = document.getElementById('modalStockText');
+      if (stockEl) {
+        stockEl.textContent = availableForSize.toLocaleString();
+      }
+
+      const btnAdd = document.getElementById('btnModalAddToCart');
+      const btnBuy = document.getElementById('btnModalBuyNow');
+      const isClosed = selectedProduct.status === 'ปิดรับการสั่งจอง';
+      const isOutOfStock = availableForSize <= 0;
+
+      if (isClosed) {
+        if (btnAdd) {
+          btnAdd.disabled = true;
+          btnAdd.className = 'flex-1 py-3 rounded-xl bg-amber-50 text-amber-800 border border-amber-300 font-semibold cursor-not-allowed flex items-center justify-center gap-2 text-xs sm:text-sm';
+          btnAdd.innerHTML = '<i class="fa-solid fa-clock"></i> ปิดรับการสั่งจองเสื้อรุ่นนี้แล้ว';
+        }
+        if (btnBuy) {
+          btnBuy.disabled = true;
+          btnBuy.className = 'px-5 py-3 rounded-xl border border-slate-200 text-slate-300 font-semibold cursor-not-allowed flex items-center justify-center gap-1.5 text-xs sm:text-sm shrink-0';
+          btnBuy.innerHTML = 'ปิดรับจอง';
+        }
+      } else if (isOutOfStock) {
+        if (btnAdd) {
+          btnAdd.disabled = true;
+          btnAdd.className = 'flex-1 py-3 rounded-xl bg-slate-200 text-slate-400 font-semibold cursor-not-allowed flex items-center justify-center gap-2 text-xs sm:text-sm';
+          btnAdd.innerHTML = '<i class="fa-solid fa-ban"></i> ไซส์ ' + escapeHtml(selectedSize || '') + ' หมดชั่วคราว';
+        }
+        if (btnBuy) {
+          btnBuy.disabled = true;
+          btnBuy.className = 'px-5 py-3 rounded-xl border border-slate-200 text-slate-300 font-semibold cursor-not-allowed flex items-center justify-center gap-1.5 text-xs sm:text-sm shrink-0';
+          btnBuy.innerHTML = 'หมด';
+        }
+      } else {
+        if (btnAdd) {
+          btnAdd.disabled = false;
+          btnAdd.className = 'flex-1 py-3 rounded-xl bg-slate-900 text-white font-semibold hover:bg-indigo-900 transition flex items-center justify-center gap-2 shadow-lg shadow-slate-900/10 text-xs sm:text-sm';
+          btnAdd.innerHTML = '<i class="fa-solid fa-cart-plus"></i> เพิ่มลงรายการจอง';
+        }
+        if (btnBuy) {
+          btnBuy.disabled = false;
+          btnBuy.className = 'px-5 py-3 rounded-xl bg-indigo-700 text-white font-semibold hover:bg-indigo-800 transition flex items-center justify-center gap-1.5 shadow-md text-xs sm:text-sm shrink-0';
+          btnBuy.innerHTML = '<i class="fa-solid fa-bolt text-xs"></i> <span>จองทันที</span>';
+        }
+      }
+
+      if (modalQty > availableForSize && availableForSize > 0) {
+        modalQty = availableForSize;
+      } else if (availableForSize <= 0) {
+        modalQty = 1;
+      }
+      const qtyEl = document.getElementById('modalQtyDisplay');
+      if (qtyEl) qtyEl.textContent = modalQty;
+    }
+
+    function renderModalSizeOptions() {
+      const container = document.getElementById('modalSizeOptions');
+      if (!container) return;
+      const label = document.getElementById('modalSelectedSizeDisplay');
+      if (label) label.textContent = selectedSize;
+
+      let sizes = (selectedProduct && selectedProduct.sizes) || [];
+      if (!Array.isArray(sizes)) {
+        sizes = String(sizes || '').split(',').map(s => s.trim()).filter(Boolean);
+      }
+      const sizeStock = (selectedProduct && selectedProduct.sizeStock) || {};
+      const hasSizeStock = Object.keys(sizeStock).length > 0;
+
+      container.innerHTML = sizes.map(sz => {
+        const isSelected = sz === selectedSize;
+        const safeSz = escapeHtml(sz);
+        const extra = getSizeExtraCharge(sz);
+        const extraBadge = extra > 0 ? ' <span class="text-[10px] font-bold text-amber-500">(+' + extra + '฿)</span>' : '';
+        const szStock = hasSizeStock && sizeStock[sz] !== undefined ? Math.max(0, parseInt(sizeStock[sz], 10) || 0) : null;
+        const isOutOfStock = szStock !== null && szStock <= 0;
+        const stockBadge = szStock !== null
+          ? (isOutOfStock ? ' <span class="text-[10px] text-rose-500 font-bold ml-1">(หมด)</span>' : ' <span class="text-[10px] text-slate-400 ml-1">(' + szStock + ')</span>')
+          : '';
+
+        let btnClass = 'size-pill min-w-[42px] px-3.5 py-1.5 rounded-xl border text-xs font-semibold transition flex items-center justify-center ';
+        if (isSelected) {
+          btnClass += isOutOfStock ? 'bg-rose-900 text-white border-rose-900 shadow-sm' : 'bg-slate-900 text-white border-slate-900 shadow-sm';
+        } else if (isOutOfStock) {
+          btnClass += 'bg-slate-50 text-slate-400 border-slate-200 border-dashed hover:border-slate-300';
+        } else {
+          btnClass += 'bg-white text-slate-700 border-slate-200 hover:border-slate-400';
+        }
+
+        return '<button type="button" onclick="selectModalSize(\'' + safeSz + '\')" class="' + btnClass + '">' +
+          safeSz + extraBadge + stockBadge +
+        '</button>';
+      }).join('');
+    }
+
+    function selectModalSize(size) {
+      selectedSize = size;
+      renderModalSizeOptions();
+      updateModalPrice();
+      updateModalStockDisplay();
+    }
+
+    function changeModalQty(delta) {
+      if (!selectedProduct) return;
+      const maxStock = getSelectedSizeStock();
+      const newQty = modalQty + delta;
+      if (newQty >= 1 && newQty <= maxStock) {
+        modalQty = newQty;
+        document.getElementById('modalQtyDisplay').textContent = modalQty;
+      }
+    }
+
+    function buyNowFromModal() {
+      if (!selectedProduct) return;
+      if (selectedProduct.status === 'ปิดรับการสั่งจอง') {
+        Swal.fire('ปิดรับการสั่งจอง', 'ขออภัย เสื้อรุ่นนี้ปิดรับการสั่งจองแล้ว', 'warning');
+        return;
+      }
+
+      const availableForSize = getSelectedSizeStock();
+      if (availableForSize <= 0) {
+        Swal.fire('ขออภัย', 'เสื้อไซส์ ' + selectedSize + ' หมดสต็อกชั่วคราว', 'warning');
+        return;
+      }
+
+      const extra = getSizeExtraCharge(selectedSize);
+      const finalPrice = selectedProduct.price + extra;
+
+      const existingIndex = cart.findIndex(item => 
+        item.productId === selectedProduct.productId && 
+        item.size === selectedSize && 
+        item.color === selectedColor
+      );
+
+      if (existingIndex > -1) {
+        const potentialQty = cart[existingIndex].qty + modalQty;
+        if (potentialQty > availableForSize) {
+          Swal.fire('ขออภัย', 'สต็อกเสื้อไซส์ ' + selectedSize + ' มีเพียง ' + availableForSize + ' ตัวเท่านั้น (ในรายการจองมีอยู่แล้ว ' + cart[existingIndex].qty + ' ตัว)', 'warning');
+          return;
+        }
+        cart[existingIndex].qty = potentialQty;
+        cart[existingIndex].stock = availableForSize;
+        cart[existingIndex].subtotal = cart[existingIndex].qty * cart[existingIndex].price;
+      } else {
+        cart.push({
+          productId: selectedProduct.productId,
+          name: selectedProduct.name,
+          size: selectedSize,
+          color: selectedColor,
+          price: finalPrice,
+          qty: modalQty,
+          subtotal: modalQty * finalPrice,
+          imageUrl: selectedProduct.imageUrl,
+          stock: availableForSize
+        });
+      }
+
+      saveCartToStorage();
+      updateCartUI();
+      closeProductModal();
+      goToCheckout();
+    }
+
+    function openFullImageViewer(e) {
+      if (e && e.stopPropagation) e.stopPropagation();
+      const modal = document.getElementById('fullImageModal');
+      if (!modal) return;
+
+      const titleEl = document.getElementById('lightboxTitle');
+      if (titleEl && selectedProduct) {
+        titleEl.textContent = selectedProduct.name;
+      }
+
+      document.getElementById('lightboxIndexBadge').textContent = (activeGalleryIndex + 1) + ' / ' + modalGalleryImages.length;
+      document.getElementById('lightboxMainImg').src = modalGalleryImages[activeGalleryIndex].url;
+
+      renderLightboxThumbnails();
+      resetLightboxZoom();
+
+      modal.style.display = 'flex';
+      window.addEventListener('keydown', handleLightboxKeydown);
+    }
+
+    function closeFullImageViewer() {
+      const modal = document.getElementById('fullImageModal');
+      if (modal) modal.style.display = 'none';
+      window.removeEventListener('keydown', handleLightboxKeydown);
+    }
+
+    function renderLightboxThumbnails() {
+      const strip = document.getElementById('lightboxThumbnailsStrip');
+      if (!strip) return;
+
+      if (modalGalleryImages.length <= 1) {
+        strip.innerHTML = '';
+        return;
+      }
+
+      strip.innerHTML = modalGalleryImages.map((img, idx) => {
+        return '<button type="button" onclick="switchProductImage(' + idx + ')" ' +
+          'class="w-12 h-12 rounded-xl border-2 ' + (idx === activeGalleryIndex ? 'border-rose-500 scale-105' : 'border-white/20 opacity-70 hover:opacity-100') + ' p-0.5 bg-black/40 overflow-hidden shrink-0 transition">' +
+          '<img src="' + img.url + '" alt="' + img.label + '" class="w-full h-full object-contain">' +
+        '</button>';
+      }).join('');
+    }
+
+    function navigateLightbox(dir) {
+      if (!modalGalleryImages.length) return;
+      let nextIndex = activeGalleryIndex + dir;
+      if (nextIndex < 0) nextIndex = modalGalleryImages.length - 1;
+      if (nextIndex >= modalGalleryImages.length) nextIndex = 0;
+      switchProductImage(nextIndex);
+    }
+
+    function zoomLightboxImage(delta) {
+      lightboxZoomLevel = Math.max(0.75, Math.min(3, lightboxZoomLevel + delta));
+      applyLightboxZoom();
+    }
+
+    function resetLightboxZoom() {
+      lightboxZoomLevel = 1;
+      applyLightboxZoom();
+    }
+
+    function applyLightboxZoom() {
+      const img = document.getElementById('lightboxMainImg');
+      if (img) {
+        img.style.transform = 'scale(' + lightboxZoomLevel + ')';
+        img.style.cursor = lightboxZoomLevel > 1 ? 'zoom-out' : 'zoom-in';
+      }
+    }
+
+    function handleLightboxKeydown(e) {
+      if (e.key === 'Escape') closeFullImageViewer();
+      if (e.key === 'ArrowLeft') navigateLightbox(-1);
+      if (e.key === 'ArrowRight') navigateLightbox(1);
+    }
+
+    function saveCartToStorage() {
+      writeStoredJson('ubru_cart', cart);
+    }
+
+    function loadCartFromStorage() {
+      const saved = readStoredJson('ubru_cart', []);
+      cart = Array.isArray(saved) ? saved.filter(item => item &&
+        typeof item.productId === 'string' && typeof item.name === 'string' &&
+        Number.isInteger(Number(item.qty)) && Number(item.qty) > 0 &&
+        Number.isFinite(Number(item.price)) && Number(item.price) >= 0
+      ).map(item => ({ ...item, qty: Number(item.qty), price: Number(item.price),
+        subtotal: Number(item.qty) * Number(item.price) })) : [];
+      updateCartUI();
+    }
+
+    function addToCartFromModal() {
+      if (!selectedProduct) return;
+      if (selectedProduct.status === 'ปิดรับการสั่งจอง') {
+        Swal.fire('ปิดรับการสั่งจอง', 'ขออภัย เสื้อรุ่นนี้ปิดรับการสั่งจองแล้ว', 'warning');
+        return;
+      }
+
+      const availableForSize = getSelectedSizeStock();
+      if (availableForSize <= 0) {
+        Swal.fire('ขออภัย', 'เสื้อไซส์ ' + selectedSize + ' หมดสต็อกชั่วคราว', 'warning');
+        return;
+      }
+
+      const extra = getSizeExtraCharge(selectedSize);
+      const finalPrice = selectedProduct.price + extra;
+
+      const existingIndex = cart.findIndex(item => 
+        item.productId === selectedProduct.productId && 
+        item.size === selectedSize && 
+        item.color === selectedColor
+      );
+
+      if (existingIndex > -1) {
+        const potentialQty = cart[existingIndex].qty + modalQty;
+        if (potentialQty > availableForSize) {
+          Swal.fire('ขออภัย', 'สต็อกเสื้อไซส์ ' + selectedSize + ' มีเพียง ' + availableForSize + ' ตัวเท่านั้น (ในรายการจองมีอยู่แล้ว ' + cart[existingIndex].qty + ' ตัว)', 'warning');
+          return;
+        }
+        cart[existingIndex].qty = potentialQty;
+        cart[existingIndex].stock = availableForSize;
+        cart[existingIndex].subtotal = cart[existingIndex].qty * cart[existingIndex].price;
+      } else {
+        cart.push({
+          productId: selectedProduct.productId,
+          name: selectedProduct.name,
+          size: selectedSize,
+          color: selectedColor,
+          price: finalPrice,
+          qty: modalQty,
+          subtotal: modalQty * finalPrice,
+          imageUrl: selectedProduct.imageUrl,
+          stock: availableForSize
+        });
+      }
+
+      saveCartToStorage();
+      updateCartUI();
+      closeProductModal();
+
+      const extraText = extra > 0 ? ' (+ ' + extra + '฿)' : '';
+      Swal.fire({
+        icon: 'success',
+        title: 'เพิ่มลงรายการจองแล้ว',
+        html: '<b>' + escapeHtml(selectedProduct.name) + '</b><br><span class="text-xs text-slate-500">ไซส์ ' + escapeHtml(selectedSize) + extraText + ' | สี ' + escapeHtml(selectedColor) + ' จำนวน ' + modalQty + ' ตัว</span>',
+        showCancelButton: true,
+        confirmButtonText: '<i class="fa-solid fa-bag-shopping"></i> ดูรายการจอง',
+        cancelButtonText: 'เลือกเสื้อต่อ',
+        confirmButtonColor: '#4338ca',
+        cancelButtonColor: '#64748b'
+      }).then(res => {
+        if (res.isConfirmed) {
+          openCartDrawer();
+        }
+      });
+    }
+
+    function updateCartUI() {
+      const badge = document.getElementById('cartCountBadge');
+      const totalCount = cart.reduce((sum, item) => sum + (Number(item.qty) || 0), 0);
+      badge.textContent = totalCount;
+      renderCartDrawerItems();
+    }
+
+    function openCartDrawer() {
+      renderCartDrawerItems();
+      document.getElementById('cartDrawer').style.display = 'block';
+    }
+
+    function closeCartDrawer() {
+      document.getElementById('cartDrawer').style.display = 'none';
+    }
+
+    function renderCartDrawerItems() {
+      const container = document.getElementById('cartItemsContainer');
+      const totalEl = document.getElementById('cartTotal');
+
+      if (cart.length === 0) {
+        container.innerHTML = '<div class="py-16 text-center text-slate-400">' +
+          '<i class="fa-solid fa-shirt text-4xl mb-2 text-slate-300"></i>' +
+          '<p class="text-sm font-medium text-slate-600">ยังไม่มีเสื้อในรายการจอง</p>' +
+          '<p class="text-xs text-slate-400 mt-1">เลือกเสื้อสโมสรที่ต้องการแล้วกดจองได้เลย</p>' +
+          '<button onclick="closeCartDrawer(); switchView(\'shop\');" class="mt-4 px-4 py-2 rounded-xl bg-slate-900 text-white text-xs font-semibold hover:bg-indigo-800 transition">ไปดูแบบเสื้อ</button>' +
+        '</div>';
+        totalEl.textContent = '฿0';
+        return;
+      }
+
+      let grandTotal = 0;
+
+      container.innerHTML = cart.map((item, idx) => {
+        grandTotal += Number(item.subtotal) || 0;
+        const safeName = escapeHtml(item.name);
+        const safeSize = escapeHtml(item.size);
+        const safeColor = escapeHtml(item.color);
+        const imgList = splitProductImages(item.imageUrl);
+        const cardImg = imgList[0] || 'https://placehold.co/100x120?text=Shirt';
+
+        return '<div class="flex gap-3 bg-slate-50 p-3 rounded-xl border border-slate-100 items-center">' +
+          '<img src="' + cardImg + '" class="w-16 h-20 object-cover rounded-lg shrink-0" onerror="this.onerror=null; this.src=\'https://placehold.co/100x120?text=Shirt\';">' +
+          '<div class="flex-1 min-w-0">' +
+            '<h4 class="font-bold text-xs sm:text-sm text-slate-800 line-clamp-1">' + safeName + '</h4>' +
+            '<p class="text-[11px] text-slate-500 mt-0.5">ไซส์: <span class="font-semibold text-slate-700">' + safeSize + '</span> | สี: <span class="font-semibold text-slate-700">' + safeColor + '</span></p>' +
+            '<div class="text-xs font-bold text-indigo-700 mt-1">฿' + item.price.toLocaleString() + ' x ' + item.qty + ' = ฿' + item.subtotal.toLocaleString() + '</div>' +
+            '<div class="flex items-center justify-between mt-2">' +
+              '<div class="flex items-center border border-slate-200 rounded-lg bg-white">' +
+                '<button onclick="updateCartItemQty(' + idx + ', -1)" class="w-6 h-6 flex items-center justify-center text-slate-600 font-bold hover:bg-slate-100">-</button>' +
+                '<span class="w-7 text-center text-xs font-semibold text-slate-800">' + item.qty + '</span>' +
+                '<button onclick="updateCartItemQty(' + idx + ', 1)" class="w-6 h-6 flex items-center justify-center text-slate-600 font-bold hover:bg-slate-100">+</button>' +
+              '</div>' +
+              '<button onclick="removeCartItem(' + idx + ')" class="text-xs text-rose-500 hover:text-rose-700 p-1"><i class="fa-solid fa-trash-can"></i></button>' +
+            '</div>' +
+          '</div>' +
+        '</div>';
+      }).join('');
+
+      totalEl.textContent = '฿' + grandTotal.toLocaleString();
+    }
+
+    function updateCartItemQty(index, delta) {
+      if (!cart[index]) return;
+      const newQty = (Number(cart[index].qty) || 1) + delta;
+      if (newQty <= 0) {
+        removeCartItem(index);
+        return;
+      }
+      let maxStock = cart[index].stock || 999;
+      const prod = allProducts && allProducts.find(p => p.productId === cart[index].productId);
+      if (prod && prod.sizeStock && cart[index].size && prod.sizeStock[cart[index].size] !== undefined) {
+        maxStock = Math.max(0, parseInt(prod.sizeStock[cart[index].size], 10) || 0);
+      } else if (prod && prod.stock !== undefined) {
+        maxStock = Math.max(0, parseInt(prod.stock, 10) || 0);
+      }
+      cart[index].stock = maxStock;
+
+      if (newQty > maxStock) {
+        Swal.fire('ขออภัย', 'สต็อกเสื้อไซส์ ' + cart[index].size + ' มีจำกัดเพียง ' + maxStock + ' ตัว', 'warning');
+        return;
+      }
+      cart[index].qty = newQty;
+      cart[index].subtotal = cart[index].qty * cart[index].price;
+      saveCartToStorage();
+      updateCartUI();
+    }
+
+    function removeCartItem(index) {
+      cart.splice(index, 1);
+      saveCartToStorage();
+      updateCartUI();
+    }
+
+    function goToCheckout() {
+      if (!cart || cart.length === 0) {
+        Swal.fire({
+          icon: 'info',
+          title: 'ยังไม่มีเสื้อในรายการจอง',
+          text: 'กรุณาเลือกเสื้อสโมสรก่อนดำเนินการสั่งจองครับ',
+          confirmButtonText: 'ไปเลือกเสื้อ',
+          confirmButtonColor: '#4338ca'
+        }).then(() => {
+          closeCartDrawer();
+          switchView('shop');
+        });
+        return;
+      }
+
+      if (!currentStudent) {
+        closeCartDrawer();
+        Swal.fire({
+          icon: 'warning',
+          title: 'กรุณาเข้าสู่ระบบก่อนสั่งจอง',
+          text: 'การสั่งจองเสื้อสโมสรจำเป็นต้องเข้าสู่ระบบด้วยรหัสนักศึกษาและรหัส PIN',
+          showCancelButton: true,
+          confirmButtonText: 'เข้าสู่ระบบ',
+          cancelButtonText: 'ลงทะเบียนใหม่',
+          confirmButtonColor: '#4338ca',
+          cancelButtonColor: '#d97706'
+        }).then(res => {
+          if (res.isConfirmed) {
+            openLoginModal();
+          } else if (res.dismiss === Swal.DismissReason.cancel) {
+            openRegisterModal();
+          }
+        });
+        return;
+      }
+
+      const closedItem = cart.find(c => {
+        const prod = allProducts.find(p => p.productId === c.productId);
+        return prod && prod.status === 'ปิดรับการสั่งจอง';
+      });
+      if (closedItem) {
+        Swal.fire({
+          title: 'ปิดรับการสั่งจองแล้ว',
+          text: 'ขออภัย เสื้อ "' + closedItem.name + '" ปิดรับการสั่งจองแล้ว กรุณาลบออกจากรายการจองก่อนดำเนินการต่อ',
+          icon: 'warning'
+        });
+        return;
+      }
+
+      closeCartDrawer();
+
+      let grandTotal = cart.reduce((sum, item) => sum + (Number(item.subtotal) || 0), 0);
+      const totalQty = cart.reduce((s, i) => s + (Number(i.qty) || 0), 0);
+
+      document.getElementById('checkoutSummaryItems').textContent = cart.length + ' แบบเสื้อ (รวม ' + totalQty + ' ตัว)';
+      document.getElementById('checkoutTotalAmount').textContent = '฿' + grandTotal.toLocaleString();
+
+      document.getElementById('custStudentId').value = currentStudent.studentId || '';
+      document.getElementById('custName').value = currentStudent.name || '';
+      document.getElementById('custEmail').value = currentStudent.email || ('std.' + currentStudent.studentId + '@ubru.ac.th');
+      const phoneInput = document.getElementById('custPhone');
+      if (phoneInput && currentStudent.phone) {
+        phoneInput.value = currentStudent.phone;
+      }
+
+      const promptPayStr = storeSettings.promptPay || '004999245434427';
+      const cleanPromptPay = promptPayStr.replace(/[^0-9]/g, '');
+      const qrImg = document.getElementById('promptPayQrImg');
+      if (cleanPromptPay) {
+        qrImg.src = 'https://i.postimg.cc/x87kMgRK/unnamed.jpg';
+        qrImg.classList.remove('hidden');
+      } else {
+        qrImg.classList.add('hidden');
+      }
+
+      const modal = document.getElementById('checkoutModal');
+      modal.style.display = 'flex';
+      modal.scrollTop = 0;
+    }
+
+    function closeCheckoutModal() {
+      document.getElementById('checkoutModal').style.display = 'none';
+    }
+
+    function copyPromptPay() {
+      const text = String(storeSettings.promptPay || '004999245434427');
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(text);
+      } else {
+        const textarea = document.createElement('textarea');
+        textarea.value = text;
+        document.body.appendChild(textarea);
+        textarea.select();
+        document.execCommand('copy');
+        document.body.removeChild(textarea);
+      }
+
+      Swal.fire({
+        icon: 'success',
+        title: 'คัดลอกเลขพร้อมเพย์แล้ว',
+        text: text,
+        toast: true,
+        position: 'top',
+        timer: 1500,
+        showConfirmButton: false
+      });
+    }
+
+    function handleSlipSelected(event) {
+      const file = event.target.files[0];
+      if (!file) return;
+
+      slipMimeType = file.type || 'image/jpeg';
+      const reader = new FileReader();
+      reader.onload = function(e) {
+        const img = new Image();
+        img.onload = function() {
+          const maxDim = 1200;
+          let width = img.width;
+          let height = img.height;
+          if (width > maxDim || height > maxDim) {
+            if (width > height) {
+              height = Math.round((height * maxDim) / width);
+              width = maxDim;
+            } else {
+              width = Math.round((width * maxDim) / height);
+              height = maxDim;
+            }
+          }
+          const canvas = document.createElement('canvas');
+          canvas.width = width;
+          canvas.height = height;
+          const ctx = canvas.getContext('2d');
+          ctx.drawImage(img, 0, 0, width, height);
+
+          slipBase64 = canvas.toDataURL('image/jpeg', 0.82);
+          slipMimeType = 'image/jpeg';
+
+          const previewImg = document.getElementById('slipPreviewImg');
+          previewImg.src = slipBase64;
+          previewImg.classList.remove('hidden');
+          document.getElementById('slipUploadPlaceholder').classList.add('hidden');
+          document.getElementById('slipRemoveBtnArea').classList.remove('hidden');
+        };
+        img.src = e.target.result;
+      };
+      reader.readAsDataURL(file);
+    }
+
+    function removeSelectedSlip() {
+      slipBase64 = '';
+      document.getElementById('slipFileInput').value = '';
+      document.getElementById('slipPreviewImg').classList.add('hidden');
+      document.getElementById('slipUploadPlaceholder').classList.remove('hidden');
+      document.getElementById('slipRemoveBtnArea').classList.add('hidden');
+    }
+
+    function submitOrderFinal() {
+      if (isSubmittingOrder) return;
+
+      const studentId = document.getElementById('custStudentId').value.trim();
+      const name = document.getElementById('custName').value.trim();
+      let email = document.getElementById('custEmail').value.trim().toLowerCase();
+      if (!email || !email.includes('@')) {
+        email = 'std.' + studentId + '@ubru.ac.th';
+      }
+      const rawPhone = document.getElementById('custPhone').value.trim();
+      const cleanPhone = normalizePhone(rawPhone);
+      const notes = document.getElementById('custNotes').value.trim();
+
+      if (!cleanPhone || cleanPhone.length < 9) {
+        Swal.fire('กรุณาระบุข้อมูล', 'กรุณากรอกเบอร์โทรศัพท์ติดต่อ 10 หลักที่ถูกต้อง สำหรับติดต่อรับเสื้อ (เช่น 0812345678)', 'warning');
+        return;
+      }
+
+      if (!slipBase64) {
+        Swal.fire({
+          icon: 'warning',
+          title: 'กรุณาแนบสลิปโอนเงิน',
+          text: 'ระบบบังคับให้แนบหลักฐานสลิปการโอนเงินเท่านั้น จึงจะสามารถยืนยันการสั่งจองได้',
+          confirmButtonText: 'ตกลง',
+          confirmButtonColor: '#4338ca'
+        });
+        return;
+      }
+
+      executeSubmitOrder(studentId, name, email, cleanPhone, notes, slipBase64);
+    }
+
+    async function executeSubmitOrder(studentId, name, email, phone, notes, slipData) {
+      if (isSubmittingOrder) return;
+      isSubmittingOrder = true;
+
+      const grandTotal = cart.reduce((sum, item) => sum + (Number(item.subtotal) || 0), 0);
+      const cartSnapshot = JSON.parse(JSON.stringify(cart));
+
+      if (!currentOrderRequestId) {
+        currentOrderRequestId = 'REQ-' + Date.now() + '-' + Math.random().toString(36).substring(2, 9).toUpperCase();
+      }
+
+      const orderPayload = {
+        requestId: currentOrderRequestId,
+        studentId: studentId,
+        customerName: name,
+        studentEmail: email,
+        phone: phone,
+        notes: notes,
+        totalAmount: grandTotal,
+        slipBase64: slipData,
+        slipMimeType: slipMimeType || 'image/jpeg',
+        items: cart
+      };
+
+      const btnSubmit = document.getElementById('btnSubmitOrder');
+      btnSubmit.disabled = true;
+      btnSubmit.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> กำลังบันทึกการจอง...';
+
+      try {
+        const res = await fetch(API_BASE + '/api/orders', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(orderPayload)
+        });
+        const resData = await res.json();
+        isSubmittingOrder = false;
+        btnSubmit.disabled = false;
+        btnSubmit.innerHTML = '<i class="fa-solid fa-check"></i> ยืนยันการสั่งจองเสื้อ';
+
+        if (resData && resData.success) {
+          const orderReceiptDetails = {
+            orderId: resData.orderId,
+            totalAmount: resData.totalAmount || grandTotal,
+            studentId: studentId,
+            customerName: name,
+            studentEmail: email,
+            phone: phone,
+            notes: notes,
+            orderDate: resData.orderDate || new Date().toLocaleString('th-TH', { year: 'numeric', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' }),
+            items: cartSnapshot,
+            pickupLocation: resData.pickupLocation || storeSettings.clubLocation,
+            pickupSchedule: storeSettings.clubSchedule,
+            status: 'รอตรวจสอบการชำระเงิน'
+          };
+          handleOrderSuccess(resData.orderId, resData.totalAmount || grandTotal, studentId, orderReceiptDetails);
+        } else {
+          Swal.fire('เกิดข้อผิดพลาด', (resData && resData.message) || 'ไม่สามารถบันทึกข้อมูลได้', 'error');
+        }
+      } catch (err) {
+        isSubmittingOrder = false;
+        btnSubmit.disabled = false;
+        btnSubmit.innerHTML = '<i class="fa-solid fa-check"></i> ยืนยันการสั่งจองเสื้อ';
+        Swal.fire('ข้อผิดพลาด', err.message || 'ระบบขัดข้อง กรุณาลองใหม่อีกครั้ง', 'error');
+      }
+    }
+
+    // ==================== RECEIPT HANDLING LOGIC ====================
+    function handleOrderSuccess(orderId, total, studentId, orderReceiptDetails) {
+      currentOrderRequestId = null; // เคลียร์ requestId เพื่อให้ออเดอร์ถัดไปได้เลขใหม่
+      cart = [];
+      saveCartToStorage();
+      updateCartUI();
+      closeCheckoutModal();
+      removeSelectedSlip();
+
+      // บันทึกและเปิดใบเสร็จทันทีเพื่อให้ลูกค้าสามารถกดบันทึกหรือพิมพ์ได้
+      currentReceiptData = orderReceiptDetails;
+      if (orderReceiptDetails) {
+        simulatedOrdersSession.unshift({
+          orderId: orderReceiptDetails.orderId,
+          orderDate: orderReceiptDetails.orderDate,
+          studentId: orderReceiptDetails.studentId,
+          customerName: orderReceiptDetails.customerName,
+          studentEmail: orderReceiptDetails.studentEmail,
+          maskedPhone: (orderReceiptDetails.phone && orderReceiptDetails.phone.length >= 7) ? (orderReceiptDetails.phone.substring(0, 3) + '-xxx-' + orderReceiptDetails.phone.substring(orderReceiptDetails.phone.length - 4)) : orderReceiptDetails.phone,
+          phone: orderReceiptDetails.phone,
+          itemsSummary: (orderReceiptDetails.items && Array.isArray(orderReceiptDetails.items)) ? orderReceiptDetails.items.map(it => (it.name || 'เสื้อสโมสร') + ' [ไซส์: ' + (it.size || '-') + ', สี: ' + (it.color || '-') + '] x' + (it.qty || 1) + ' (' + (it.subtotal || ((it.price || 0) * (it.qty || 1))) + '฿)').join('\n') : (orderReceiptDetails.itemsSummary || ''),
+          itemsJSON: JSON.stringify(orderReceiptDetails.items || []),
+          totalAmount: orderReceiptDetails.totalAmount,
+          status: orderReceiptDetails.status || 'รอตรวจสอบการชำระเงิน',
+          pickupLocation: orderReceiptDetails.pickupLocation || storeSettings.clubLocation,
+          updatedAt: orderReceiptDetails.orderDate
+        });
+      }
+      openReceiptModal(orderReceiptDetails);
+
+      // แจ้งเตือนสั้นๆ และแสดงใบเสร็จรับเงิน
+      Swal.fire({
+        icon: 'success',
+        title: 'สั่งจองเสื้อสำเร็จเรียบร้อย!',
+        text: 'ระบบได้สร้างใบเสร็จการสั่งจองให้คุณเรียบร้อยแล้ว คุณสามารถกดปุ่ม "บันทึกรูปภาพ" เพื่อเก็บใบเสร็จไว้เป็นหลักฐานได้ทันที',
+        confirmButtonText: 'ดูใบเสร็จของฉัน',
+        confirmButtonColor: '#4338ca',
+        timer: 3500
+      });
+
+      fetchStoreData();
+    }
+
+    function openReceiptModal(orderData) {
+      if (!orderData) return;
+      currentReceiptData = orderData;
+
+      const setVal = (id, val) => {
+        const el = document.getElementById(id);
+        if (el) el.textContent = val;
+      };
+
+      setVal('receiptOrderId', orderData.orderId || '-');
+      setVal('receiptOrderDate', orderData.orderDate || new Date().toLocaleString('th-TH'));
+      setVal('receiptStudentId', orderData.studentId || '-');
+      setVal('receiptStudentName', orderData.customerName || '-');
+      setVal('receiptStudentPhone', orderData.phone || '-');
+      setVal('receiptPickupLoc', orderData.pickupLocation || storeSettings.clubLocation);
+      setVal('receiptPickupSchedule', orderData.pickupSchedule || storeSettings.clubSchedule);
+
+      // Render Items Table
+      const tbody = document.getElementById('receiptItemsTbody');
+      let totalQty = 0;
+      let calculatedSum = 0;
+
+      if (orderData.items && Array.isArray(orderData.items) && orderData.items.length > 0) {
+        tbody.innerHTML = orderData.items.map((item, idx) => {
+          const qty = Number(item.qty) || 1;
+          const price = Number(item.price) || 0;
+          const subtotal = Number(item.subtotal) || (qty * price);
+          totalQty += qty;
+          calculatedSum += subtotal;
+
+          return '<tr class="hover:bg-slate-50/60 transition">' +
+            '<td class="p-2 sm:p-2.5 text-center text-slate-400 font-mono text-[11px]">' + (idx + 1) + '</td>' +
+            '<td class="p-2 sm:p-2.5 font-medium text-slate-800">' +
+              '<div class="font-semibold">' + escapeHtml(item.name || 'เสื้อสโมสร') + '</div>' +
+              '<div class="text-[11px] text-slate-400">ไซส์: <span class="font-bold text-slate-600">' + escapeHtml(item.size || '-') + '</span> | สี: <span class="font-bold text-slate-600">' + escapeHtml(item.color || '-') + '</span></div>' +
+            '</td>' +
+            '<td class="p-2 sm:p-2.5 text-right font-mono text-slate-700">฿' + price.toLocaleString() + '</td>' +
+            '<td class="p-2 sm:p-2.5 text-center font-bold text-slate-800">' + qty + '</td>' +
+            '<td class="p-2 sm:p-2.5 text-right font-bold text-indigo-700 font-mono">฿' + subtotal.toLocaleString() + '</td>' +
+          '</tr>';
+        }).join('');
+      } else if (orderData.itemsSummary) {
+        // กรณีดึงมาจากหน้า Track เป็นข้อความสรุป
+        const lines = String(orderData.itemsSummary).split('\n').filter(Boolean);
+        tbody.innerHTML = lines.map((line, idx) => {
+          totalQty += 1;
+          return '<tr>' +
+            '<td class="p-2 sm:p-2.5 text-center text-slate-400 text-[11px]">' + (idx + 1) + '</td>' +
+            '<td colspan="3" class="p-2 sm:p-2.5 text-slate-800 font-medium">' + escapeHtml(line) + '</td>' +
+            '<td class="p-2 sm:p-2.5 text-right font-bold text-indigo-700 font-mono">-</td>' +
+          '</tr>';
+        }).join('');
+        calculatedSum = Number(orderData.totalAmount) || 0;
+      }
+
+      setVal('receiptTotalQty', totalQty);
+      const grandTotalVal = Number(orderData.totalAmount || calculatedSum);
+      setVal('receiptGrandTotal', '฿' + grandTotalVal.toLocaleString());
+
+      const totalItemCount = (orderData.items && Array.isArray(orderData.items)) ? orderData.items.length : ((orderData.itemsSummary && String(orderData.itemsSummary).split('\n').filter(Boolean).length) || 0);
+      const countBadge = document.getElementById('receiptItemCountBadge');
+      if (countBadge) {
+        if (totalItemCount > 8) {
+          countBadge.innerHTML = '<span class="text-indigo-700 font-semibold bg-indigo-50 px-2 py-0.5 rounded-full border border-indigo-100">(ทั้งหมด ' + totalItemCount + ' รายการ - เลื่อนดูในกรอบได้)</span>';
+        } else if (totalItemCount > 0) {
+          countBadge.textContent = '(' + totalItemCount + ' รายการ)';
+        } else {
+          countBadge.textContent = '';
+        }
+      }
+
+      const tableContainer = document.getElementById('receiptTableContainer');
+      if (tableContainer) {
+        tableContainer.scrollTop = 0;
+      }
+
+      const modal = document.getElementById('receiptModal');
+      if (modal) {
+        modal.style.display = 'flex';
+        modal.scrollTop = 0;
+      }
+    }
+
+    function closeReceiptModal() {
+      const modal = document.getElementById('receiptModal');
+      if (modal) modal.style.display = 'none';
+    }
+
+    function closeReceiptModalAndGoTrack() {
+      closeReceiptModal();
+      const trackInput = document.getElementById('trackInput');
+      if (trackInput) {
+        trackInput.value = '';
+      }
+      switchView('track');
+    }
+
+    // ฟังก์ชันบันทึกใบเสร็จเป็นรูปภาพ PNG ด้วย html2canvas
+    function downloadReceiptImage() {
+      const receiptEl = document.getElementById('receiptPaper');
+      if (!receiptEl) return;
+
+      Swal.fire({
+        title: 'กำลังสร้างรูปภาพใบเสร็จ...',
+        html: '<div class="text-xs text-slate-500 mt-1">กรุณารอสักครู่ ระบบกำลังจัดเตรียมไฟล์รูปภาพครบถ้วนทุกรายการ</div>',
+        allowOutsideClick: false,
+        didOpen: () => {
+          Swal.showLoading();
+        }
+      });
+
+      // 1. สร้าง Clone ของใบเสร็จสำหรับเรนเดอร์โดยเฉพาะ เพื่อไม่ให้กระทบหน้าจอ และไม่ถูกตัดความสูง
+      const clone = receiptEl.cloneNode(true);
+      clone.id = 'receiptPaper_downloadClone';
+
+      // 2. ปลดล็อกความสูงและ scroll ใน clone ให้ขยายแสดงครบทุกรายการ
+      const cloneTable = clone.querySelector('#receiptTableContainer');
+      if (cloneTable) {
+        cloneTable.style.maxHeight = 'none';
+        cloneTable.style.height = 'auto';
+        cloneTable.style.overflow = 'visible';
+        cloneTable.classList.remove('max-h-56', 'sm:max-h-64', 'overflow-y-auto');
+      }
+
+      // 3. ปรับ thead / tfoot ใน clone เป็น static เพื่อไม่ให้ซ้อนทับกันใน html2canvas
+      const cloneThead = clone.querySelector('thead');
+      if (cloneThead) {
+        cloneThead.style.position = 'static';
+        cloneThead.classList.remove('sticky', 'top-0');
+      }
+      const cloneTfoot = clone.querySelector('tfoot');
+      if (cloneTfoot) {
+        cloneTfoot.style.position = 'static';
+        cloneTfoot.classList.remove('sticky', 'bottom-0');
+      }
+
+      // 4. ลบข้อความแจ้งเตือน "เลื่อนดูในกรอบได้" ในใบเสร็จรูปภาพออก ให้เป็นเอกสารทางการ
+      const cloneBadge = clone.querySelector('#receiptItemCountBadge');
+      if (cloneBadge) {
+        cloneBadge.textContent = '';
+      }
+
+      // 5. สร้าง Wrapper แบบเต็มความสูง นอก Modal โดยไม่ติด overflow ใดๆ
+      const targetWidth = Math.max(receiptEl.offsetWidth || 0, 600);
+      const wrapper = document.createElement('div');
+      wrapper.style.position = 'fixed';
+      wrapper.style.left = '0';
+      wrapper.style.top = '0';
+      wrapper.style.width = targetWidth + 'px';
+      wrapper.style.maxWidth = targetWidth + 'px';
+      wrapper.style.zIndex = '50'; // อยู่ใต้ SweetAlert modal
+      wrapper.style.background = '#ffffff';
+      wrapper.style.pointerEvents = 'none';
+      wrapper.appendChild(clone);
+      document.body.appendChild(wrapper);
+
+      setTimeout(() => {
+        const fullHeight = Math.max(clone.offsetHeight, clone.scrollHeight);
+        const fullWidth = Math.max(clone.offsetWidth, targetWidth);
+
+        html2canvas(clone, {
+          scale: 2,
+          useCORS: true,
+          allowTaint: true,
+          backgroundColor: '#ffffff',
+          logging: false,
+          width: fullWidth,
+          height: fullHeight,
+          windowWidth: fullWidth,
+          windowHeight: fullHeight + 200,
+          x: 0,
+          y: 0,
+          scrollX: 0,
+          scrollY: 0
+        }).then(canvas => {
+          if (wrapper && wrapper.parentNode) {
+            wrapper.parentNode.removeChild(wrapper);
+          }
+          Swal.close();
+          const imgData = canvas.toDataURL('image/png');
+          const link = document.createElement('a');
+          const orderId = (currentReceiptData && currentReceiptData.orderId) ? currentReceiptData.orderId : 'BBA_Receipt';
+          link.download = 'Receipt_' + orderId + '.png';
+          link.href = imgData;
+          document.body.appendChild(link);
+          link.click();
+          document.body.removeChild(link);
+
+          Swal.fire({
+            icon: 'success',
+            title: 'บันทึกรูปภาพใบเสร็จเรียบร้อยแล้ว!',
+            text: 'ดาวน์โหลดไฟล์ ' + link.download + ' ครบถ้วนทุกรายการแล้ว',
+            timer: 2500,
+            showConfirmButton: false
+          });
+        }).catch(err => {
+          if (wrapper && wrapper.parentNode) {
+            wrapper.parentNode.removeChild(wrapper);
+          }
+          Swal.close();
+          console.error('html2canvas error:', err);
+          Swal.fire({
+            icon: 'info',
+            title: 'แนะนำให้กด "พิมพ์ / PDF"',
+            text: 'สามารถกดปุ่ม "พิมพ์ / PDF" เพื่อพิมพ์หรือบันทึกเป็นเอกสาร PDF ได้ครบถ้วนครับ'
+          });
+        });
+      }, 150);
+    }
+
+    // ฟังก์ชันพิมพ์หรือบันทึกเป็น PDF
+    function printReceipt() {
+      window.print();
+    }
+
+    // เปิดดูใบเสร็จจากหน้า Track Order
+    function viewTrackOrderReceipt(orderId) {
+      let targetOrder = trackOrdersCache.find(o => o.orderId === orderId);
+      if (!targetOrder) return;
+
+      let parsedItems = [];
+      if (targetOrder.itemsJSON) {
+        try {
+          parsedItems = JSON.parse(targetOrder.itemsJSON);
+        } catch (e) {
+          parsedItems = [];
+        }
+      }
+
+      openReceiptModal({
+        orderId: targetOrder.orderId,
+        orderDate: targetOrder.orderDate,
+        studentId: targetOrder.studentId,
+        customerName: targetOrder.customerName,
+        phone: targetOrder.phone || targetOrder.maskedPhone,
+        studentEmail: targetOrder.studentEmail,
+        itemsSummary: targetOrder.itemsSummary,
+        items: parsedItems,
+        totalAmount: targetOrder.totalAmount,
+        status: targetOrder.status,
+        pickupLocation: targetOrder.pickupLocation || storeSettings.clubLocation,
+        pickupSchedule: storeSettings.clubSchedule
+      });
+    }
+
+    async function handleTrackSearch() {
+      if (!currentStudent) {
+        const notLoggedInBox = document.getElementById('trackNotLoggedInBox');
+        const loggedInContent = document.getElementById('trackLoggedInContent');
+        if (notLoggedInBox) notLoggedInBox.classList.remove('hidden');
+        if (loggedInContent) loggedInContent.classList.add('hidden');
+        return;
+      }
+
+      const notLoggedInBox = document.getElementById('trackNotLoggedInBox');
+      const loggedInContent = document.getElementById('trackLoggedInContent');
+      if (notLoggedInBox) notLoggedInBox.classList.add('hidden');
+      if (loggedInContent) loggedInContent.classList.remove('hidden');
+
+      const inputEl = document.getElementById('trackInput');
+      const q = inputEl ? inputEl.value.trim() : '';
+      const area = document.getElementById('trackResultArea');
+
+      area.innerHTML = '<div class="text-center py-8 text-slate-400">' +
+          '<i class="fa-solid fa-spinner fa-spin text-2xl text-indigo-600 mb-2"></i>' +
+          '<p class="text-xs">กำลังโหลดประวัติการสั่งซื้อของคุณ (' + escapeHtml(currentStudent.studentId) + ')...</p>' +
+        '</div>';
+
+      try {
+        const res = await fetch(API_BASE + '/api/my-orders', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            studentId: currentStudent.studentId,
+            pin: currentStudent.pin
+          })
+        });
+        const resData = await res.json();
+        if (resData && resData.success && resData.orders && resData.orders.length > 0) {
+          let list = resData.orders;
+          if (q) {
+            const lq = q.toLowerCase();
+            list = list.filter(o => 
+              (o.orderId && o.orderId.toLowerCase().includes(lq)) ||
+              (o.itemsSummary && o.itemsSummary.toLowerCase().includes(lq)) ||
+              (o.status && o.status.toLowerCase().includes(lq))
+            );
+          }
+          trackOrdersCache = list;
+          renderTrackOrders(list);
+        } else if (resData && !resData.success) {
+          trackOrdersCache = [];
+          area.innerHTML = '<div class="text-center py-8 bg-rose-50 rounded-xl border border-rose-200 text-rose-600 text-xs sm:text-sm">' +
+              '<i class="fa-solid fa-circle-exclamation text-3xl mb-2 text-rose-500"></i>' +
+              '<p class="font-semibold">' + escapeHtml(resData.message || 'เกิดข้อผิดพลาดในการโหลดประวัติ') + '</p>' +
+              '<div class="mt-3">' +
+                '<button onclick="openLoginModal()" class="px-4 py-2 bg-indigo-700 text-white rounded-xl text-xs font-semibold hover:bg-indigo-800 transition">เข้าสู่ระบบใหม่</button>' +
+              '</div>' +
+            '</div>';
+        } else {
+          trackOrdersCache = [];
+          area.innerHTML = '<div class="text-center py-8 bg-slate-50 rounded-xl border border-slate-200 text-slate-500 text-xs sm:text-sm">' +
+              '<i class="fa-solid fa-file-circle-xmark text-3xl text-slate-400 mb-2"></i>' +
+              '<p class="font-semibold text-slate-700">ไม่พบประวัติการสั่งซื้อ' + (q ? ' ที่ตรงกับคำค้นหา' : '') + '</p>' +
+              '<p class="text-slate-400 mt-1">' + (q ? 'ลองค้นหาด้วยคำอื่น หรือกดปุ่ม "แสดงคำสั่งจองทั้งหมด"' : 'คุณยังไม่มีรายการสั่งจองเสื้อในระบบ') + '</p>' +
+              '<div class="mt-3 flex items-center justify-center gap-2 flex-wrap">' +
+                (q ? '<button onclick="document.getElementById(\'trackInput\').value=\'\'; handleTrackSearch();" class="px-3.5 py-2 bg-indigo-50 text-indigo-700 hover:bg-indigo-100 rounded-xl text-xs font-semibold transition flex items-center gap-1.5"><i class="fa-solid fa-rotate-left"></i> แสดงคำสั่งจองทั้งหมด</button>' : '') +
+                '<button onclick="switchView(\'shop\')" class="px-4 py-2 bg-slate-900 text-white rounded-xl text-xs font-semibold hover:bg-indigo-900 transition flex items-center gap-1.5"><i class="fa-solid fa-shirt"></i> ไปดูแบบเสื้อสโมสร</button>' +
+              '</div>' +
+            '</div>';
+        }
+      } catch (err) {
+        area.innerHTML = '<div class="text-rose-500 text-center py-4 text-xs">' + escapeHtml(err.message) + '</div>';
+      }
+    }
+
+    function renderTrackOrders(orders) {
+      const area = document.getElementById('trackResultArea');
+      area.innerHTML = orders.map(ord => {
+        let step = 1;
+        if (ord.status.includes('รอตรวจสอบ')) step = 1;
+        if (ord.status === 'ชำระเงินเรียบร้อย') step = 2;
+        if (ord.status === 'พร้อมรับเสื้อที่ห้องสโมสร') step = 3;
+        if (ord.status === 'รับเสื้อแล้ว') step = 4;
+        if (ord.status === 'ยกเลิกคำสั่งซื้อ') step = -1;
+
+        let badgeClass = 'bg-amber-100 text-amber-800 border-amber-200';
+        if (ord.status === 'ชำระเงินเรียบร้อย') badgeClass = 'bg-blue-100 text-blue-800 border-blue-200';
+        if (ord.status === 'พร้อมรับเสื้อที่ห้องสโมสร') badgeClass = 'bg-emerald-100 text-emerald-800 border-emerald-300 ring-2 ring-emerald-400/30';
+        if (ord.status === 'รับเสื้อแล้ว') badgeClass = 'bg-slate-200 text-slate-800 border-slate-300';
+        if (ord.status === 'ยกเลิกคำสั่งซื้อ') badgeClass = 'bg-rose-100 text-rose-800 border-rose-200';
+
+        const safeOrderId = escapeHtml(ord.orderId);
+        const safeStudentId = escapeHtml(ord.studentId);
+        const safeName = escapeHtml(ord.customerName);
+        const safeEmail = escapeHtml(ord.studentEmail);
+        const safeItems = escapeHtml(ord.itemsSummary);
+        const safePickup = escapeHtml(ord.pickupLocation);
+        const safeStatus = escapeHtml(ord.status);
+
+        return '<div class="border border-slate-200 rounded-2xl p-5 bg-white shadow-sm space-y-4">' +
+            '<div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pb-3 border-b border-slate-100">' +
+              '<div>' +
+                '<span class="text-xs text-slate-400">รหัสคำสั่งจอง: <b class="font-mono text-slate-700">' + safeOrderId + '</b></span>' +
+                '<div class="text-xs text-slate-500 font-mono">รหัสนักศึกษา: <span class="font-bold text-slate-900">' + safeStudentId + '</span> (' + safeName + ')</div>' +
+              '</div>' +
+              '<div class="flex items-center gap-2">' +
+                '<button type="button" onclick="viewTrackOrderReceipt(\'' + safeOrderId + '\')" class="px-2.5 py-1 rounded-lg bg-indigo-50 hover:bg-indigo-100 text-indigo-700 border border-indigo-200 text-xs font-semibold shadow-sm transition flex items-center gap-1.5" title="ดูใบเสร็จและบันทึกรูปภาพ">' +
+                  '<i class="fa-solid fa-file-invoice"></i> <span>ดูใบเสร็จ</span>' +
+                '</button>' +
+                '<span class="px-3 py-1 rounded-full text-xs font-bold border ' + badgeClass + '">' + safeStatus + '</span>' +
+              '</div>' +
+            '</div>' +
+            (step !== -1 ? (
+              '<div class="py-2">' +
+                '<div class="flex items-center justify-between relative text-xs">' +
+                  '<div class="absolute top-3.5 left-4 right-4 h-0.5 bg-slate-200 -z-0">' +
+                    '<div class="h-full bg-indigo-700 transition-all duration-500" style="width: ' + (step === 1 ? '10%' : (step === 2 ? '40%' : (step === 3 ? '75%' : '100%'))) + '"></div>' +
+                  '</div>' +
+                  '<div class="flex flex-col items-center z-10">' +
+                    '<div class="w-7 h-7 rounded-full flex items-center justify-center font-bold ' + (step >= 1 ? 'bg-indigo-700 text-white shadow' : 'bg-slate-200 text-slate-500') + '">' +
+                      '<i class="fa-solid fa-receipt text-[10px]"></i>' +
+                    '</div>' +
+                    '<span class="mt-1 font-semibold text-[11px] text-slate-700">จองแล้ว</span>' +
+                  '</div>' +
+                  '<div class="flex flex-col items-center z-10">' +
+                    '<div class="w-7 h-7 rounded-full flex items-center justify-center font-bold ' + (step >= 2 ? 'bg-indigo-700 text-white shadow' : 'bg-slate-200 text-slate-500') + '">' +
+                      '<i class="fa-solid fa-boxes-packing text-[10px]"></i>' +
+                    '</div>' +
+                    '<span class="mt-1 font-semibold text-[11px] text-slate-700">เตรียมเสื้อ</span>' +
+                  '</div>' +
+                  '<div class="flex flex-col items-center z-10">' +
+                    '<div class="w-7 h-7 rounded-full flex items-center justify-center font-bold ' + (step >= 3 ? 'bg-emerald-600 text-white shadow ring-2 ring-emerald-300' : 'bg-slate-200 text-slate-500') + '">' +
+                      '<i class="fa-solid fa-gift text-[10px]"></i>' +
+                    '</div>' +
+                    '<span class="mt-1 font-semibold text-[11px] ' + (step === 3 ? 'text-emerald-700 font-bold' : 'text-slate-700') + '">พร้อมรับเสื้อ</span>' +
+                  '</div>' +
+                  '<div class="flex flex-col items-center z-10">' +
+                    '<div class="w-7 h-7 rounded-full flex items-center justify-center font-bold ' + (step >= 4 ? 'bg-slate-800 text-white shadow' : 'bg-slate-200 text-slate-500') + '">' +
+                      '<i class="fa-solid fa-check text-[10px]"></i>' +
+                    '</div>' +
+                    '<span class="mt-1 font-semibold text-[11px] text-slate-700">รับแล้ว</span>' +
+                  '</div>' +
+                '</div>' +
+              '</div>'
+            ) : '<div class="p-3 bg-rose-50 border border-rose-200 rounded-xl text-rose-700 text-xs"><i class="fa-solid fa-circle-xmark"></i> การสั่งจองนี้ถูกยกเลิกแล้ว</div>') +
+            (ord.status === 'พร้อมรับเสื้อที่ห้องสโมสร' ? (
+              '<div class="p-4 bg-emerald-50 border-2 border-emerald-300 rounded-xl space-y-1">' +
+                '<div class="font-bold text-emerald-900 flex items-center gap-2 text-sm"><i class="fa-solid fa-circle-check text-emerald-600 text-base"></i> เสื้อของคุณพร้อมให้มารับแล้วครับ!</div>' +
+                '<div class="text-xs text-emerald-800">กรุณานำบัตรนักศึกษาหรือเปิดหน้านี้ มาแสดงต่อกรรมการสโมสรที่:<div class="font-bold mt-0.5">' + safePickup + '</div></div>' +
+              '</div>'
+            ) : '') +
+            '<div class="text-xs space-y-1 text-slate-600 bg-slate-50 p-3.5 rounded-xl">' +
+              '<div><span class="font-medium text-slate-500">อีเมลนักศึกษา:</span> ' + safeEmail + '</div>' +
+              '<div><span class="font-medium text-slate-500">วันเวลาที่สั่งจอง:</span> ' + escapeHtml(ord.orderDate) + '</div>' +
+              '<div><span class="font-medium text-slate-500">รายการเสื้อ:</span> <div class="max-h-44 overflow-y-auto whitespace-pre-line mt-1 p-2 bg-white rounded-lg border border-slate-200 text-slate-700 font-normal">' + safeItems + '</div></div>' +
+              '<div class="pt-1.5 font-bold text-slate-900 border-t border-slate-200 flex justify-between">' +
+                '<span>ยอดชำระ:</span>' +
+                '<span class="text-indigo-700 font-extrabold text-sm">฿' + Number(ord.totalAmount).toLocaleString() + '</span>' +
+              '</div>' +
+            '</div>' +
+          '</div>';
+      }).join('');
+    }
+
+    function switchView(viewName) {
+      document.getElementById('viewShop').classList.add('hidden');
+      document.getElementById('viewTrack').classList.add('hidden');
+
+      const btnNavShop = document.getElementById('btnNavShop');
+      const btnNavTrack = document.getElementById('btnNavTrack');
+      const btnNavHistory = document.getElementById('btnNavHistory');
+
+      if (btnNavShop) btnNavShop.className = 'p-1.5 sm:px-3 sm:py-1.5 rounded-lg text-xs sm:text-sm font-medium text-slate-600 hover:text-slate-900 hover:bg-slate-100 transition flex items-center gap-1.5';
+      if (btnNavTrack) btnNavTrack.className = 'p-1.5 sm:px-3 sm:py-1.5 rounded-lg text-xs sm:text-sm font-medium text-slate-600 hover:text-slate-900 hover:bg-slate-100 transition flex items-center gap-1.5';
+      if (btnNavHistory) btnNavHistory.className = 'p-1.5 sm:px-3 sm:py-1.5 rounded-lg text-xs sm:text-sm font-medium text-slate-600 hover:text-slate-900 hover:bg-slate-100 transition flex items-center gap-1.5';
+
+      if (viewName === 'shop') {
+        document.getElementById('viewShop').classList.remove('hidden');
+        if (btnNavShop) btnNavShop.className = 'p-1.5 sm:px-3 sm:py-1.5 rounded-lg text-xs sm:text-sm font-medium text-indigo-700 bg-indigo-50 transition flex items-center gap-1.5';
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+        renderProducts(allProducts);
+      } else if (viewName === 'track') {
+        document.getElementById('viewTrack').classList.remove('hidden');
+        if (btnNavTrack) btnNavTrack.className = 'p-1.5 sm:px-3 sm:py-1.5 rounded-lg text-xs sm:text-sm font-medium text-indigo-700 bg-indigo-50 transition flex items-center gap-1.5';
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+
+        const notLoggedInBox = document.getElementById('trackNotLoggedInBox');
+        const loggedInContent = document.getElementById('trackLoggedInContent');
+        const titleEl = document.getElementById('trackHeaderTitle');
+
+        if (currentStudent) {
+          if (notLoggedInBox) notLoggedInBox.classList.add('hidden');
+          if (loggedInContent) loggedInContent.classList.remove('hidden');
+          if (titleEl) titleEl.textContent = 'ประวัติการสั่งซื้อของฉัน (' + (currentStudent.name || currentStudent.studentId) + ')';
+          const nameEl = document.getElementById('loggedInTrackName');
+          const idEl = document.getElementById('loggedInTrackId');
+          if (nameEl) nameEl.textContent = currentStudent.name || 'นักศึกษา';
+          if (idEl) idEl.textContent = 'รหัสนักศึกษา: ' + currentStudent.studentId;
+          handleTrackSearch();
+        } else {
+          if (notLoggedInBox) notLoggedInBox.classList.remove('hidden');
+          if (loggedInContent) loggedInContent.classList.add('hidden');
+          if (titleEl) titleEl.textContent = 'ประวัติการสั่งซื้อของฉัน';
+        }
+      }
+    }
+
+
+    // ==================== INITIALIZATION ====================
+    function initializeApp() {
+      if (appInitialized) return;
+      appInitialized = true;
+      loadStudentFromStorage();
+      loadCartFromStorage();
+      fetchStoreData();
+      
+      const trackInput = document.getElementById('trackInput');
+      if (trackInput) {
+        trackInput.addEventListener('keydown', event => {
+          if (event.key === 'Enter') handleTrackSearch();
+        });
+      }
+
+      window.addEventListener('keydown', e => {
+        if (e.key === 'Escape') {
+          closeProductModal();
+          closeLoginModal();
+          closeRegisterModal();
+          closeCheckoutModal();
+          closeCartDrawer();
+          closeReceiptModal();
+        }
+      });
+    }
+
+    if (document.readyState === 'loading') {
+      document.addEventListener('DOMContentLoaded', initializeApp, { once: true });
+    } else {
+      initializeApp();
+    }
+  </script>
+</body>
+</html>

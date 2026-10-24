@@ -1,0 +1,1848 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <base target="_top">
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+  <title>ระบบจัดการหลังบ้านสโมสรนักศึกษา | คณะบริหารธุรกิจและการจัดการ (BBA UBRU)</title>
+  <link rel="icon" type="image/png" href="https://i.postimg.cc/g0V05nHd/LOGO-SAMO-002-(1).png">
+
+  <!-- Google Fonts: Prompt -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com">
+  <link href="https://fonts.googleapis.com/css2?family=Prompt:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    window.tailwind = window.tailwind || {};
+    tailwind.config = {
+      theme: {
+        extend: {
+          fontFamily: {
+            sans: ['Prompt', 'sans-serif'],
+          },
+          colors: {
+            ubru: {
+              50: '#fdf2f8',
+              100: '#fce7f3',
+              500: '#ec4899',
+              600: '#db2777',
+              700: '#be185d',
+              800: '#9d174d',
+              900: '#831843',
+            },
+            navy: {
+              80: '#1e293b',
+              900: '#0f172a',
+              950: '#020617',
+            }
+          }
+        }
+      }
+    }
+  </script>
+
+  <!-- Font Awesome 6 Icons -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  
+  <!-- SweetAlert2 -->
+  <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+
+  <style>
+    html, body {
+      max-width: 100%;
+      overflow-x: hidden;
+    }
+    .hidden { display: none !important; }
+    .swal2-container { z-index: 10000 !important; }
+    body {
+      font-family: 'Prompt', sans-serif;
+      background-color: #f8fafc;
+    }
+    .hide-scrollbar::-webkit-scrollbar {
+      display: none;
+    }
+    .hide-scrollbar {
+      -ms-overflow-style: none;
+      scrollbar-width: none;
+    }
+  </style>
+</head>
+<body class="text-slate-800 antialiased min-h-screen flex flex-col">
+
+  <!-- ==================== 1. TOP NAVBAR (ADMIN) ==================== -->
+  <header class="sticky top-0 z-40 bg-white/95 backdrop-blur shadow-sm border-b border-slate-100">
+    <div class="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8 h-14 sm:h-16 flex items-center justify-between gap-2">
+      
+      <!-- Brand & Admin Tag -->
+      <div class="flex items-center gap-2 sm:gap-3 cursor-pointer min-w-0" onclick="window.location.reload()">
+        <img src="https://drive.google.com/thumbnail?id=11lMXnbog9-wdE28O3ax2LgzQJyFRxopi&sz=w200" alt="BBA UBRU Logo" class="w-8 h-8 sm:w-10 sm:h-10 rounded-lg sm:rounded-xl object-contain shadow-sm shrink-0">
+        <div class="min-w-0">
+          <div class="flex items-center gap-1.5 sm:gap-2">
+            <span class="font-bold text-xs sm:text-base lg:text-lg text-slate-900 tracking-tight block leading-tight truncate">สโมสรนักศึกษา BBA UBRU</span>
+            <span class="px-2 py-0.5 rounded-full text-[10px] sm:text-xs font-semibold bg-indigo-100 text-indigo-800 shrink-0">Admin Portal</span>
+          </div>
+          <span class="hidden sm:block text-[11px] sm:text-xs text-indigo-700 font-medium truncate">ระบบจัดการหลังบ้าน & ตรวจประวัติการสั่งจองเสื้อ</span>
+        </div>
+      </div>
+
+      <!-- Action Buttons -->
+      <nav class="flex items-center gap-1.5 sm:gap-2 shrink-0">
+        <a href="javascript:void(0)" onclick="goToShop(event)" class="px-2.5 py-1.5 sm:px-3 sm:py-1.5 rounded-lg text-xs sm:text-sm font-medium text-slate-600 hover:text-indigo-700 hover:bg-indigo-50 border border-slate-200 bg-white transition flex items-center gap-1.5 shadow-sm cursor-pointer" title="กลับไปหน้าร้านค้า">
+          <i class="fa-solid fa-store text-xs text-indigo-600"></i>
+          <span class="hidden sm:inline">หน้าร้านค้า</span>
+        </a>
+
+        <button onclick="loadAdminData()" id="btnHeaderRefresh" class="hidden px-2.5 py-1.5 sm:px-3 sm:py-1.5 rounded-lg text-xs sm:text-sm font-medium text-slate-700 hover:bg-slate-100 border border-slate-200 bg-white transition flex items-center gap-1.5 shadow-sm" title="รีเฟรชข้อมูล">
+          <i class="fa-solid fa-rotate-right text-xs"></i>
+          <span class="hidden sm:inline">รีเฟรช</span>
+        </button>
+
+        <button onclick="exitAdmin()" id="btnHeaderLogout" class="hidden px-2.5 py-1.5 sm:px-3 sm:py-1.5 rounded-lg text-xs sm:text-sm font-medium bg-rose-50 text-rose-700 hover:bg-rose-100 transition flex items-center gap-1.5 shadow-sm" title="ออกจากระบบ">
+          <i class="fa-solid fa-right-from-bracket text-xs"></i>
+          <span class="hidden sm:inline">ออกจากระบบ</span>
+        </button>
+      </nav>
+
+    </div>
+  </header>
+
+  <!-- ==================== 2. MAIN CONTAINER ==================== -->
+  <main class="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8 py-6 w-full flex-1">
+
+    <!-- Login Card (แสดงเมื่อยังไม่ได้ยืนยัน PIN) -->
+    <div id="adminLoginCard" class="max-w-md mx-auto my-12 bg-white rounded-3xl shadow-xl p-6 sm:p-8 border border-slate-100 text-center animate-fade-in">
+      <div class="w-16 h-16 rounded-2xl bg-indigo-50 text-indigo-600 flex items-center justify-center mx-auto mb-4 text-2xl shadow-inner">
+        <i class="fa-solid fa-shield-halved"></i>
+      </div>
+      <h2 class="text-xl font-bold text-slate-900 mb-1">เข้าสู่ระบบจัดการหลังบ้าน</h2>
+      <p class="text-xs text-slate-500 mb-6">กรุณาระบุรหัส PIN ผู้ดูแลระบบ (ค่าเริ่มต้น 1234)</p>
+      
+      <form onsubmit="handlePinFormSubmit(event)" class="space-y-4">
+        <div>
+          <input type="password" id="inputLoginPin" maxlength="10" placeholder="••••" autofocus
+                 class="w-full text-center tracking-widest text-2xl font-mono px-4 py-3 rounded-2xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-indigo-600 bg-slate-50 focus:bg-white transition">
+        </div>
+        <button type="submit" id="btnLoginSubmit" class="w-full py-3 bg-indigo-700 hover:bg-indigo-800 text-white font-bold rounded-2xl shadow-md transition flex items-center justify-center gap-2 text-sm">
+          <i class="fa-solid fa-lock-open"></i> เข้าสู่ระบบ
+        </button>
+      </form>
+
+      <div class="mt-6 pt-5 border-t border-slate-100">
+        <a href="javascript:void(0)" onclick="goToShop(event)" class="text-xs text-slate-500 hover:text-indigo-700 transition inline-flex items-center gap-1.5 font-medium cursor-pointer">
+          <i class="fa-solid fa-arrow-left"></i> กลับไปหน้าร้านค้าหลัก
+        </a>
+      </div>
+    </div>
+
+    <!-- Admin Dashboard Section -->
+    <section id="viewAdmin" class="hidden">
+      
+      <!-- Admin Header & Actions -->
+      <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-6 mb-6 border-b border-slate-200">
+        <div>
+          <div class="flex items-center gap-2">
+            <span class="px-2.5 py-0.5 rounded-full text-xs font-semibold bg-indigo-100 text-indigo-800">Admin BBA UBRU</span>
+            <h2 class="text-xl sm:text-2xl font-bold text-slate-900">ระบบจัดการ & ตรวจประวัติการสั่งซื้อรวม (BBA UBRU)</h2>
+          </div>
+          <p class="text-xs text-slate-500 mt-1">ตรวจสอบประวัติการสั่งซื้อรวมทั้งหมดของนักศึกษา, ตรวจสอบสลิป, แจ้งพร้อมรับเสื้อ และบันทึกการส่งมอบเสื้อ</p>
+        </div>
+
+        <div class="flex items-center gap-2">
+          <button onclick="loadAdminData()" class="px-3.5 py-2 rounded-xl bg-white border border-slate-200 text-xs font-semibold text-slate-700 hover:bg-slate-50 transition flex items-center gap-1.5 shadow-sm">
+            <i class="fa-solid fa-rotate-right"></i> รีเฟรช
+          </button>
+          <button onclick="exitAdmin()" class="px-3.5 py-2 rounded-xl bg-rose-50 text-rose-700 text-xs font-semibold hover:bg-rose-100 transition flex items-center gap-1.5">
+            <i class="fa-solid fa-right-from-bracket"></i> ออกจากระบบ
+          </button>
+        </div>
+      </div>
+
+      <!-- Admin Store Status Info -->
+      <div class="mb-6 p-4 bg-indigo-50/70 border border-indigo-100 rounded-2xl flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 text-xs text-indigo-950 shadow-sm">
+        <div class="flex items-center gap-2.5">
+          <div class="w-8 h-8 rounded-xl bg-indigo-600 text-white flex items-center justify-center text-sm shadow-sm">
+            <i class="fa-solid fa-shirt"></i>
+          </div>
+          <div>
+            <span class="font-bold">ระบบปิด/เปิดรับการสั่งจองรายสินค้า:</span>
+            <span class="text-indigo-700 block sm:inline sm:ml-1">สามารถกดปุ่ม "ปิดรับจอง" หรือ "เปิดรับจอง" ได้ที่แท็บ <strong class="underline decoration-indigo-400">สต็อกเสื้อผ้า</strong> ทีละรายการตามต้องการ</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Stats Cards -->
+      <div class="grid grid-cols-2 lg:grid-cols-5 gap-3 mb-8">
+        <div class="bg-white p-4 rounded-2xl border border-slate-200 shadow-sm">
+          <div class="flex items-center justify-between text-slate-500 mb-1">
+            <span class="text-xs font-medium">ยอดเงินรวม</span>
+            <i class="fa-solid fa-coins text-amber-500"></i>
+          </div>
+          <div class="text-lg sm:text-xl font-bold text-slate-900" id="statSales">฿0</div>
+        </div>
+
+        <div class="bg-white p-4 rounded-2xl border border-slate-200 shadow-sm">
+          <div class="flex items-center justify-between text-slate-500 mb-1">
+            <span class="text-xs font-medium">รอตรวจสลิป</span>
+            <i class="fa-solid fa-clock text-amber-500"></i>
+          </div>
+          <div class="text-lg sm:text-xl font-bold text-amber-600" id="statPending">0</div>
+        </div>
+
+        <div class="bg-white p-4 rounded-2xl border border-slate-200 shadow-sm">
+          <div class="flex items-center justify-between text-slate-500 mb-1">
+            <span class="text-xs font-medium">เตรียมเสื้อ</span>
+            <i class="fa-solid fa-boxes-packing text-blue-500"></i>
+          </div>
+          <div class="text-lg sm:text-xl font-bold text-blue-600" id="statPaid">0</div>
+        </div>
+
+        <div class="bg-white p-4 rounded-2xl border border-slate-200 shadow-sm">
+          <div class="flex items-center justify-between text-slate-500 mb-1">
+            <span class="text-xs font-medium">พร้อมรับที่สโมสร</span>
+            <i class="fa-solid fa-bell text-emerald-500"></i>
+          </div>
+          <div class="text-lg sm:text-xl font-bold text-emerald-600" id="statReady">0</div>
+        </div>
+
+        <div class="bg-white p-4 rounded-2xl border border-slate-200 shadow-sm">
+          <div class="flex items-center justify-between text-slate-500 mb-1">
+            <span class="text-xs font-medium">รับเสื้อแล้ว</span>
+            <i class="fa-solid fa-circle-check text-slate-400"></i>
+          </div>
+          <div class="text-lg sm:text-xl font-bold text-slate-600" id="statCompleted">0</div>
+        </div>
+      </div>
+
+      <!-- Admin Tabs -->
+      <div class="flex border-b border-slate-200 mb-6 gap-4 sm:gap-6 overflow-x-auto hide-scrollbar whitespace-nowrap">
+        <button onclick="switchAdminTab('orders')" id="tabBtnOrders" class="pb-3 text-sm font-semibold text-indigo-700 border-b-2 border-indigo-600 transition flex items-center gap-2 shrink-0">
+          <i class="fa-solid fa-boxes-packing"></i> ประวัติการสั่งซื้อรวม & จัดการรายการจอง (<span id="adminOrdersCount">0</span>)
+        </button>
+        <button onclick="switchAdminTab('stock')" id="tabBtnStock" class="pb-3 text-sm font-semibold text-slate-500 hover:text-slate-800 border-b-2 border-transparent transition flex items-center gap-2 shrink-0">
+          <i class="fa-solid fa-boxes-stacked"></i> สต็อกเสื้อผ้าสโมสร (<span id="adminProductsCount">0</span>)
+        </button>
+        <button onclick="switchAdminTab('production')" id="tabBtnProduction" class="pb-3 text-sm font-semibold text-slate-500 hover:text-slate-800 border-b-2 border-transparent transition flex items-center gap-2 shrink-0">
+          <i class="fa-solid fa-chart-pie"></i> สรุปยอดสั่งผลิต (<span id="adminProductionCount">0</span> ตัว)
+        </button>
+      </div>
+
+      <!-- Admin Tab Content 1: Orders -->
+      <div id="adminTabOrders">
+        <div class="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
+          <div class="p-4 border-b border-slate-200 flex flex-col md:flex-row md:items-center justify-between gap-3 bg-slate-50/50">
+            <div class="flex items-center gap-2">
+              <span class="text-sm font-bold text-slate-800">ประวัติการสั่งซื้อรวมของนักศึกษาทุกคน (เฉพาะหลังบ้าน)</span>
+              <span id="adminOrdersFilteredCount" class="text-xs text-indigo-700 font-medium bg-indigo-50 px-2.5 py-0.5 rounded-full border border-indigo-100">0 รายการ</span>
+            </div>
+            
+            <div class="flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
+              <!-- Search Box for Admin Orders -->
+              <div class="relative w-full sm:w-72">
+                <i class="fa-solid fa-magnifying-glass absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-xs"></i>
+                <input type="text" id="adminSearchInput" oninput="debouncedAdminSearch()" 
+                       placeholder="ค้นหารหัสนักศึกษา, ชื่อ, รหัสจอง, เบอร์..." 
+                       class="w-full pl-8 pr-7 py-1.5 text-xs rounded-lg border border-slate-200 bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500 shadow-sm transition">
+                <button type="button" id="adminSearchClearBtn" onclick="clearAdminSearch()" title="ล้างคำค้นหา"
+                        class="hidden absolute right-2 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 text-xs p-1">
+                  <i class="fa-solid fa-circle-xmark"></i>
+                </button>
+              </div>
+
+              <button type="button" onclick="exportOrdersToCsv()" class="px-3 py-1.5 rounded-lg border border-slate-300 bg-white text-slate-700 hover:bg-slate-100 font-semibold text-xs shadow-sm transition inline-flex items-center gap-1.5 shrink-0">
+                <i class="fa-solid fa-file-arrow-down text-emerald-600"></i>
+                <span>Export คำสั่งซื้อ (CSV)</span>
+              </button>
+              <!-- Status Filter Dropdown -->
+              <div class="flex items-center gap-1.5 shrink-0">
+                <select id="adminStatusFilter" onchange="renderAdminOrders()" class="text-xs rounded-lg border border-slate-200 px-3 py-1.5 bg-white focus:outline-none focus:ring-1 focus:ring-indigo-500 shadow-sm">
+                  <option value="ทั้งหมด">แสดงทุกสถานะ</option>
+                  <option value="รอตรวจสอบการชำระเงิน">รอตรวจสอบการชำระเงิน</option>
+                  <option value="ชำระเงินเรียบร้อย">ชำระเงินเรียบร้อย</option>
+                  <option value="พร้อมรับเสื้อที่ห้องสโมสร">พร้อมรับเสื้อที่ห้องสโมสร</option>
+                  <option value="รับเสื้อแล้ว">รับเสื้อแล้ว</option>
+                  <option value="ยกเลิกคำสั่งซื้อ">ยกเลิกคำสั่งซื้อ</option>
+                </select>
+
+                <button onclick="loadAdminData()" title="รีเฟรชรายการ" class="px-2.5 py-1.5 rounded-lg border border-slate-200 bg-white hover:bg-slate-50 text-slate-600 text-xs shadow-sm transition">
+                  <i class="fa-solid fa-arrows-rotate"></i>
+                </button>
+              </div>
+            </div>
+          </div>
+
+          <div class="overflow-x-auto">
+            <table class="w-full text-left border-collapse text-xs sm:text-sm">
+              <thead class="bg-slate-100/75 text-slate-600 font-semibold uppercase text-[11px] tracking-wider border-b border-slate-200">
+                <tr>
+                  <th class="p-3.5">รหัสจอง / วันที่</th>
+                  <th class="p-3.5">ข้อมูลนักศึกษา</th>
+                  <th class="p-3.5">รายการเสื้อ</th>
+                  <th class="p-3.5 text-right">ยอดรวม</th>
+                  <th class="p-3.5 text-center">สลิป</th>
+                  <th class="p-3.5 text-center">สถานะ</th>
+                  <th class="p-3.5 text-right">จัดการสถานะ</th>
+                </tr>
+              </thead>
+              <tbody id="adminOrdersTableBody" class="divide-y divide-slate-100">
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <!-- Admin Tab Content 2: Stock -->
+      <div id="adminTabStock" class="hidden">
+        <div class="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
+          <div class="p-4 border-b border-slate-200 flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-slate-50/50">
+            <div>
+              <span class="text-sm font-bold text-slate-800 block">สต็อกเสื้อสโมสรในระบบ Google Sheets</span>
+              <span class="text-xs text-slate-400">สามารถเพิ่มสินค้าใหม่ และแก้ไขรายละเอียดได้โดยตรง</span>
+            </div>
+            <div class="flex items-center gap-2">
+              <button onclick="openCategoryManageModal()" type="button" class="px-3.5 py-2 rounded-xl bg-white border border-slate-200 text-slate-700 text-xs font-semibold hover:bg-slate-50 shadow-sm transition flex items-center justify-center gap-1.5 shrink-0">
+                <i class="fa-solid fa-tags text-indigo-600"></i> จัดการหมวดหมู่เสื้อ (<span id="adminCategoryCountBadge">0</span>)
+              </button>
+              <button onclick="openAddProductModal()" class="px-3.5 py-2 rounded-xl bg-indigo-700 text-white text-xs font-semibold hover:bg-indigo-800 shadow-sm transition flex items-center justify-center gap-1.5 shrink-0">
+                <i class="fa-solid fa-plus"></i> เพิ่มสินค้าใหม่
+              </button>
+            </div>
+          </div>
+          <div class="overflow-x-auto">
+            <table class="w-full text-left border-collapse text-xs sm:text-sm">
+              <thead class="bg-slate-100/75 text-slate-600 font-semibold uppercase text-[11px] tracking-wider border-b border-slate-200">
+                <tr>
+                  <th class="p-3.5">รหัสเสื้อ</th>
+                  <th class="p-3.5">รูป & ชื่อเสื้อ</th>
+                  <th class="p-3.5">หมวดหมู่</th>
+                  <th class="p-3.5">ราคา (บาท)</th>
+                  <th class="p-3.5">สต็อกคงเหลือ</th>
+                  <th class="p-3.5">สถานะ</th>
+                  <th class="p-3.5 text-right">แก้ไข</th>
+                </tr>
+              </thead>
+              <tbody id="adminStockTableBody" class="divide-y divide-slate-100">
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <!-- Admin Tab Content 3: Production Summary -->
+      <div id="adminTabProduction" class="hidden">
+        <div class="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden p-4 sm:p-6 space-y-6">
+          <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-4 border-b border-slate-100">
+            <div>
+              <h3 class="text-base font-bold text-slate-900 flex items-center gap-2">
+                <i class="fa-solid fa-chart-pie text-indigo-600"></i> สรุปยอดสั่งผลิตเสื้อสโมสรแยกตามไซส์และสี
+              </h3>
+              <p class="text-xs text-slate-500 mt-0.5">รวมเฉพาะคำสั่งซื้อที่ไม่ได้ถูกยกเลิก สำหรับใช้ส่งโรงงานผลิต</p>
+            </div>
+            <div class="flex items-center gap-2">
+              <button type="button" onclick="copyProductionSummaryText()" class="px-3.5 py-2 rounded-xl bg-indigo-50 hover:bg-indigo-100 text-indigo-700 border border-indigo-200 font-semibold text-xs shadow-sm transition inline-flex items-center gap-1.5">
+                <i class="fa-solid fa-copy"></i> คัดลอกสรุปข้อความ (ส่ง LINE)
+              </button>
+            </div>
+          </div>
+
+          <!-- Total Count Hero -->
+          <div class="bg-gradient-to-r from-slate-900 to-indigo-950 text-white rounded-2xl p-5 shadow-sm flex items-center justify-between">
+            <div>
+              <span class="text-xs text-indigo-200 font-medium">ยอดสั่งผลิตรวมทั้งหมด</span>
+              <div class="text-3xl font-extrabold mt-1 tracking-tight"><span id="prodSummaryGrandTotal">0</span> <span class="text-lg font-normal text-indigo-200">ตัว</span></div>
+            </div>
+            <div class="w-12 h-12 rounded-2xl bg-white/10 flex items-center justify-center text-2xl text-indigo-300">
+              <i class="fa-solid fa-industry"></i>
+            </div>
+          </div>
+
+          <!-- Production Breakdown Container -->
+          <div id="productionSummaryContainer" class="space-y-6"></div>
+        </div>
+      </div>
+
+    </section>
+
+  </main>
+
+  <!-- ==================== 3. MODALS ==================== -->
+  <div id="slipViewerModal" class="fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-sm items-center justify-center p-4" style="display: none;">
+    <div class="bg-white rounded-2xl max-w-md w-full overflow-hidden shadow-2xl p-4 animate-fade-in flex flex-col">
+      <div class="flex justify-between items-center pb-2.5 mb-2 border-b border-slate-100">
+        <div class="flex items-center gap-2">
+          <i class="fa-solid fa-file-invoice-dollar text-indigo-700"></i>
+          <h4 class="font-bold text-sm text-slate-800">หลักฐานการโอนเงิน (สลิป)</h4>
+        </div>
+        <button onclick="closeSlipViewer()" class="w-7 h-7 rounded-full text-slate-400 hover:text-slate-700 hover:bg-slate-100 flex items-center justify-center transition">
+          <i class="fa-solid fa-xmark"></i>
+        </button>
+      </div>
+
+      <!-- Slip Image Box -->
+      <div class="flex items-center justify-center min-h-[320px] max-h-[520px] overflow-auto bg-slate-50 rounded-xl relative p-2 border border-slate-100">
+        <!-- Loading Spinner -->
+        <div id="slipViewerSpinner" class="flex flex-col items-center justify-center text-slate-400 py-12">
+          <i class="fa-solid fa-circle-notch fa-spin text-3xl text-indigo-600 mb-2.5"></i>
+          <span class="text-xs font-medium text-slate-500">กำลังดึงภาพสลิปจาก Google Drive...</span>
+        </div>
+
+        <!-- Rendered Image -->
+        <img id="viewerSlipImg" src="" alt="สลิปโอนเงิน" class="hidden max-w-full max-h-[500px] object-contain rounded-lg shadow-sm">
+
+        <!-- Error State -->
+        <div id="slipViewerError" class="hidden text-center text-slate-500 py-8 px-4 text-xs space-y-2">
+          <i class="fa-solid fa-image-slash text-3xl text-rose-400"></i>
+          <p class="font-semibold text-slate-700">ไม่สามารถแสดงผลภาพสลิปในหน้านี้ได้</p>
+          <p class="text-slate-400">เนื่องจากข้อจำกัดด้านสิทธิ์ความปลอดภัยของ Google Drive</p>
+          <a id="errorSlipLink" href="#" target="_blank" class="inline-block mt-2 px-4 py-2 bg-indigo-50 text-indigo-700 font-semibold rounded-xl border border-indigo-200 hover:bg-indigo-100 transition">
+            เปิดดูรูปใน Google Drive โดยตรง <i class="fa-solid fa-arrow-up-right-from-square text-[10px]"></i>
+          </a>
+        </div>
+      </div>
+
+      <div class="mt-3 flex items-center justify-between text-xs text-slate-500 pt-1">
+        <span class="text-[11px] text-slate-400">* ตรวจสอบยอดเงินและเวลาโอน</span>
+        <a id="viewerSlipLink" href="#" target="_blank" class="text-indigo-700 font-medium hover:underline inline-flex items-center gap-1">
+          เปิดใน Drive <i class="fa-solid fa-arrow-up-right-from-square text-[10px]"></i>
+        </a>
+      </div>
+    </div>
+  </div>
+
+  <div id="adminProductModal" class="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-sm items-center justify-center p-3 sm:p-4 overflow-y-auto" style="display: none;">
+    <div class="bg-white rounded-2xl max-w-xl w-full my-6 overflow-hidden shadow-2xl animate-fade-in flex flex-col max-h-[92vh]">
+      
+      <div class="p-4 sm:p-5 border-b border-slate-200 flex items-center justify-between bg-slate-900 text-white">
+        <div class="flex items-center gap-2">
+          <i class="fa-solid fa-shirt text-indigo-400"></i>
+          <h3 id="adminProductModalTitle" class="font-bold text-base sm:text-lg">จัดการข้อมูลสินค้า</h3>
+        </div>
+        <button onclick="closeAdminProductModal()" class="w-8 h-8 rounded-full text-slate-300 hover:text-white hover:bg-white/10 flex items-center justify-center">
+          <i class="fa-solid fa-xmark"></i>
+        </button>
+      </div>
+
+      <div class="p-5 sm:p-6 overflow-y-auto space-y-4 flex-1 text-xs sm:text-sm">
+        <input type="hidden" id="prodFormMode" value="add">
+
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          <div>
+            <label class="block text-slate-700 font-semibold mb-1">รหัสสินค้า (Product ID):</label>
+            <input type="text" id="prodFormId" placeholder="เช่น BBA-05 (เว้นว่างเพื่อสร้างให้อัตโนมัติ)" 
+                   class="w-full px-3.5 py-2 rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-indigo-500 font-mono text-xs">
+          </div>
+
+          <div>
+            <div class="flex items-center justify-between mb-1">
+              <label class="block text-slate-700 font-semibold">หมวดหมู่ (Category): <span class="text-rose-500">*</span></label>
+              <button type="button" onclick="openCategoryManageModal()" class="text-[11px] text-indigo-600 hover:text-indigo-800 hover:underline inline-flex items-center gap-1">
+                <i class="fa-solid fa-gear text-[10px]"></i> จัดการหมวดหมู่
+              </button>
+            </div>
+            <input type="text" id="prodFormCategory" list="categorySuggestions" placeholder="เช่น เสื้อโปโล, เสื้อยืด, เสื้อกิจกรรม" 
+                   class="w-full px-3.5 py-2 rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-indigo-500 text-xs">
+            <datalist id="categorySuggestions">
+              <option value="เสื้อโปโล">
+              <option value="เสื้อยืด Oversize">
+              <option value="เสื้อกิจกรรม">
+              <option value="เสื้อกันหนาว/แจ็คเก็ต">
+            </datalist>
+          </div>
+
+          <div class="sm:col-span-2">
+            <label class="block text-slate-700 font-semibold mb-1">ชื่อสินค้า: <span class="text-rose-500">*</span></label>
+            <input type="text" id="prodFormName" placeholder="เช่น เสื้อโปโลสโมสรนักศึกษา BBA UBRU รุ่น 2026" 
+                   class="w-full px-3.5 py-2 rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-indigo-500 text-xs">
+          </div>
+
+          <div>
+            <label class="block text-slate-700 font-semibold mb-1">ราคาปกติ (บาท): <span class="text-rose-500">*</span></label>
+            <input type="number" id="prodFormPrice" min="0" placeholder="เช่น 350" 
+                   class="w-full px-3.5 py-2 rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-indigo-500 text-xs">
+            <span class="text-[10px] text-slate-400 mt-0.5 block">* ไซส์ 2XL+ ระบบจะบวกเพิ่ม 20฿ อัตโนมัติ</span>
+          </div>
+
+          <div>
+            <label class="block text-slate-700 font-semibold mb-1">จำนวนสต็อกรวม (ตัว): <span class="text-rose-500">*</span></label>
+            <input type="number" id="prodFormStock" min="0" placeholder="เช่น 100" readonly
+                   class="w-full px-3.5 py-2 rounded-xl border border-slate-200 bg-slate-100 text-slate-700 font-bold focus:outline-none text-xs cursor-not-allowed">
+            <span class="text-[10px] text-slate-400 mt-0.5 block">* คำนวณจากผลรวมของสต็อกแต่ละไซส์</span>
+          </div>
+
+          <div>
+            <label class="block text-slate-700 font-semibold mb-1">ไซส์ที่มีจำหน่าย: <span class="text-rose-500">*</span></label>
+            <input type="text" id="prodFormSizes" placeholder="คั่นด้วยจุลภาค เช่น S, M, L, XL, 2XL, 3XL" oninput="renderAdminSizeStockInputs()"
+                   class="w-full px-3.5 py-2 rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-indigo-500 text-xs">
+            <span class="text-[10px] text-slate-400 mt-0.5 block">คั่นแต่ละไซส์ด้วยเครื่องหมายจุลภาค (,)</span>
+          </div>
+
+          <div class="sm:col-span-2 bg-indigo-50/50 border border-indigo-100 rounded-2xl p-3 sm:p-4">
+            <div class="flex items-center justify-between mb-2">
+              <label class="block text-slate-800 font-bold text-xs flex items-center gap-1.5">
+                <i class="fa-solid fa-boxes-stacked text-indigo-600"></i>
+                <span>ระบุจำนวนสต็อกแยกตามรายไซส์:</span>
+                <span class="text-rose-500">*</span>
+              </label>
+              <span class="text-[11px] text-slate-500">รวมทั้งหมด: <span id="adminTotalSizeStockBadge" class="font-bold text-indigo-700">0</span> ตัว</span>
+            </div>
+            <div id="adminSizeStockContainer" class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-6 gap-2">
+              <!-- Rendered dynamically -->
+            </div>
+            <p class="text-[10px] text-slate-400 mt-2">* จำนวนสต็อกรวม (ด้านบน) จะคำนวณและปรับตามผลรวมของสต็อกแต่ละไซส์โดยอัตโนมัติ</p>
+          </div>
+
+          <div>
+            <label class="block text-slate-700 font-semibold mb-1">สีที่มีจำหน่าย: <span class="text-rose-500">*</span></label>
+            <input type="text" id="prodFormColors" placeholder="คั่นด้วยจุลภาค เช่น ฟ้าคราม-ทอง, กรมท่า-ขาว" 
+                   class="w-full px-3.5 py-2 rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-indigo-500 text-xs">
+          </div>
+
+          <div class="sm:col-span-2">
+            <div class="flex items-center justify-between mb-1.5">
+              <label class="block text-slate-700 font-semibold text-xs">
+                รูปภาพสินค้า: <span class="text-slate-400 font-normal text-[11px]">(อัปโหลดรูปภาพได้หลายรูป)</span>
+              </label>
+              <span id="adminImageCountBadge" class="text-[11px] font-semibold text-indigo-600">0 รูป</span>
+            </div>
+            <div class="border-2 border-dashed border-indigo-200 hover:border-indigo-400 bg-indigo-50/40 hover:bg-indigo-50/70 rounded-2xl p-4 text-center cursor-pointer transition select-none"
+                 onclick="document.getElementById('prodFormFileInput').click()"
+                 ondragover="event.preventDefault(); this.classList.add('border-indigo-500', 'bg-indigo-50');"
+                 ondragleave="this.classList.remove('border-indigo-500', 'bg-indigo-50');"
+                 ondrop="handleProductFileDrop(event)">
+              <input type="file" id="prodFormFileInput" accept="image/*" multiple class="hidden" onchange="handleProductFilesSelect(event)">
+              <div class="w-10 h-10 rounded-full bg-indigo-100 text-indigo-600 flex items-center justify-center mx-auto mb-1.5 text-base shadow-sm">
+                <i class="fa-solid fa-cloud-arrow-up"></i>
+              </div>
+              <p class="text-xs font-semibold text-slate-700">คลิกเพื่อเลือกรูปภาพจากเครื่อง หรือลากรูปมาวางที่นี่</p>
+              <p class="text-[11px] text-slate-400 mt-0.5">รองรับไฟล์ JPG, PNG, WEBP (เลือกได้หลายรูปพร้อมกัน)</p>
+            </div>
+            <!-- Preview List -->
+            <div id="prodFormImagePreviews" class="flex flex-wrap gap-2.5 mt-3"></div>
+          </div>
+          <div class="sm:col-span-2">
+            <label class="block text-slate-700 font-semibold mb-1 text-xs">รายละเอียดขนาด / รอบอก (Size Guide):</label>
+            <textarea id="prodFormSizeGuide" rows="2" placeholder="เช่น S อก 36\" ยาว 26\" / M อก 38\" ยาว 27\" / L อก 40\" ยาว 28\" / 2XL อก 44\" ยาว 30\"..." 
+                      class="w-full px-3.5 py-2 rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-indigo-500 text-xs"></textarea>
+          </div>
+
+          <div class="sm:col-span-2">
+            <label class="block text-slate-700 font-semibold mb-1">คำอธิบายรายละเอียดสินค้า:</label>
+            <textarea id="prodFormDesc" rows="3" placeholder="ระบุเนื้อผ้า คุณสมบัติ หรือรายละเอียดของเสื้อ..." 
+                      class="w-full px-3.5 py-2 rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-indigo-500 text-xs"></textarea>
+          </div>
+
+          <div>
+            <label class="block text-slate-700 font-semibold mb-1">สถานะสินค้า:</label>
+            <select id="prodFormStatus" class="w-full px-3.5 py-2 rounded-xl border border-slate-200 bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500 text-xs">
+              <option value="พร้อมจำหน่าย">พร้อมจำหน่าย</option>
+              <option value="ปิดรับการสั่งจอง">ปิดรับการสั่งจอง</option>
+              <option value="สินค้าหมด">สินค้าหมด</option>
+            </select>
+          </div>
+        </div>
+
+      </div>
+
+      <div class="p-4 sm:p-5 border-t border-slate-200 bg-slate-50 flex items-center justify-end gap-3">
+        <button onclick="closeAdminProductModal()" type="button" class="px-4 py-2 rounded-xl border border-slate-300 text-slate-700 font-medium hover:bg-slate-100 transition text-xs sm:text-sm">
+          ยกเลิก
+        </button>
+        <button onclick="saveAdminProductForm()" id="btnSaveAdminProd" type="button" class="px-5 py-2 rounded-xl bg-indigo-700 text-white font-bold hover:bg-indigo-800 transition flex items-center gap-2 text-xs sm:text-sm shadow-md">
+          <i class="fa-solid fa-floppy-disk"></i> บันทึกข้อมูลสินค้า
+        </button>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- Modal: จัดการหมวดหมู่เสื้อ (Category Management Modal) -->
+  <div id="categoryManageModal" class="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-sm items-center justify-center p-3 sm:p-4" style="display: none;">
+    <div class="bg-white rounded-2xl max-w-md w-full overflow-hidden shadow-2xl animate-fade-in flex flex-col">
+      <div class="p-4 sm:p-5 border-b border-slate-200 flex items-center justify-between bg-slate-900 text-white">
+        <div class="flex items-center gap-2">
+          <i class="fa-solid fa-tags text-indigo-400"></i>
+          <h3 class="font-bold text-sm sm:text-base">จัดการหมวดหมู่เสื้อสโมสร</h3>
+        </div>
+        <button onclick="closeCategoryManageModal()" type="button" class="w-8 h-8 rounded-full text-slate-300 hover:text-white hover:bg-white/10 flex items-center justify-center">
+          <i class="fa-solid fa-xmark"></i>
+        </button>
+      </div>
+
+      <div class="p-5 space-y-4 text-xs sm:text-sm">
+        <!-- Add New Category Form -->
+        <div>
+          <label class="block text-slate-700 font-bold mb-1.5 text-xs">เพิ่มหมวดหมู่ใหม่:</label>
+          <div class="flex gap-2">
+            <input type="text" id="newCategoryInput" placeholder="พิมพ์ชื่อหมวดหมู่ เช่น เสื้อกาวน์, เสื้อช็อป..." 
+                   class="flex-1 px-3.5 py-2 rounded-xl border border-slate-200 text-xs focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                   onkeydown="if(event.key === 'Enter') { event.preventDefault(); submitAddCategory(); }">
+            <button type="button" onclick="submitAddCategory()" id="btnAddCategory" class="px-3.5 py-2 rounded-xl bg-indigo-700 hover:bg-indigo-800 text-white font-bold text-xs transition flex items-center gap-1.5 shadow-sm shrink-0">
+              <i class="fa-solid fa-plus"></i> เพิ่ม
+            </button>
+          </div>
+        </div>
+
+        <!-- Categories List -->
+        <div>
+          <div class="flex items-center justify-between mb-2">
+            <label class="block text-slate-700 font-bold text-xs">หมวดหมู่ทั้งหมดในระบบ:</label>
+            <span class="text-[11px] text-slate-400">คลิกที่ <i class="fa-solid fa-xmark text-rose-500"></i> เพื่อลบ</span>
+          </div>
+          <div id="adminCategoryListContainer" class="flex flex-wrap gap-2 p-3 bg-slate-50 border border-slate-200 rounded-2xl min-h-[90px] max-h-[220px] overflow-y-auto">
+            <!-- Dynamic Category Badges -->
+          </div>
+          <p class="text-[10px] text-slate-400 mt-2">* เมื่อเพิ่มหรือลบหมวดหมู่ ระบบจะอัปเดตตัวเลือกในฟอร์มสินค้าและหน้าร้านค้าทันที</p>
+        </div>
+      </div>
+
+      <div class="p-4 border-t border-slate-200 bg-slate-50 flex items-center justify-end">
+        <button onclick="closeCategoryManageModal()" type="button" class="px-4 py-2 rounded-xl bg-slate-900 text-white font-medium hover:bg-slate-800 transition text-xs sm:text-sm">
+          ปิดหน้าต่าง
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ==================== 4. JAVASCRIPT LOGIC ==================== -->
+  <script>
+    // Base API URL: ถ้าเปิดผ่านเว็บ Worker ใช้ relative path แต่ถ้าเปิดเป็น Tauri App หรืออื่นๆ ให้ชี้ไปยัง Cloudflare Worker
+    const API_BASE = (window.location.origin && window.location.origin.includes('workers.dev')) ? '' : 'https://bba-store.smobba.workers.dev';
+
+    // State Variables
+    let adminTokenPin = '';
+    let adminOrdersList = [];
+    let adminProductsList = [];
+    let allProducts = [];
+    let adminFormImages = [];
+    let currentViewingSlipOrderId = '';
+    let adminCategoriesList = ['เสื้อโปโล', 'เสื้อยืด Oversize', 'เสื้อกิจกรรม', 'เสื้อกันหนาว/แจ็คเก็ต'];
+
+    function renderAdminCategories() {
+      const badge = document.getElementById('adminCategoryCountBadge');
+      if (badge) badge.textContent = adminCategoriesList.length;
+
+      const container = document.getElementById('adminCategoryListContainer');
+      if (container) {
+        if (adminCategoriesList.length === 0) {
+          container.innerHTML = '<span class="text-xs text-slate-400 my-auto mx-auto py-2">ยังไม่มีหมวดหมู่</span>';
+        } else {
+          container.innerHTML = adminCategoriesList.map(cat => {
+            const safe = escapeHtml(cat);
+            return '<div class="inline-flex items-center gap-1.5 px-3 py-1.5 bg-white border border-slate-200 rounded-xl text-xs font-semibold text-slate-800 shadow-sm">' +
+              '<i class="fa-solid fa-tag text-indigo-600 text-[10px]"></i>' +
+              '<span>' + safe + '</span>' +
+              '<button type="button" onclick="confirmDeleteCategory(\'' + safe + '\')" title="ลบหมวดหมู่ ' + safe + '" class="w-4 h-4 ml-1 rounded-full text-slate-400 hover:text-rose-600 hover:bg-rose-50 flex items-center justify-center transition">' +
+                '<i class="fa-solid fa-xmark text-[10px]"></i>' +
+              '</button>' +
+            '</div>';
+          }).join('');
+        }
+      }
+
+      const datalist = document.getElementById('categorySuggestions');
+      if (datalist) {
+        datalist.innerHTML = adminCategoriesList.map(cat => '<option value="' + escapeHtml(cat) + '">').join('');
+      }
+    }
+
+    function openCategoryManageModal() {
+      renderAdminCategories();
+      const modal = document.getElementById('categoryManageModal');
+      if (modal) {
+        modal.style.display = 'flex';
+        const input = document.getElementById('newCategoryInput');
+        if (input) {
+          input.value = '';
+          setTimeout(() => input.focus(), 100);
+        }
+      }
+    }
+
+    function closeCategoryManageModal() {
+      const modal = document.getElementById('categoryManageModal');
+      if (modal) modal.style.display = 'none';
+    }
+
+    async function submitAddCategory() {
+      const input = document.getElementById('newCategoryInput');
+      const val = input ? input.value.trim() : '';
+      if (!val) {
+        Swal.fire('แจ้งเตือน', 'กรุณาระบุชื่อหมวดหมู่ที่ต้องการเพิ่ม', 'warning');
+        return;
+      }
+      if (adminCategoriesList.some(c => c.toLowerCase() === val.toLowerCase())) {
+        Swal.fire('แจ้งเตือน', 'หมวดหมู่ "' + val + '" มีอยู่ในระบบแล้ว', 'warning');
+        return;
+      }
+
+      Swal.showLoading();
+      try {
+        const res = await fetch(API_BASE + '/api/admin/categories/add', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ pin: adminTokenPin, category: val })
+        });
+        const resData = await res.json();
+        Swal.close();
+        if (resData && resData.success) {
+          adminCategoriesList = resData.categories || adminCategoriesList;
+          renderAdminCategories();
+          if (input) input.value = '';
+          Swal.fire({
+            title: 'สำเร็จ',
+            text: resData.message || 'เพิ่มหมวดหมู่สำเร็จ',
+            icon: 'success',
+            timer: 1500,
+            showConfirmButton: false
+          });
+        } else {
+          Swal.fire('ข้อผิดพลาด', (resData && resData.message) || 'ไม่สามารถเพิ่มหมวดหมู่ได้', 'error');
+        }
+      } catch (err) {
+        Swal.close();
+        Swal.fire('ข้อผิดพลาด', err.message, 'error');
+      }
+    }
+
+    function confirmDeleteCategory(cat) {
+      if (!cat) return;
+      Swal.fire({
+        title: 'ยืนยันการลบหมวดหมู่?',
+        text: 'ต้องการลบหมวดหมู่ "' + cat + '" ออกจากระบบใช่หรือไม่?',
+        icon: 'warning',
+        showCancelButton: true,
+        confirmButtonColor: '#e11d48',
+        cancelButtonColor: '#64748b',
+        confirmButtonText: 'ลบหมวดหมู่',
+        cancelButtonText: 'ยกเลิก'
+      }).then(async result => {
+        if (!result.isConfirmed) return;
+
+        Swal.showLoading();
+        try {
+          const res = await fetch(API_BASE + '/api/admin/categories/delete', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ pin: adminTokenPin, category: cat })
+          });
+          const resData = await res.json();
+          Swal.close();
+          if (resData && resData.success) {
+            adminCategoriesList = resData.categories || adminCategoriesList.filter(c => c !== cat);
+            renderAdminCategories();
+            Swal.fire({
+              title: 'สำเร็จ',
+              text: resData.message || 'ลบหมวดหมู่เรียบร้อยแล้ว',
+              icon: 'success',
+              timer: 1500,
+              showConfirmButton: false
+            });
+          } else {
+            Swal.fire('ข้อผิดพลาด', (resData && resData.message) || 'ไม่สามารถลบหมวดหมู่ได้', 'error');
+          }
+        } catch (err) {
+          Swal.close();
+          Swal.fire('ข้อผิดพลาด', err.message, 'error');
+        }
+      });
+    }
+
+    let serverWebAppUrl = '';
+
+    // ฟังก์ชันกลับไปหน้าร้านค้าหลัก
+    function goToShop(event) {
+      if (event) event.preventDefault();
+      window.location.href = '/';
+    }
+
+    // Helper: XSS Protection
+    function escapeHtml(str) {
+      if (str === null || str === undefined) return '';
+      return String(str)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#039;');
+    }
+
+    // Helper: จัดการรหัส PIN 4 หลัก ไม่ให้เลข 0 ด้านหน้าหายไป
+    function normalizePin(val) {
+      if (val === null || val === undefined) return '';
+      let s = String(val).trim();
+      if (s.startsWith("'")) s = s.substring(1).trim();
+      s = s.replace(/[^0-9]/g, '');
+      if (!s) return '';
+      if (s.length < 4) s = s.padStart(4, '0');
+      return s;
+    }
+
+    function debounce(fn, delay) {
+      let timer;
+      return function (...args) {
+        clearTimeout(timer);
+        timer = setTimeout(() => fn.apply(this, args), delay);
+      };
+    }
+
+    const debouncedAdminSearch = debounce(renderAdminOrders, 150);
+
+    function switchView(viewName) {
+      const loginCard = document.getElementById('adminLoginCard');
+      const viewAdmin = document.getElementById('viewAdmin');
+      const btnRefresh = document.getElementById('btnHeaderRefresh');
+      const btnLogout = document.getElementById('btnHeaderLogout');
+
+      if (viewName === 'admin') {
+        if (loginCard) loginCard.classList.add('hidden');
+        if (viewAdmin) viewAdmin.classList.remove('hidden');
+        if (btnRefresh) btnRefresh.classList.remove('hidden');
+        if (btnLogout) btnLogout.classList.remove('hidden');
+      } else {
+        if (loginCard) loginCard.classList.remove('hidden');
+        if (viewAdmin) viewAdmin.classList.add('hidden');
+        if (btnRefresh) btnRefresh.classList.add('hidden');
+        if (btnLogout) btnLogout.classList.add('hidden');
+      }
+    }
+
+    function renderProducts(prods) {
+      // Stub for admin page compatibility
+    }
+
+    function handlePinFormSubmit(e) {
+      if (e) e.preventDefault();
+      const input = document.getElementById('inputLoginPin');
+      const pin = normalizePin(input ? input.value : '');
+      if (!pin) {
+        Swal.fire('แจ้งเตือน', 'กรุณาระบุรหัส PIN', 'warning');
+        return;
+      }
+      adminTokenPin = pin;
+      loadAdminData();
+    }
+
+    function openAdminModal() {
+      if (adminTokenPin) {
+        switchView('admin');
+        loadAdminData();
+        return;
+      }
+      switchView('login');
+    }
+
+    function exitAdmin() {
+      adminTokenPin = '';
+      try { sessionStorage.removeItem('bba_admin_pin'); } catch (e) {}
+      switchView('login');
+      const input = document.getElementById('inputLoginPin');
+      if (input) {
+        input.value = '';
+        input.focus();
+      }
+    }
+
+    async function loadAdminData() {
+      if (!adminTokenPin) {
+        switchView('login');
+        return;
+      }
+      Swal.showLoading();
+      try {
+        const res = await fetch(API_BASE + '/api/admin/data', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ pin: adminTokenPin })
+        });
+        const resData = await res.json();
+        Swal.close();
+        if (resData && resData.success) {
+          try { sessionStorage.setItem('bba_admin_pin', adminTokenPin); } catch (e) {}
+          switchView('admin');
+          document.getElementById('statSales').textContent = '฿' + Number(resData.stats.totalSales || 0).toLocaleString();
+          document.getElementById('statPending').textContent = resData.stats.pendingCount || 0;
+          document.getElementById('statPaid').textContent = resData.stats.paidCount || 0;
+          document.getElementById('statReady').textContent = resData.stats.readyCount || 0;
+          document.getElementById('statCompleted').textContent = resData.stats.completedCount || 0;
+
+          adminOrdersList = resData.orders || [];
+          adminProductsList = resData.products || [];
+          allProducts = adminProductsList;
+
+          document.getElementById('adminOrdersCount').textContent = adminOrdersList.length;
+          document.getElementById('adminProductsCount').textContent = adminProductsList.length;
+
+          if (resData.categories && Array.isArray(resData.categories) && resData.categories.length > 0) {
+            adminCategoriesList = resData.categories;
+          }
+          renderAdminCategories();
+
+          renderAdminOrders();
+          renderAdminStock();
+          updateProductionBadge();
+          renderProductionSummary();
+        } else {
+          adminTokenPin = '';
+          try { sessionStorage.removeItem('bba_admin_pin'); } catch (e) {}
+          switchView('login');
+          Swal.fire('ปฏิเสธการเข้าถึง', (resData && resData.message) || 'รหัส PIN ไม่ถูกต้อง', 'error');
+        }
+      } catch (err) {
+        Swal.close();
+        Swal.fire('ข้อผิดพลาด', err.message || 'ไม่สามารถเชื่อมต่อเซิร์ฟเวอร์ได้', 'error');
+      }
+    }
+
+    // ==================== PRODUCTION SUMMARY ====================
+    function calculateProductionSummary(orders) {
+      const summaryByProduct = {};
+      let grandTotalShirts = 0;
+
+      orders.forEach(order => {
+        if (order.status === 'ยกเลิกคำสั่งซื้อ') return;
+
+        let items = [];
+        if (order.itemsJSON) {
+          try {
+            items = JSON.parse(order.itemsJSON);
+          } catch (e) {
+            items = [];
+          }
+        }
+        if (!items || items.length === 0) {
+          const lines = String(order.itemsSummary || '').split('\n').map(l => l.trim()).filter(Boolean);
+          lines.forEach(line => {
+            const m = line.match(/(.*?)\s*-\s*ไซส์:\s*([^,]+),\s*สี:\s*(.*?)\s*x\s*(\d+)/i);
+            if (m) {
+              items.push({
+                name: m[1].trim(),
+                size: m[2].trim(),
+                color: m[3].trim(),
+                qty: parseInt(m[4], 10) || 1
+              });
+            }
+          });
+        }
+
+        items.forEach(it => {
+          const prodName = it.name || it.productId || 'เสื้อสโมสร';
+          const color = it.color || 'มาตรฐาน';
+          const size = it.size || 'Free Size';
+          const qty = Number(it.qty) || 1;
+
+          grandTotalShirts += qty;
+
+          if (!summaryByProduct[prodName]) {
+            summaryByProduct[prodName] = {
+              name: prodName,
+              totalQty: 0,
+              byColor: {}
+            };
+          }
+
+          summaryByProduct[prodName].totalQty += qty;
+
+          if (!summaryByProduct[prodName].byColor[color]) {
+            summaryByProduct[prodName].byColor[color] = {
+              totalQty: 0,
+              bySize: {}
+            };
+          }
+
+          summaryByProduct[prodName].byColor[color].totalQty += qty;
+          summaryByProduct[prodName].byColor[color].bySize[size] = (summaryByProduct[prodName].byColor[color].bySize[size] || 0) + qty;
+        });
+      });
+
+      return {
+        grandTotalShirts: grandTotalShirts,
+        products: Object.values(summaryByProduct)
+      };
+    }
+
+    function updateProductionBadge() {
+      const badge = document.getElementById('adminProductionCount');
+      if (badge && adminOrdersList) {
+        const sum = calculateProductionSummary(adminOrdersList);
+        badge.textContent = sum.grandTotalShirts.toLocaleString();
+      }
+    }
+
+    function renderProductionSummary() {
+      const container = document.getElementById('productionSummaryContainer');
+      const grandTotalEl = document.getElementById('prodSummaryGrandTotal');
+      const badgeCountEl = document.getElementById('adminProductionCount');
+      if (!container) return;
+
+      const summary = calculateProductionSummary(adminOrdersList || []);
+      if (grandTotalEl) grandTotalEl.textContent = summary.grandTotalShirts.toLocaleString();
+      if (badgeCountEl) badgeCountEl.textContent = summary.grandTotalShirts.toLocaleString();
+
+      if (summary.products.length === 0) {
+        container.innerHTML = '<div class="text-center py-12 text-slate-400"><i class="fa-solid fa-boxes-packing text-3xl mb-2 text-slate-300"></i><p class="font-medium text-slate-600">ยังไม่มีรายการสั่งจองสำหรับสรุปยอดผลิต</p></div>';
+        return;
+      }
+
+      container.innerHTML = summary.products.map(prod => {
+        const orderOfSizes = ['S', 'M', 'L', 'XL', '2XL', '3XL', '4XL', '5XL', 'XXL', 'XXXL'];
+        const allSizes = Array.from(new Set(Object.values(prod.byColor).flatMap(c => Object.keys(c.bySize)))).sort((a,b) => {
+          const ia = orderOfSizes.indexOf(a);
+          const ib = orderOfSizes.indexOf(b);
+          if (ia !== -1 && ib !== -1) return ia - ib;
+          if (ia !== -1) return -1;
+          if (ib !== -1) return 1;
+          return a.localeCompare(b);
+        });
+
+        const rows = Object.entries(prod.byColor).map(([colorName, colorData]) => {
+          const cells = allSizes.map(s => {
+            const count = colorData.bySize[s] || 0;
+            return '<td class="p-3 text-center text-xs ' + (count > 0 ? 'font-bold text-slate-900 bg-indigo-50/30' : 'text-slate-300') + '">' + (count > 0 ? count : '-') + '</td>';
+          }).join('');
+
+          return '<tr class="border-b border-slate-100 hover:bg-slate-50/60 transition">' +
+            '<td class="p-3 font-semibold text-xs text-slate-800"><span class="inline-block w-2.5 h-2.5 rounded-full bg-indigo-600 mr-2 align-middle"></span>' + escapeHtml(colorName) + '</td>' +
+            cells +
+            '<td class="p-3 text-center text-xs font-extrabold text-indigo-700 bg-indigo-50/50">' + colorData.totalQty + ' ตัว</td>' +
+            '</tr>';
+        }).join('');
+
+        const totalCells = allSizes.map(s => {
+          let sizeTotal = 0;
+          Object.values(prod.byColor).forEach(c => { sizeTotal += (c.bySize[s] || 0); });
+          return '<td class="p-3 text-center text-xs font-bold text-slate-800 bg-slate-100/80">' + sizeTotal + '</td>';
+        }).join('');
+
+        return '<div class="rounded-2xl border border-slate-200 overflow-hidden shadow-sm bg-white">' +
+          '<div class="p-4 bg-slate-50/80 border-b border-slate-200 flex items-center justify-between">' +
+          '<div class="font-bold text-sm text-slate-900 flex items-center gap-2">' +
+          '<i class="fa-solid fa-shirt text-indigo-600"></i> ' + escapeHtml(prod.name) +
+          '</div>' +
+          '<span class="px-3 py-1 rounded-full text-xs font-extrabold bg-indigo-600 text-white shadow-sm">รวม ' + prod.totalQty + ' ตัว</span>' +
+          '</div>' +
+          '<div class="overflow-x-auto">' +
+          '<table class="w-full text-left border-collapse">' +
+          '<thead>' +
+          '<tr class="border-b border-slate-200 bg-slate-100/50 text-[11px] font-bold text-slate-600 uppercase tracking-wider">' +
+          '<th class="p-3">สี / ไซส์</th>' +
+          allSizes.map(s => '<th class="p-3 text-center min-w-[50px]">' + escapeHtml(s) + '</th>').join('') +
+          '<th class="p-3 text-center font-extrabold text-indigo-800 min-w-[70px]">รวมทั้งหมด</th>' +
+          '</tr>' +
+          '</thead>' +
+          '<tbody>' + rows + '</tbody>' +
+          '<tfoot>' +
+          '<tr class="border-t-2 border-slate-200 font-bold bg-slate-100/80">' +
+          '<td class="p-3 text-xs text-slate-800">รวมทุกสี</td>' +
+          totalCells +
+          '<td class="p-3 text-center text-xs font-extrabold text-indigo-700">' + prod.totalQty + ' ตัว</td>' +
+          '</tr>' +
+          '</tfoot>' +
+          '</table>' +
+          '</div>' +
+          '</div>';
+      }).join('');
+    }
+
+    function copyProductionSummaryText() {
+      const summary = calculateProductionSummary(adminOrdersList || []);
+      if (summary.grandTotalShirts === 0) {
+        Swal.fire('ไม่มีข้อมูล', 'ยังไม่มีรายการสั่งจองสำหรับคัดลอก', 'info');
+        return;
+      }
+
+      const now = new Date();
+      const dateStr = now.toLocaleDateString('th-TH', { year: 'numeric', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' });
+
+      let text = '📋 สรุปยอดสั่งผลิตเสื้อสโมสรนักศึกษา BBA UBRU\n';
+      text += '📅 ข้อมูล ณ วันที่ ' + dateStr + '\n';
+      text += '⭐️ ยอดสั่งผลิตรวมทั้งหมด: ' + summary.grandTotalShirts.toLocaleString() + ' ตัว\n';
+      text += '===============================\n';
+
+      summary.products.forEach((prod, pIdx) => {
+        text += '\n' + (pIdx + 1) + '. ' + prod.name + ' (รวม ' + prod.totalQty + ' ตัว)\n';
+        Object.entries(prod.byColor).forEach(([colorName, colorData]) => {
+          text += '  ▫️ สี ' + colorName + ' (รวม ' + colorData.totalQty + ' ตัว):\n';
+          const sizeList = Object.entries(colorData.bySize).map(([sz, qty]) => sz + '=' + qty).join(', ');
+          text += '     ' + sizeList + '\n';
+        });
+      });
+
+      text += '\n===============================\n* ข้อมูลสรุปเฉพาะรายการที่ไม่ได้ยกเลิกคำสั่งซื้อ';
+
+      navigator.clipboard.writeText(text).then(() => {
+        Swal.fire({
+          title: 'คัดลอกสำเร็จ!',
+          text: 'คัดลอกสรุปยอดสั่งผลิตเรียบร้อยแล้ว สามารถนำไปวางส่งให้โรงงานหรือใน LINE ได้ทันที',
+          icon: 'success',
+          timer: 2000,
+          showConfirmButton: false
+        });
+      }).catch(() => {
+        Swal.fire('ข้อความสรุป', '<textarea class="w-full p-2 border rounded text-xs h-40">' + escapeHtml(text) + '</textarea>', 'info');
+      });
+    }
+
+    function switchAdminTab(tab) {
+      const isOrders = tab === 'orders';
+      const isStock = tab === 'stock';
+      const isProd = tab === 'production';
+
+      const tabOrders = document.getElementById('adminTabOrders');
+      const tabStock = document.getElementById('adminTabStock');
+      const tabProd = document.getElementById('adminTabProduction');
+
+      if (tabOrders) tabOrders.classList.toggle('hidden', !isOrders);
+      if (tabStock) tabStock.classList.toggle('hidden', !isStock);
+      if (tabProd) tabProd.classList.toggle('hidden', !isProd);
+
+      const activeClass = 'pb-3 text-sm font-semibold text-indigo-700 border-b-2 border-indigo-600 transition flex items-center gap-2';
+      const inactiveClass = 'pb-3 text-sm font-semibold text-slate-500 hover:text-slate-800 border-b-2 border-transparent transition flex items-center gap-2';
+
+      const btnOrders = document.getElementById('tabBtnOrders');
+      const btnStock = document.getElementById('tabBtnStock');
+      const btnProd = document.getElementById('tabBtnProduction');
+
+      if (btnOrders) btnOrders.className = isOrders ? activeClass : inactiveClass;
+      if (btnStock) btnStock.className = isStock ? activeClass : inactiveClass;
+      if (btnProd) btnProd.className = isProd ? activeClass : inactiveClass;
+
+      if (isProd) {
+        renderProductionSummary();
+      }
+    }
+
+    function clearAdminSearch() {
+      const input = document.getElementById('adminSearchInput');
+      if (input) {
+        input.value = '';
+      }
+      renderAdminOrders();
+    }
+
+    function renderAdminOrders() {
+      const tbody = document.getElementById('adminOrdersTableBody');
+      const statusFilterEl = document.getElementById('adminStatusFilter');
+      const filter = statusFilterEl ? statusFilterEl.value : 'ทั้งหมด';
+      const searchInput = document.getElementById('adminSearchInput');
+      const search = (searchInput ? searchInput.value : '').trim().toLowerCase();
+      
+      const clearBtn = document.getElementById('adminSearchClearBtn');
+      if (clearBtn) {
+        clearBtn.classList.toggle('hidden', search === '');
+      }
+
+      let filtered = adminOrdersList || [];
+
+      if (filter && filter !== 'ทั้งหมด') {
+        filtered = filtered.filter(o => o.status === filter);
+      }
+
+      if (search) {
+        filtered = filtered.filter(item => {
+          const orderId = String(item.orderId || '').toLowerCase();
+          const studentId = String(item.studentId || '').toLowerCase();
+          const name = String(item.customerName || '').toLowerCase();
+          const email = String(item.studentEmail || '').toLowerCase();
+          const phone = String(item.phone || '').toLowerCase();
+          const items = String(item.itemsSummary || '').toLowerCase();
+          const notes = String(item.adminNotes || item.notes || '').toLowerCase();
+
+          return orderId.includes(search) ||
+                 studentId.includes(search) ||
+                 name.includes(search) ||
+                 email.includes(search) ||
+                 phone.includes(search) ||
+                 items.includes(search) ||
+                 notes.includes(search);
+        });
+      }
+
+      const countBadge = document.getElementById('adminOrdersFilteredCount');
+      if (countBadge) {
+        if (search || (filter && filter !== 'ทั้งหมด')) {
+          countBadge.textContent = filtered.length + ' จาก ' + adminOrdersList.length + ' รายการ';
+        } else {
+          countBadge.textContent = adminOrdersList.length + ' รายการ';
+        }
+      }
+
+      if (filtered.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="7" class="p-8 text-center text-slate-400"><div class="flex flex-col items-center justify-center gap-1.5"><i class="fa-solid fa-magnifying-glass text-2xl text-slate-300"></i><p class="font-medium text-slate-600">ไม่พบคำสั่งจองที่ตรงกับเงื่อนไขการค้นหา</p><p class="text-xs text-slate-400">ลองพิมพ์คำค้นหาอื่น หรือเลือกสถานะเป็น "แสดงทุกสถานะ"</p>' +
+          (search ? '<button type="button" onclick="clearAdminSearch()" class="mt-2 px-3 py-1 text-xs rounded-lg bg-indigo-50 text-indigo-700 hover:bg-indigo-100 font-medium transition inline-flex items-center gap-1"><i class="fa-solid fa-circle-xmark text-[11px]"></i> ล้างคำค้นหา</button>' : '') +
+        '</div></td></tr>';
+        return;
+      }
+
+      tbody.innerHTML = filtered.map(item => {
+        let badgeClass = 'bg-amber-100 text-amber-800';
+        if (item.status === 'ชำระเงินเรียบร้อย') badgeClass = 'bg-blue-100 text-blue-800';
+        if (item.status === 'พร้อมรับเสื้อที่ห้องสโมสร') badgeClass = 'bg-emerald-100 text-emerald-800 font-bold';
+        if (item.status === 'รับเสื้อแล้ว') badgeClass = 'bg-slate-200 text-slate-800';
+        if (item.status === 'ยกเลิกคำสั่งซื้อ') badgeClass = 'bg-rose-100 text-rose-800';
+
+        const safeOrderId = escapeHtml(item.orderId);
+        const safeStudentId = escapeHtml(item.studentId);
+        const safeName = escapeHtml(item.customerName);
+        const safeEmail = escapeHtml(item.studentEmail);
+        const safePhone = escapeHtml(item.phone);
+        const safeItems = escapeHtml(item.itemsSummary);
+        const safeStatus = escapeHtml(item.status);
+
+        return '<tr class="hover:bg-slate-50/80 transition">' +
+          '<td class="p-3.5 align-top"><span class="font-mono font-bold text-slate-900 block">' + safeOrderId + '</span><span class="text-[11px] text-slate-400">' + escapeHtml(item.orderDate) + '</span></td>' +
+          '<td class="p-3.5 align-top"><div class="font-bold text-slate-800">' + safeName + '</div><div class="font-mono text-xs text-indigo-700">' + safeStudentId + '</div><div class="text-[11px] text-slate-500">' + safeEmail + '</div><div class="text-[11px] text-slate-400"><i class="fa-solid fa-phone text-[9px]"></i> ' + safePhone + '</div></td>' +
+          '<td class="p-3.5 align-top"><div class="text-xs text-slate-700 whitespace-pre-line max-w-xs">' + safeItems + '</div></td>' +
+          '<td class="p-3.5 align-top text-right"><span class="font-extrabold text-slate-900">฿' + Number(item.totalAmount).toLocaleString() + '</span></td>' +
+          '<td class="p-3.5 align-top text-center">' +
+            (item.slipUrl && (item.slipUrl.startsWith('http') || item.slipUrl.length > 10) ? (
+              '<div class="inline-flex flex-col items-center">' +
+                '<button type="button" onclick="viewSlip(\'' + item.slipUrl + '\')" class="px-2.5 py-1.5 rounded-lg bg-indigo-50 text-indigo-700 border border-indigo-200 text-xs font-semibold hover:bg-indigo-100 transition inline-flex items-center gap-1.5 shadow-sm">' +
+                  '<i class="fa-solid fa-image"></i> <span>ดูสลิป</span>' +
+                '</button>' +
+                '<a href="' + (item.slipUrl.includes('drive.google.com') ? item.slipUrl : '#') + '" target="_blank" class="text-[10px] text-slate-400 hover:text-indigo-600 mt-1 inline-flex items-center gap-0.5">Drive <i class="fa-solid fa-arrow-up-right-from-square text-[8px]"></i></a>' +
+              '</div>'
+            ) : '<span class="text-slate-400 text-xs">' + (item.slipUrl ? 'มีสลิป' : '-') + '</span>') +
+          '</td>' +
+          '<td class="p-3.5 align-top text-center"><span class="inline-block px-2.5 py-1 rounded-full text-xs font-semibold ' + badgeClass + '">' + safeStatus + '</span></td>' +
+          '<td class="p-3.5 align-top text-right"><div class="inline-flex flex-col gap-1.5">' +
+            (item.status.includes('รอตรวจสอบ') ? '<button onclick="adminChangeStatus(\'' + safeOrderId + '\', \'ชำระเงินเรียบร้อย\')" class="px-2.5 py-1 rounded-lg bg-blue-600 text-white text-xs font-semibold hover:bg-blue-700 shadow-sm transition">อนุมัติยอดเงิน</button>' : '') +
+            (item.status === 'ชำระเงินเรียบร้อย' ? '<button onclick="adminChangeStatus(\'' + safeOrderId + '\', \'พร้อมรับเสื้อที่ห้องสโมสร\')" class="px-2.5 py-1 rounded-lg bg-emerald-600 text-white text-xs font-semibold hover:bg-emerald-700 shadow-sm transition"><i class="fa-solid fa-bell"></i> แจ้งพร้อมรับเสื้อ</button>' : '') +
+            (item.status === 'พร้อมรับเสื้อที่ห้องสโมสร' ? '<button onclick="adminChangeStatus(\'' + safeOrderId + '\', \'รับเสื้อแล้ว\')" class="px-2.5 py-1 rounded-lg bg-slate-800 text-white text-xs font-semibold hover:bg-slate-900 shadow-sm transition"><i class="fa-solid fa-check"></i> บันทึกรับเสื้อแล้ว</button>' : '') +
+            (item.status !== 'ยกเลิกคำสั่งซื้อ' && item.status !== 'รับเสื้อแล้ว' ? '<button onclick="adminCancelOrder(\'' + safeOrderId + '\')" class="px-2 py-0.5 rounded text-[11px] text-rose-500 hover:text-rose-700 hover:bg-rose-50 transition">ยกเลิกการจอง</button>' : '') +
+          '</div></td>' +
+        '</tr>';
+      }).join('');
+    }
+
+    function extractDriveId(url) {
+      if (!url) return '';
+      const m = String(url).match(/\/d\/([a-zA-Z0-9_-]+)/) || String(url).match(/[?&]id=([a-zA-Z0-9_-]+)/);
+      return m ? m[1] : '';
+    }
+
+    function viewSlip(url, orderId) {
+      if (url && url.startsWith('/api/')) url = API_BASE + url;
+      currentViewingSlipOrderId = orderId || '';
+      const modal = document.getElementById('slipViewerModal');
+      const img = document.getElementById('viewerSlipImg');
+      const spinner = document.getElementById('slipViewerSpinner');
+      const errorBox = document.getElementById('slipViewerError');
+      const link = document.getElementById('viewerSlipLink');
+      const errorLink = document.getElementById('errorSlipLink');
+
+      img.src = '';
+      img.classList.add('hidden');
+      errorBox.classList.add('hidden');
+      spinner.classList.remove('hidden');
+
+      const isDataUrl = typeof url === 'string' && url.startsWith('data:');
+      const fileId = extractDriveId(url);
+      const driveDirectLink = isDataUrl ? '#' : (fileId ? ('https://drive.google.com/file/d/' + fileId + '/view') : url);
+      link.href = driveDirectLink;
+      if (errorLink) errorLink.href = driveDirectLink;
+
+      modal.style.display = 'flex';
+
+      if (isDataUrl || !fileId) {
+        img.src = url;
+        img.onload = () => {
+          spinner.classList.add('hidden');
+          img.classList.remove('hidden');
+        };
+        img.onerror = () => {
+          spinner.classList.add('hidden');
+          errorBox.classList.remove('hidden');
+        };
+      } else {
+        const thumbUrl = 'https://drive.google.com/thumbnail?id=' + fileId + '&sz=w1200';
+        img.src = thumbUrl;
+        img.onload = () => {
+          spinner.classList.add('hidden');
+          img.classList.remove('hidden');
+        };
+        img.onerror = () => {
+          spinner.classList.add('hidden');
+          errorBox.classList.remove('hidden');
+        };
+      }
+    }
+
+    function closeSlipViewer() {
+      document.getElementById('slipViewerModal').style.display = 'none';
+      document.getElementById('viewerSlipImg').src = '';
+    }
+
+    function adminChangeStatus(orderId, newStatus) {
+      Swal.fire({
+        title: 'ยืนยันการเปลี่ยนสถานะ',
+        text: 'ต้องการเปลี่ยนสถานะคำสั่งจอง ' + orderId + ' เป็น "' + newStatus + '" ใช่หรือไม่?',
+        icon: 'question',
+        showCancelButton: true,
+        confirmButtonText: 'ยืนยัน',
+        cancelButtonText: 'ยกเลิก',
+        confirmButtonColor: '#4338ca'
+      }).then(result => {
+        if (result.isConfirmed) {
+          executeAdminUpdateStatus(orderId, newStatus);
+        }
+      });
+    }
+
+    function adminCancelOrder(orderId) {
+      Swal.fire({
+        title: 'ยืนยันการยกเลิกคำสั่งจอง?',
+        text: 'ระบบจะคืนสต็อกเสื้อกลับสู่คลังอัตโนมัติ',
+        icon: 'warning',
+        showCancelButton: true,
+        confirmButtonText: 'ยืนยันยกเลิก',
+        cancelButtonText: 'ไม่ยกเลิก',
+        confirmButtonColor: '#e11d48'
+      }).then(result => {
+        if (result.isConfirmed) {
+          executeAdminUpdateStatus(orderId, 'ยกเลิกคำสั่งซื้อ');
+        }
+      });
+    }
+
+    async function executeAdminUpdateStatus(orderId, newStatus) {
+      Swal.showLoading();
+      try {
+        const res = await fetch(API_BASE + '/api/admin/orders/status', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            pin: adminTokenPin,
+            orderId: orderId,
+            newStatus: newStatus
+          })
+        });
+        const resData = await res.json();
+        Swal.close();
+        if (resData && resData.success) {
+          Swal.fire('สำเร็จ', resData.message, 'success');
+          loadAdminData();
+        } else {
+          Swal.fire('ข้อผิดพลาด', (resData && resData.message) || 'เกิดข้อผิดพลาดในการปรับสถานะ', 'error');
+        }
+      } catch (err) {
+        Swal.close();
+        Swal.fire('ข้อผิดพลาด', err.message, 'error');
+      }
+    }
+
+    // ==================== ADMIN PRODUCT MANAGEMENT ====================
+    function handleProductFilesSelect(event) {
+      const files = event.target.files;
+      if (!files || files.length === 0) return;
+      processSelectedProductImages(files);
+    }
+
+    function handleProductFileDrop(event) {
+      event.preventDefault();
+      event.currentTarget.classList.remove('border-indigo-500', 'bg-indigo-50');
+      const files = event.dataTransfer.files;
+      if (!files || files.length === 0) return;
+      processSelectedProductImages(files);
+    }
+
+    function processSelectedProductImages(files) {
+      Array.from(files).forEach(file => {
+        if (!file.type || !file.type.startsWith('image/')) return;
+        const reader = new FileReader();
+        reader.onload = e => {
+          const img = new Image();
+          img.onload = () => {
+            const canvas = document.createElement('canvas');
+            let width = img.width;
+            let height = img.height;
+            const maxDim = 1200;
+            if (width > maxDim || height > maxDim) {
+              if (width > height) {
+                height = Math.round((height * maxDim) / width);
+                width = maxDim;
+              } else {
+                width = Math.round((width * maxDim) / height);
+                height = maxDim;
+              }
+            }
+            canvas.width = width;
+            canvas.height = height;
+            const ctx = canvas.getContext('2d');
+            ctx.drawImage(img, 0, 0, width, height);
+            const compressedBase64 = canvas.toDataURL('image/jpeg', 0.85);
+
+            adminFormImages.push({
+              type: 'new',
+              name: file.name,
+              base64: compressedBase64,
+              mimeType: 'image/jpeg'
+            });
+            renderAdminFormImagePreviews();
+          };
+          img.src = e.target.result;
+        };
+        reader.readAsDataURL(file);
+      });
+    }
+
+    function renderAdminFormImagePreviews() {
+      const container = document.getElementById('prodFormImagePreviews');
+      const badge = document.getElementById('adminImageCountBadge');
+      if (badge) badge.textContent = adminFormImages.length + ' รูป';
+      if (!container) return;
+
+      if (adminFormImages.length === 0) {
+        container.innerHTML = '<div class="w-full text-center py-2 text-xs text-slate-400 italic">ยังไม่มีรูปภาพที่เลือก (หากไม่เลือก ระบบจะใช้รูปมาตรฐานให้อัตโนมัติ)</div>';
+        return;
+      }
+
+      container.innerHTML = adminFormImages.map((img, idx) => {
+        const src = img.type === 'existing' ? img.url : img.base64;
+        const coverBadge = idx === 0 ? '<span class="absolute top-1 left-1 bg-indigo-600 text-white text-[9px] font-bold px-1.5 py-0.5 rounded shadow">รูปหลัก</span>' : '';
+        return '<div class="relative w-20 h-20 sm:w-24 sm:h-24 rounded-xl border border-slate-200 overflow-hidden bg-slate-100 shrink-0 group shadow-sm">' +
+          '<img src="' + src + '" class="w-full h-full object-cover" onerror="this.src=\'https://placehold.co/100x100?text=No+Img\';">' +
+          coverBadge +
+          '<button type="button" onclick="removeAdminFormImage(' + idx + ')" ' +
+          'class="absolute top-1 right-1 w-5 h-5 rounded-full bg-rose-600 text-white flex items-center justify-center text-[10px] hover:bg-rose-700 shadow transition" title="ลบรูปนี้">' +
+          '<i class="fa-solid fa-xmark"></i>' +
+          '</button>' +
+          '</div>';
+      }).join('');
+    }
+
+    function removeAdminFormImage(index) {
+      adminFormImages.splice(index, 1);
+      renderAdminFormImagePreviews();
+    }
+
+    let currentFormSizeStock = {};
+
+    function renderAdminSizeStockInputs() {
+      const container = document.getElementById('adminSizeStockContainer');
+      if (!container) return;
+      const rawSizes = document.getElementById('prodFormSizes').value;
+      const sizes = rawSizes.split(',').map(s => s.trim()).filter(Boolean);
+
+      if (sizes.length === 0) {
+        container.innerHTML = '<div class="col-span-full text-center text-xs text-slate-400 py-2">กรุณาระบุไซส์ที่มีจำหน่ายด้านบน</div>';
+        const badge = document.getElementById('adminTotalSizeStockBadge');
+        if (badge) badge.textContent = '0';
+        const stockInput = document.getElementById('prodFormStock');
+        if (stockInput) stockInput.value = 0;
+        return;
+      }
+
+      let total = 0;
+      container.innerHTML = sizes.map(sz => {
+        let val = currentFormSizeStock[sz];
+        if (val === undefined || val === null || val === '') {
+          val = 0;
+        } else {
+          val = Math.max(0, parseInt(val, 10) || 0);
+        }
+        currentFormSizeStock[sz] = val;
+        total += val;
+
+        const safeSz = escapeHtml(sz);
+        return '<div class="bg-white border border-slate-200 rounded-xl p-2.5 shadow-xs flex flex-col items-center justify-center">' +
+          '<span class="text-xs font-bold text-slate-700 mb-1">ไซส์ ' + safeSz + '</span>' +
+          '<div class="relative w-full">' +
+            '<input type="number" min="0" value="' + val + '" ' +
+              'class="w-full text-center px-2 py-1.5 border border-slate-200 rounded-lg text-xs font-semibold focus:outline-none focus:ring-2 focus:ring-indigo-500 bg-slate-50 focus:bg-white" ' +
+              'oninput="updateAdminSizeStockValue(\'' + safeSz + '\', this.value)">' +
+          '</div>' +
+        '</div>';
+      }).join('');
+
+      const badge = document.getElementById('adminTotalSizeStockBadge');
+      if (badge) badge.textContent = total.toLocaleString();
+      const stockInput = document.getElementById('prodFormStock');
+      if (stockInput) stockInput.value = total;
+    }
+
+    function updateAdminSizeStockValue(size, value) {
+      const intVal = Math.max(0, parseInt(value, 10) || 0);
+      currentFormSizeStock[size] = intVal;
+
+      const rawSizes = document.getElementById('prodFormSizes').value;
+      const sizes = rawSizes.split(',').map(s => s.trim()).filter(Boolean);
+      let total = 0;
+      sizes.forEach(sz => {
+        total += Math.max(0, parseInt(currentFormSizeStock[sz], 10) || 0);
+      });
+
+      const badge = document.getElementById('adminTotalSizeStockBadge');
+      if (badge) badge.textContent = total.toLocaleString();
+      const stockInput = document.getElementById('prodFormStock');
+      if (stockInput) stockInput.value = total;
+    }
+
+    // Helper สำหรับแยกรูปภาพ (รองรับทั้ง URL ภายนอก และ Base64 Data URL)
+    function splitProductImages(raw) {
+      if (!raw) return [];
+      const str = String(raw).trim();
+      if (!str) return [];
+      const resolveApi = u => (u.startsWith('/api/') ? API_BASE + u : u);
+      if (str.includes('|||')) {
+        return str.split('|||').map(s => s.trim()).filter(Boolean).map(resolveApi);
+      }
+      if (str.includes('data:image/')) {
+        const matches = str.match(/(?:data:image\/[a-zA-Z0-9.+_-]+;base64,[A-Za-z0-9+/=]+)|(?:https?:\/\/[^\s,]+)|(?:\/api\/images\/[^\s,]+)/g);
+        if (matches && matches.length > 0) return matches.map(resolveApi);
+      }
+      return str.split(/[\n,]+/).map(s => s.trim()).filter(Boolean).map(resolveApi);
+    }
+
+    function openAddProductModal() {
+      document.getElementById('prodFormMode').value = 'add';
+      document.getElementById('adminProductModalTitle').textContent = 'เพิ่มสินค้าใหม่เข้าระบบ';
+      document.getElementById('prodFormId').value = '';
+      document.getElementById('prodFormId').readOnly = false;
+      document.getElementById('prodFormCategory').value = 'เสื้อโปโล';
+      document.getElementById('prodFormName').value = '';
+      document.getElementById('prodFormPrice').value = '';
+      document.getElementById('prodFormSizes').value = 'S, M, L, XL, 2XL, 3XL';
+      document.getElementById('prodFormColors').value = 'ฟ้า, ขาว, กรมท่า';
+      document.getElementById('prodFormDesc').value = '';
+      document.getElementById('prodFormStatus').value = 'พร้อมจำหน่าย';
+      const sgEl = document.getElementById('prodFormSizeGuide');
+      if (sgEl) sgEl.value = '';
+
+      currentFormSizeStock = { 'S': 20, 'M': 20, 'L': 20, 'XL': 20, '2XL': 10, '3XL': 10 };
+      renderAdminSizeStockInputs();
+
+      adminFormImages = [];
+      const fileInput = document.getElementById('prodFormFileInput');
+      if (fileInput) fileInput.value = '';
+      renderAdminFormImagePreviews();
+
+      document.getElementById('adminProductModal').style.display = 'flex';
+    }
+
+    function openEditProductModal(productId) {
+      const p = (adminProductsList && adminProductsList.find(item => item.productId === productId)) ||
+                (allProducts && allProducts.find(item => item.productId === productId));
+      if (!p) return;
+
+      document.getElementById('prodFormMode').value = 'edit';
+      document.getElementById('adminProductModalTitle').textContent = 'แก้ไขข้อมูลเสื้อ: ' + p.productId;
+      document.getElementById('prodFormId').value = p.productId;
+      document.getElementById('prodFormId').readOnly = true;
+      document.getElementById('prodFormCategory').value = p.category || '';
+      document.getElementById('prodFormName').value = p.name || '';
+      document.getElementById('prodFormPrice').value = p.price !== undefined ? p.price : '';
+      document.getElementById('prodFormSizes').value = Array.isArray(p.sizes) ? p.sizes.join(', ') : (p.sizes || '');
+      document.getElementById('prodFormColors').value = Array.isArray(p.colors) ? p.colors.join(', ') : (p.colors || '');
+      document.getElementById('prodFormDesc').value = p.description || '';
+      document.getElementById('prodFormStatus').value = p.status || 'พร้อมจำหน่าย';
+      const sgEl = document.getElementById('prodFormSizeGuide');
+      if (sgEl) sgEl.value = p.sizeGuide || '';
+
+      currentFormSizeStock = {};
+      const prodSizes = Array.isArray(p.sizes) ? p.sizes : String(p.sizes || '').split(',').map(s => s.trim()).filter(Boolean);
+      if (p.sizeStock && typeof p.sizeStock === 'object' && Object.keys(p.sizeStock).length > 0) {
+        prodSizes.forEach(sz => {
+          currentFormSizeStock[sz] = p.sizeStock[sz] !== undefined ? (parseInt(p.sizeStock[sz], 10) || 0) : 0;
+        });
+      } else {
+        const total = Math.max(0, Number(p.stock) || 0);
+        const base = Math.floor(total / (prodSizes.length || 1));
+        const rem = total % (prodSizes.length || 1);
+        prodSizes.forEach((sz, idx) => {
+          currentFormSizeStock[sz] = base + (idx === 0 ? rem : 0);
+        });
+      }
+      renderAdminSizeStockInputs();
+
+      adminFormImages = [];
+      if (p.imageUrl) {
+        const urls = splitProductImages(p.imageUrl);
+        urls.forEach(u => {
+          adminFormImages.push({ type: 'existing', url: u });
+        });
+      }
+      const fileInput = document.getElementById('prodFormFileInput');
+      if (fileInput) fileInput.value = '';
+      renderAdminFormImagePreviews();
+
+      document.getElementById('adminProductModal').style.display = 'flex';
+    }
+
+    function closeAdminProductModal() {
+      const modal = document.getElementById('adminProductModal');
+      if (modal) modal.style.display = 'none';
+    }
+
+    async function saveAdminProductForm() {
+      const mode = document.getElementById('prodFormMode') ? document.getElementById('prodFormMode').value : 'add';
+      const isNew = mode === 'add';
+      const productId = document.getElementById('prodFormId').value.trim();
+      const name = document.getElementById('prodFormName').value.trim();
+      const category = document.getElementById('prodFormCategory').value.trim();
+      const price = parseFloat(document.getElementById('prodFormPrice').value) || 0;
+      const sizes = document.getElementById('prodFormSizes').value.trim();
+      const colors = document.getElementById('prodFormColors').value.trim();
+      const stock = parseInt(document.getElementById('prodFormStock').value, 10) || 0;
+      const description = document.getElementById('prodFormDesc').value.trim();
+      const status = document.getElementById('prodFormStatus').value;
+      const sizeGuide = document.getElementById('prodFormSizeGuide') ? document.getElementById('prodFormSizeGuide').value.trim() : '';
+
+      if (!productId) {
+        Swal.fire('ข้อผิดพลาด', 'กรุณาระบุรหัสสินค้า (ProductID)', 'warning');
+        return;
+      }
+      if (!name) {
+        Swal.fire('ข้อผิดพลาด', 'กรุณาระบุชื่อสินค้า', 'warning');
+        return;
+      }
+
+      const payload = {
+        pin: adminTokenPin,
+        mode: mode,
+        isNew: isNew,
+        productId: productId,
+        name: name,
+        category: category || 'เสื้อสโมสร',
+        price: price,
+        sizes: sizes || 'S, M, L, XL, 2XL, 3XL',
+        colors: colors || 'มาตรฐาน',
+        stock: stock,
+        images: (typeof adminFormImages !== 'undefined' && Array.isArray(adminFormImages)) ? adminFormImages : [],
+        description: description,
+        status: status,
+        sizeGuide: sizeGuide
+      };
+
+      const btn = document.getElementById('btnSaveAdminProd');
+      if (btn) {
+        btn.disabled = true;
+        btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> กำลังบันทึก...';
+      }
+
+      try {
+        const res = await fetch(API_BASE + '/api/admin/products', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload)
+        });
+        const resData = await res.json();
+        if (btn) {
+          btn.disabled = false;
+          btn.innerHTML = '<i class="fa-solid fa-floppy-disk"></i> บันทึกข้อมูลสินค้า';
+        }
+        if (resData && resData.success) {
+          closeAdminProductModal();
+          Swal.fire('สำเร็จ', resData.message, 'success');
+          loadAdminData();
+        } else {
+          Swal.fire('ข้อผิดพลาด', (resData && resData.message) || 'เกิดข้อผิดพลาดในการบันทึก', 'error');
+        }
+      } catch (err) {
+        if (btn) {
+          btn.disabled = false;
+          btn.innerHTML = '<i class="fa-solid fa-floppy-disk"></i> บันทึกข้อมูลสินค้า';
+        }
+        Swal.fire('ข้อผิดพลาด', err.message, 'error');
+      }
+    }
+
+    // ==================== EXPORT ORDERS (CSV) ====================
+    function exportOrdersToCsv() {
+      if (!adminOrdersList || adminOrdersList.length === 0) {
+        Swal.fire('ไม่มีข้อมูล', 'ยังไม่มีรายการคำสั่งจองสำหรับส่งออก', 'info');
+        return;
+      }
+
+      const headers = [
+        'รหัสคำสั่งจอง',
+        'วันที่สั่งจอง',
+        'รหัสนักศึกษา',
+        'ชื่อ-นามสกุล',
+        'อีเมล',
+        'เบอร์โทรศัพท์',
+        'รายการเสื้อที่สั่ง',
+        'ยอดรวม(บาท)',
+        'สถานะคำสั่งจอง',
+        'ลิงก์สลิปโอนเงิน',
+        'สถานที่รับเสื้อ',
+        'หมายเหตุ'
+      ];
+
+      const csvRows = [headers.join(',')];
+
+      adminOrdersList.forEach(item => {
+        const clean = val => '"' + String(val || '').replace(/"/g, '""').replace(/\r?\n/g, ' ') + '"';
+        const row = [
+          clean(item.orderId),
+          clean(item.orderDate),
+          clean(item.studentId),
+          clean(item.customerName),
+          clean(item.studentEmail),
+          clean(item.phone),
+          clean(item.itemsSummary),
+          item.totalAmount || 0,
+          clean(item.status),
+          clean(item.slipUrl),
+          clean(item.pickupLocation),
+          clean(item.adminNotes || item.notes)
+        ];
+        csvRows.push(row.join(','));
+      });
+
+      const csvContent = '\uFEFF' + csvRows.join('\r\n'); // UTF-8 BOM
+      const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      const now = new Date();
+      const dateStr = now.getFullYear() + '-' + String(now.getMonth() + 1).padStart(2, '0') + '-' + String(now.getDate()).padStart(2, '0');
+      a.download = 'BBA_UBRU_Orders_' + dateStr + '.csv';
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+
+      Swal.fire({
+        title: 'ส่งออกไฟล์สำเร็จ',
+        text: 'ดาวน์โหลดไฟล์ ' + a.download + ' เรียบร้อยแล้ว สามารถเปิดด้วย Microsoft Excel ได้ทันที',
+        icon: 'success',
+        timer: 2500,
+        showConfirmButton: false
+      });
+    }
+
+    function renderAdminStock() {
+      const tbody = document.getElementById('adminStockTableBody');
+      if (!tbody) return;
+      if (adminProductsList.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="7" class="p-8 text-center text-slate-400">ไม่พบรายการสินค้า</td></tr>';
+        return;
+      }
+
+      tbody.innerHTML = adminProductsList.map(p => {
+        const safeId = escapeHtml(p.productId);
+        const safeName = escapeHtml(p.name);
+        const safeCat = escapeHtml(p.category);
+        const safeSizes = escapeHtml(Array.isArray(p.sizes) ? p.sizes.join(', ') : (p.sizes || '-'));
+        const safeColors = escapeHtml(Array.isArray(p.colors) ? p.colors.join(', ') : (p.colors || '-'));
+        const safeStatus = escapeHtml(p.status || (p.stock > 0 ? 'พร้อมจำหน่าย' : 'สินค้าหมด'));
+        const imgList = splitProductImages(p.imageUrl);
+        const cardImg = imgList[0] || 'https://placehold.co/100x120?text=Shirt';
+
+        let statusBadge = '';
+        if (p.status === 'ปิดรับการสั่งจอง') {
+          statusBadge = '<span class="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-bold bg-amber-100 text-amber-800 border border-amber-200"><i class="fa-solid fa-clock text-[10px]"></i> ปิดรับจอง</span>';
+        } else if (p.status === 'พร้อมจำหน่าย') {
+          statusBadge = '<span class="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-bold bg-emerald-100 text-emerald-800 border border-emerald-200"><i class="fa-solid fa-circle-check text-[10px]"></i> พร้อมจำหน่าย</span>';
+        } else {
+          statusBadge = '<span class="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-bold bg-slate-100 text-slate-600 border border-slate-200">' + safeStatus + '</span>';
+        }
+
+        const isClosed = p.status === 'ปิดรับการสั่งจอง';
+        const toggleBtn = isClosed
+          ? '<button type="button" onclick="adminToggleProductPreorder(\'' + safeId + '\', \'พร้อมจำหน่าย\')" class="px-2.5 py-1 bg-emerald-50 text-emerald-700 hover:bg-emerald-100 border border-emerald-200 rounded-lg text-xs font-semibold shadow-sm transition inline-flex items-center gap-1" title="เปิดรับการสั่งจองเสื้อรุ่นนี้"><i class="fa-solid fa-play text-[10px]"></i> เปิดรับจอง</button>'
+          : '<button type="button" onclick="adminToggleProductPreorder(\'' + safeId + '\', \'ปิดรับการสั่งจอง\')" class="px-2.5 py-1 bg-amber-50 text-amber-700 hover:bg-amber-100 border border-amber-200 rounded-lg text-xs font-semibold shadow-sm transition inline-flex items-center gap-1" title="ปิดรับการสั่งจองเสื้อรุ่นนี้"><i class="fa-solid fa-pause text-[10px]"></i> ปิดรับจอง</button>';
+
+        let sizeStockBadges = '';
+        if (p.sizeStock && typeof p.sizeStock === 'object') {
+          const entries = Object.entries(p.sizeStock);
+          if (entries.length > 0) {
+            sizeStockBadges = '<div class="text-[10px] text-slate-500 mt-1 flex flex-wrap gap-1 max-w-[220px]">' +
+              entries.map(([sz, qty]) => {
+                const q = Number(qty) || 0;
+                const badgeColor = q <= 0 ? 'bg-rose-50 text-rose-600 border-rose-200 font-bold' : 'bg-white text-slate-700 border-slate-200';
+                return '<span class="inline-block border px-1.5 py-0.5 rounded text-[10px] ' + badgeColor + '">' + escapeHtml(sz) + ': ' + q + '</span>';
+              }).join('') +
+            '</div>';
+          }
+        }
+
+        return '<tr class="hover:bg-slate-50/80 transition">' +
+          '<td class="p-3.5 font-mono font-bold text-slate-900">' + safeId + '</td>' +
+          '<td class="p-3.5">' +
+            '<div class="flex items-center gap-3">' +
+              '<img loading="lazy" decoding="async" src="' + cardImg + '" class="w-10 h-12 object-cover rounded-md shadow-sm" onerror="this.onerror=null; this.src=\'https://placehold.co/100x120?text=Shirt\';">' +
+              '<div>' +
+                '<div class="font-bold text-slate-800 text-xs sm:text-sm">' + safeName + '</div>' +
+                '<div class="text-[11px] text-slate-400">ไซส์: ' + safeSizes + ' | สี: ' + safeColors + '</div>' +
+              '</div>' +
+            '</div>' +
+          '</td>' +
+          '<td class="p-3.5 text-xs text-slate-600">' + safeCat + '</td>' +
+          '<td class="p-3.5 font-bold text-slate-800">฿' + Number(p.price).toLocaleString() + '</td>' +
+          '<td class="p-3.5">' +
+            '<span class="inline-block px-2.5 py-0.5 rounded-full font-bold text-xs ' + (p.stock <= 5 ? 'bg-rose-100 text-rose-700' : 'bg-slate-100 text-slate-800') + '">' + p.stock + ' ตัว</span>' +
+            sizeStockBadges +
+          '</td>' +
+          '<td class="p-3.5 text-xs">' + statusBadge + '</td>' +
+          '<td class="p-3.5 text-right"><div class="inline-flex items-center justify-end gap-1.5">' +
+            toggleBtn +
+            '<button onclick="openEditProductModal(\'' + safeId + '\')" class="px-2.5 py-1 bg-white border border-slate-300 text-slate-700 hover:bg-slate-100 rounded-lg text-xs font-semibold shadow-sm transition inline-flex items-center gap-1"><i class="fa-solid fa-pen-to-square"></i> แก้ไข</button>' +
+          '</div></td>' +
+        '</tr>';
+      }).join('');
+    }
+
+    function adminToggleProductPreorder(productId, targetStatus) {
+      const isClosing = targetStatus === 'ปิดรับการสั่งจอง';
+      const actionText = isClosing ? 'ปิดรับการสั่งจอง' : 'เปิดรับการสั่งจอง';
+      const promptText = isClosing 
+        ? 'ต้องการ "ปิดรับการสั่งจอง" สำหรับสินค้านี้ใช่หรือไม่? (ผู้ซื้อจะไม่สามารถกดจองเสื้อรายการนี้ได้)' 
+        : 'ต้องการ "เปิดรับการสั่งจอง" อีกครั้งใช่หรือไม่?';
+
+      Swal.fire({
+        title: 'ยืนยัน' + actionText + '?',
+        text: promptText,
+        icon: isClosing ? 'warning' : 'question',
+        showCancelButton: true,
+        confirmButtonText: 'ยืนยัน' + actionText,
+        cancelButtonText: 'ยกเลิก',
+        confirmButtonColor: isClosing ? '#d97706' : '#059669'
+      }).then(async result => {
+        if (!result.isConfirmed) return;
+
+        Swal.showLoading();
+        try {
+          const res = await fetch(API_BASE + '/api/admin/products/toggle-preorder', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ pin: adminTokenPin, productId: productId, status: targetStatus })
+          });
+          const resData = await res.json();
+          Swal.close();
+          if (resData && resData.success) {
+            Swal.fire('สำเร็จ', resData.message, 'success');
+            loadAdminData();
+          } else {
+            Swal.fire('ข้อผิดพลาด', (resData && resData.message) || 'เกิดข้อผิดพลาดในการปรับสถานะ', 'error');
+          }
+        } catch (err) {
+          Swal.close();
+          Swal.fire('ข้อผิดพลาด', err.message, 'error');
+        }
+      });
+    }
+
+    // Initial load: เช็ก PIN จาก sessionStorage หรือเปิดหน้าล็อกอิน
+    document.addEventListener('DOMContentLoaded', () => {
+      let cachedPin = '';
+      try { cachedPin = sessionStorage.getItem('bba_admin_pin') || ''; } catch (e) {}
+      if (cachedPin) {
+        adminTokenPin = normalizePin(cachedPin);
+        loadAdminData();
+      } else {
+        switchView('login');
+      }
+
+      window.addEventListener('keydown', e => {
+        if (e.key === 'Escape') {
+          closeSlipViewer();
+          closeAdminProductModal();
+          closeCategoryManageModal();
+        }
+      });
+    });
+  </script>
+</body>
+</html>
