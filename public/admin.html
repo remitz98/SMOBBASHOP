@@ -1660,8 +1660,22 @@
         Swal.close();
         const imgData = canvas.toDataURL('image/png');
         const orderId = (currentAdminReceiptData && currentAdminReceiptData.orderId) ? currentAdminReceiptData.orderId : 'Receipt';
+        const fileName = 'Receipt_' + orderId + '.png';
+
+        if (window.AndroidNative && typeof window.AndroidNative.saveBase64Image === 'function') {
+          window.AndroidNative.saveBase64Image(imgData, fileName);
+          Swal.fire({
+            icon: 'success',
+            title: 'บันทึกรูปภาพใบเสร็จเรียบร้อยแล้ว!',
+            text: 'บันทึกไฟล์ ' + fileName + ' ลงในแกลเลอรีรูปภาพของเครื่องแล้ว',
+            timer: 2500,
+            showConfirmButton: false
+          });
+          return;
+        }
+
         const link = document.createElement('a');
-        link.download = 'Receipt_' + orderId + '.png';
+        link.download = fileName;
         link.href = imgData;
         document.body.appendChild(link);
         link.click();

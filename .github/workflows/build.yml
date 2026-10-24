@@ -1,0 +1,117 @@
+name: Build Apps (Windows, macOS, Android)
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - main
+
+jobs:
+  build-desktop:
+    permissions:
+      contents: write
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - platform: 'windows-latest'
+            name: 'Windows'
+          - platform: 'macos-latest'
+            name: 'macOS'
+
+    runs-on: ${{ matrix.platform }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Install Rust stable
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: ${{ matrix.platform == 'macos-latest' && 'aarch64-apple-darwin,x86_64-apple-darwin' || '' }}
+
+      - name: Install dependencies
+        run: npm install
+
+      - name: Build Tauri Desktop App
+        uses: tauri-apps/tauri-action@v0
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          tagName: ''
+          releaseDraft: false
+          prerelease: false
+
+      - name: Upload Windows Installers
+        if: matrix.platform == 'windows-latest'
+        uses: actions/upload-artifact@v4
+        with:
+          name: SMO-BBA-SHOP-Windows
+          path: |
+            src-tauri/target/release/bundle/msi/*.msi
+            src-tauri/target/release/bundle/nsis/*.exe
+
+      - name: Upload macOS App
+        if: matrix.platform == 'macos-latest'
+        uses: actions/upload-artifact@v4
+        with:
+          name: SMO-BBA-SHOP-macOS
+          path: |
+            src-tauri/target/**/bundle/dmg/*.dmg
+
+  build-android:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Java JDK
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'zulu'
+          java-version: '17'
+
+      - name: Setup Gradle
+        uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '8.10.2'
+
+      - name: Build Android Native Kotlin APK
+        run: |
+          cd kmp-app
+          gradle :assembleDebug --no-daemon --stacktrace
+
+      - name: Upload Android APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: SMO-BBA-SHOP-Android-APK
+          path: kmp-app/build/outputs/apk/**/*.apk
+
+  release:
+    needs: [build-desktop, build-android]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Download all artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: all-dist
+
+      - name: Publish to GitHub Releases
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          TAG="v2.1.0"
+          shopt -s globstar nullglob
+          gh release create "$TAG" \
+            --title "SMO BBA SHOP v2.1.0 (Official Native Release)" \
+            --notes "เวอร์ชันใหม่สมบูรณ์แบบ 100%: ปรับปรุงให้เหมาะกับ Windows, macOS และ Android โดยดึงหน้าตา ดีไซน์ ฟอนต์ และระบบทั้งหมดจากเว็บมาใช้งาน 100% พร้อมระบบบันทึกใบเสร็จลงเครื่องอัตโนมัติ และไอคอนสโมสร BBA UBRU แท้" \
+            all-dist/**/*.apk all-dist/**/*.msi all-dist/**/*.exe all-dist/**/*.dmg || \
+          gh release upload "$TAG" all-dist/**/*.apk all-dist/**/*.msi all-dist/**/*.exe all-dist/**/*.dmg --clobber || true

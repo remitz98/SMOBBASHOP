@@ -2763,6 +2763,23 @@
             const fileName = 'Receipt_' + orderId + '.png';
             const imgData = canvas.toDataURL('image/png');
 
+            // 0. ตรวจสอบการบันทึกผ่าน Android Native Kotlin App
+            if (window.AndroidNative && typeof window.AndroidNative.saveBase64Image === 'function') {
+              try {
+                window.AndroidNative.saveBase64Image(imgData, fileName);
+                Swal.fire({
+                  icon: 'success',
+                  title: 'บันทึกรูปภาพใบเสร็จเรียบร้อยแล้ว!',
+                  text: 'ระบบได้บันทึกไฟล์ ' + fileName + ' ลงในแกลเลอรีรูปภาพและโฟลเดอร์รูปภาพของเครื่องแล้ว',
+                  timer: 2500,
+                  showConfirmButton: false
+                });
+                return;
+              } catch (nativeErr) {
+                console.error('AndroidNative save error:', nativeErr);
+              }
+            }
+
             // 1. ตรวจสอบการแชร์แบบ Native บนมือถือ (Android / iOS)
             let sharedSuccess = false;
             if (blob && navigator.canShare) {

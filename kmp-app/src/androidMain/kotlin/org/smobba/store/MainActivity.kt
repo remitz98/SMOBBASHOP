@@ -1,20 +1,205 @@
 package org.smobba.store
 
+import android.annotation.SuppressLint
+import android.app.Activity
+import android.content.ContentValues
 import android.content.Context
+import android.content.Intent
+import android.graphics.Bitmap
+import android.graphics.BitmapFactory
+import android.net.Uri
+import android.os.Build
 import android.os.Bundle
+import android.os.Environment
+import android.provider.MediaStore
+import android.util.Base64
+import android.view.KeyEvent
+import android.view.View
+import android.webkit.*
+import android.widget.FrameLayout
+import android.widget.Toast
 import androidx.activity.ComponentActivity
-import androidx.activity.compose.setContent
-
-object AppContextHolder {
-    var context: Context? = null
-}
+import java.io.File
+import java.io.FileOutputStream
 
 class MainActivity : ComponentActivity() {
+
+    private lateinit var webView: WebView
+    private var fileUploadCallback: ValueCallback<Array<Uri>>? = null
+    private val FILE_CHOOSER_REQUEST_CODE = 1001
+
+    @SuppressLint("SetJavaScriptEnabled")
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        AppContextHolder.context = applicationContext
-        setContent {
-            App()
+
+        webView = WebView(this).apply {
+            layoutParams = FrameLayout.LayoutParams(
+                FrameLayout.LayoutParams.MATCH_PARENT,
+                FrameLayout.LayoutParams.MATCH_PARENT
+            )
+
+            settings.apply {
+                javaScriptEnabled = true
+                domStorageEnabled = true
+                databaseEnabled = true
+                allowFileAccess = true
+                allowContentAccess = true
+                useWideViewPort = true
+                loadWithOverviewMode = true
+                cacheMode = WebSettings.LOAD_DEFAULT
+                mixedContentMode = WebSettings.MIXED_CONTENT_ALWAYS_ALLOW
+                userAgentString = "$userAgentString BBAStoreAndroidNativeApp/1.0"
+            }
+
+            // Native Android Bridge for Saving Receipts
+            addJavascriptInterface(AndroidNativeBridge(this@MainActivity), "AndroidNative")
+
+            webViewClient = object : WebViewClient() {
+                override fun shouldOverrideUrlLoading(view: WebView?, request: WebResourceRequest?): Boolean {
+                    val url = request?.url?.toString() ?: return false
+                    if (url.startsWith("tel:") || url.startsWith("mailto:") || url.startsWith("line:")) {
+                        try {
+                            startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(url)))
+                            return true
+                        } catch (e: Exception) {
+                            return false
+                        }
+                    }
+                    return false
+                }
+            }
+
+            webChromeClient = object : WebChromeClient() {
+                // Support file uploads for payment slips
+                override fun onShowFileChooser(
+                    webView: WebView?,
+                    filePathCallback: ValueCallback<Array<Uri>>?,
+                    fileChooserParams: FileChooserParams?
+                ): Boolean {
+                    fileUploadCallback?.onReceiveValue(null)
+                    fileUploadCallback = filePathCallback
+
+                    val intent = fileChooserParams?.createIntent() ?: Intent(Intent.ACTION_GET_CONTENT).apply {
+                        type = "image/*"
+                        addCategory(Intent.CATEGORY_OPENABLE)
+                    }
+
+                    try {
+                        startActivityForResult(intent, FILE_CHOOSER_REQUEST_CODE)
+                    } catch (e: Exception) {
+                        fileUploadCallback = null
+                        return false
+                    }
+                    return true
+                }
+            }
+
+            // Direct download listener
+            setDownloadListener { url, _, _, mimetype, _ ->
+                try {
+                    val intent = Intent(Intent.ACTION_VIEW, Uri.parse(url))
+                    startActivity(intent)
+                } catch (e: Exception) {
+                    Toast.makeText(this@MainActivity, "ไม่สามารถดาวน์โหลดไฟล์ได้: ${e.message}", Toast.LENGTH_SHORT).show()
+                }
+            }
+
+            loadUrl("https://bba-store.smobba.workers.dev")
+        }
+
+        setContentView(webView)
+    }
+
+    override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
+        super.onActivityResult(requestCode, resultCode, data)
+        if (requestCode == FILE_CHOOSER_REQUEST_CODE) {
+            val results = if (resultCode == Activity.RESULT_OK && data != null) {
+                if (data.data != null) arrayOf(data.data!!) else null
+            } else null
+            fileUploadCallback?.onReceiveValue(results)
+            fileUploadCallback = null
+        }
+    }
+
+    override fun onKeyDown(keyCode: Int, event: KeyEvent?): Boolean {
+        if (keyCode == KeyEvent.KEYCODE_BACK && webView.canGoBack()) {
+            webView.goBack()
+            return true
+        }
+        return super.onKeyDown(keyCode, event)
+    }
+
+    class AndroidNativeBridge(private val activity: MainActivity) {
+
+        @JavascriptInterface
+        fun isAndroidNativeApp(): Boolean {
+            return true
+        }
+
+        @JavascriptInterface
+        fun saveBase64Image(base64Data: String, fileName: String) {
+            activity.runOnUiThread {
+                try {
+                    val cleanBase64 = if (base64Data.contains(",")) {
+                        base64Data.substringAfter(",")
+                    } else base64Data
+
+                    val bytes = Base64.decode(cleanBase64, Base64.DEFAULT)
+                    val bitmap = BitmapFactory.decodeByteArray(bytes, 0, bytes.size)
+
+                    if (bitmap != null) {
+                        val saved = saveBitmapToGallery(activity, bitmap, fileName)
+                        if (saved) {
+                            Toast.makeText(
+                                activity,
+                                "✅ บันทึกใบเสร็จ $fileName ลงในแกลเลอรีรูปภาพและโฟลเดอร์เรียบร้อยแล้ว",
+                                Toast.LENGTH_LONG
+                            ).show()
+                        } else {
+                            Toast.makeText(activity, "ไม่สามารถบันทึกไฟล์ภาพได้", Toast.LENGTH_SHORT).show()
+                        }
+                    } else {
+                        Toast.makeText(activity, "ไม่สามารถแปลงข้อมูลภาพได้", Toast.LENGTH_SHORT).show()
+                    }
+                } catch (e: Exception) {
+                    Toast.makeText(activity, "เกิดข้อผิดพลาด: ${e.message}", Toast.LENGTH_LONG).show()
+                }
+            }
+        }
+
+        private fun saveBitmapToGallery(context: Context, bitmap: Bitmap, fileName: String): Boolean {
+            return try {
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+                    val resolver = context.contentResolver
+                    val contentValues = ContentValues().apply {
+                        put(MediaStore.MediaColumns.DISPLAY_NAME, fileName)
+                        put(MediaStore.MediaColumns.MIME_TYPE, "image/png")
+                        put(MediaStore.MediaColumns.RELATIVE_PATH, Environment.DIRECTORY_PICTURES + "/BBA_Receipts")
+                        put(MediaStore.Images.Media.IS_PENDING, 1)
+                    }
+                    val uri = resolver.insert(MediaStore.Images.Media.EXTERNAL_CONTENT_URI, contentValues)
+                    if (uri != null) {
+                        resolver.openOutputStream(uri)?.use { out ->
+                            bitmap.compress(Bitmap.CompressFormat.PNG, 100, out)
+                        }
+                        contentValues.clear()
+                        contentValues.put(MediaStore.Images.Media.IS_PENDING, 0)
+                        resolver.update(uri, contentValues, null, null)
+                        true
+                    } else false
+                } else {
+                    val dir = File(Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_PICTURES), "BBA_Receipts")
+                    if (!dir.exists()) dir.mkdirs()
+                    val file = File(dir, fileName)
+                    FileOutputStream(file).use { out ->
+                        bitmap.compress(Bitmap.CompressFormat.PNG, 100, out)
+                    }
+                    true
+                }
+            } catch (e: Exception) {
+                e.printStackTrace()
+                false
+            }
         }
     }
 }

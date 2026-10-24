@@ -1,6 +1,6 @@
 {
   "$schema": "../node_modules/@tauri-apps/cli/config.schema.json",
-  "productName": "BBA Store",
+  "productName": "SMO BBA SHOP",
   "version": "1.0.4",
   "identifier": "org.smobba.store",
   "build": {
