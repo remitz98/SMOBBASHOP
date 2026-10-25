@@ -22,15 +22,12 @@ import android.webkit.*
 import android.widget.FrameLayout
 import android.widget.Toast
 import androidx.activity.ComponentActivity
-import androidx.core.app.NotificationCompat
-import androidx.swiperefreshlayout.widget.SwipeRefreshLayout
 import java.io.File
 import java.io.FileOutputStream
 
 class MainActivity : ComponentActivity() {
 
     private lateinit var webView: WebView
-    lateinit var swipeRefreshLayout: SwipeRefreshLayout
     private var fileUploadCallback: ValueCallback<Array<Uri>>? = null
     private val FILE_CHOOSER_REQUEST_CODE = 1001
     private val NOTIFICATION_PERMISSION_REQUEST_CODE = 2001
@@ -70,7 +67,7 @@ class MainActivity : ComponentActivity() {
                 userAgentString = "$userAgentString BBAStoreAndroidNativeApp/1.0"
             }
 
-            // Native Android Bridge for Saving Receipts, Notifications & Refresh Control
+            // Native Android Bridge for Saving Receipts, Notifications & App Controls
             addJavascriptInterface(AndroidNativeBridge(this@MainActivity), "AndroidNative")
 
             webViewClient = object : WebViewClient() {
@@ -85,13 +82,6 @@ class MainActivity : ComponentActivity() {
                         }
                     }
                     return false
-                }
-
-                override fun onPageFinished(view: WebView?, url: String?) {
-                    super.onPageFinished(view, url)
-                    if (::swipeRefreshLayout.isInitialized) {
-                        swipeRefreshLayout.isRefreshing = false
-                    }
                 }
             }
 
@@ -145,26 +135,7 @@ class MainActivity : ComponentActivity() {
             loadUrl("https://bba-store.smobba.workers.dev")
         }
 
-        // Lazada/Shopee-style SwipeRefreshLayout
-        swipeRefreshLayout = SwipeRefreshLayout(this).apply {
-            setColorSchemeColors(
-                android.graphics.Color.parseColor("#4338CA"),
-                android.graphics.Color.parseColor("#059669"),
-                android.graphics.Color.parseColor("#F59E0B")
-            )
-            setOnChildScrollUpCallback { _, _ ->
-                webView.scrollY > 0
-            }
-            setOnRefreshListener {
-                webView.evaluateJavascript(
-                    "(function() { if (typeof window.triggerStoreRefresh === 'function') { window.triggerStoreRefresh(); return 'store_refresh'; } else { window.location.reload(); return 'reload'; } })()",
-                    null
-                )
-            }
-            addView(webView)
-        }
-
-        setContentView(swipeRefreshLayout)
+        setContentView(webView)
     }
 
     private fun createNotificationChannel() {
@@ -247,11 +218,7 @@ class MainActivity : ComponentActivity() {
 
         @JavascriptInterface
         fun finishRefresh() {
-            activity.runOnUiThread {
-                if (::activity.isInitialized && ::activity.swipeRefreshLayout.isInitialized) {
-                    activity.swipeRefreshLayout.isRefreshing = false
-                }
-            }
+            // No-op for compatibility
         }
 
         @JavascriptInterface
@@ -268,15 +235,21 @@ class MainActivity : ComponentActivity() {
                         PendingIntent.FLAG_UPDATE_CURRENT or (if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) PendingIntent.FLAG_IMMUTABLE else 0)
                     )
 
-                    val notification = NotificationCompat.Builder(activity, activity.NOTIFICATION_CHANNEL_ID)
-                        .setSmallIcon(R.mipmap.ic_launcher)
+                    val builder = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                        android.app.Notification.Builder(activity, activity.NOTIFICATION_CHANNEL_ID)
+                    } else {
+                        @Suppress("DEPRECATION")
+                        android.app.Notification.Builder(activity)
+                    }
+
+                    val notification = builder
+                        .setSmallIcon(activity.applicationInfo.icon)
                         .setContentTitle(title)
                         .setContentText(message)
-                        .setStyle(NotificationCompat.BigTextStyle().bigText(message))
-                        .setPriority(NotificationCompat.PRIORITY_HIGH)
+                        .setStyle(android.app.Notification.BigTextStyle().bigText(message))
                         .setAutoCancel(true)
                         .setContentIntent(pendingIntent)
-                        .setDefaults(NotificationCompat.DEFAULT_ALL)
+                        .setDefaults(android.app.Notification.DEFAULT_ALL)
                         .build()
 
                     val manager = activity.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager

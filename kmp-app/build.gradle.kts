@@ -44,8 +44,6 @@ kotlin {
         androidMain.dependencies {
             implementation(libs.androidx.activity.compose)
             implementation(libs.ktor.client.okhttp)
-            implementation("androidx.swiperefreshlayout:swiperefreshlayout:1.1.0")
-            implementation("androidx.core:core-ktx:1.13.1")
         }
 
         val desktopMain by getting {
