@@ -345,6 +345,23 @@ fun AdminScreen(
                                         Spacer(modifier = Modifier.width(4.dp))
                                         Text("รับเสื้อแล้ว", fontSize = 12.sp, fontWeight = FontWeight.Bold)
                                     }
+                                } else if (order.status == "รับเสื้อแล้ว") {
+                                    Button(
+                                        onClick = {
+                                            coroutineScope.launch {
+                                                api.updateOrderStatus(pin.trim(), order.orderId, "พร้อมรับเสื้อที่ห้องสโมสร")
+                                                refreshData()
+                                            }
+                                        },
+                                        colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFD97706)),
+                                        modifier = Modifier.weight(1f),
+                                        shape = RoundedCornerShape(10.dp),
+                                        contentPadding = PaddingValues(vertical = 6.dp, horizontal = 10.dp)
+                                    ) {
+                                        Icon(Icons.Default.Refresh, contentDescription = null, modifier = Modifier.size(15.dp))
+                                        Spacer(modifier = Modifier.width(4.dp))
+                                        Text("ย้อนสถานะรับเสื้อ", fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                                    }
                                 }
                             }
                         }

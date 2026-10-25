@@ -1532,11 +1532,20 @@
               '</button>' +
             '</div>' +
           '</td>' +
-          '<td class="p-3.5 align-top text-center"><span class="inline-block px-2.5 py-1 rounded-full text-xs font-semibold ' + badgeClass + '">' + safeStatus + '</span></td>' +
+          '<td class="p-3.5 align-top text-center">' +
+            '<div class="inline-flex items-center justify-center gap-1.5">' +
+              '<span class="inline-block px-2.5 py-1 rounded-full text-xs font-semibold ' + badgeClass + '">' + safeStatus + '</span>' +
+              '<button type="button" onclick="adminEditOrderStatusModal(\'' + safeOrderId + '\', \'' + safeStatus + '\')" title="แก้ไขสถานะคำสั่งจองนี้ (กันกดผิด)" class="p-1 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 rounded transition text-xs">' +
+                '<i class="fa-solid fa-pen-to-square"></i>' +
+              '</button>' +
+            '</div>' +
+          '</td>' +
           '<td class="p-3.5 align-top text-right"><div class="inline-flex flex-col gap-1.5">' +
             (item.status.includes('รอตรวจสอบ') ? '<button onclick="adminChangeStatus(\'' + safeOrderId + '\', \'ชำระเงินเรียบร้อย\')" class="px-2.5 py-1 rounded-lg bg-blue-600 text-white text-xs font-semibold hover:bg-blue-700 shadow-sm transition">อนุมัติยอดเงิน</button>' : '') +
             (item.status === 'ชำระเงินเรียบร้อย' ? '<button onclick="adminChangeStatus(\'' + safeOrderId + '\', \'พร้อมรับเสื้อที่ห้องสโมสร\')" class="px-2.5 py-1 rounded-lg bg-emerald-600 text-white text-xs font-semibold hover:bg-emerald-700 shadow-sm transition"><i class="fa-solid fa-bell"></i> แจ้งพร้อมรับเสื้อ</button>' : '') +
-            (item.status === 'พร้อมรับเสื้อที่ห้องสโมสร' ? '<button onclick="adminChangeStatus(\'' + safeOrderId + '\', \'รับเสื้อแล้ว\')" class="px-2.5 py-1 rounded-lg bg-slate-800 text-white text-xs font-semibold hover:bg-slate-900 shadow-sm transition"><i class="fa-solid fa-check"></i> บันทึกรับเสื้อแล้ว</button>' : '') +
+            (item.status === 'พร้อมรับเสื้อที่ห้องสโมสร' ? '<button onclick="adminConfirmPickup(\'' + safeOrderId + '\')" class="px-2.5 py-1 rounded-lg bg-slate-800 text-white text-xs font-semibold hover:bg-slate-900 shadow-sm transition"><i class="fa-solid fa-check"></i> บันทึกรับเสื้อแล้ว</button>' : '') +
+            (item.status === 'รับเสื้อแล้ว' ? '<button onclick="adminPromptRevertPickup(\'' + safeOrderId + '\')" class="px-2.5 py-1 rounded-lg bg-amber-500 hover:bg-amber-600 text-white text-xs font-semibold shadow-sm transition inline-flex items-center justify-center gap-1.5"><i class="fa-solid fa-rotate-left"></i> <span>แก้ไขสถานะรับเสื้อ</span></button>' : '') +
+            (item.status === 'รับเสื้อแล้ว' ? '<button onclick="adminEditOrderStatusModal(\'' + safeOrderId + '\', \'' + safeStatus + '\')" class="px-2 py-0.5 rounded text-[11px] text-slate-500 hover:text-indigo-700 hover:bg-slate-100 transition inline-flex items-center justify-center gap-1"><i class="fa-solid fa-pen"></i> <span>เปลี่ยนสถานะอื่น</span></button>' : '') +
             (item.status !== 'ยกเลิกคำสั่งซื้อ' && item.status !== 'รับเสื้อแล้ว' ? '<button onclick="adminCancelOrder(\'' + safeOrderId + '\')" class="px-2 py-0.5 rounded text-[11px] text-rose-500 hover:text-rose-700 hover:bg-rose-50 transition">ยกเลิกการจอง</button>' : '') +
           '</div></td>' +
         '</tr>';
@@ -1747,6 +1756,10 @@
     }
 
     function adminChangeStatus(orderId, newStatus) {
+      if (newStatus === 'รับเสื้อแล้ว') {
+        adminConfirmPickup(orderId);
+        return;
+      }
       Swal.fire({
         title: 'ยืนยันการเปลี่ยนสถานะ',
         text: 'ต้องการเปลี่ยนสถานะคำสั่งจอง ' + orderId + ' เป็น "' + newStatus + '" ใช่หรือไม่?',
@@ -1758,6 +1771,193 @@
       }).then(result => {
         if (result.isConfirmed) {
           executeAdminUpdateStatus(orderId, newStatus);
+        }
+      });
+    }
+
+    function adminConfirmPickup(orderId) {
+      const item = adminOrdersList.find(o => o.orderId === orderId);
+      const name = item ? escapeHtml(item.customerName) : '';
+      const studentId = item ? escapeHtml(item.studentId) : '';
+      const items = item ? escapeHtml(item.itemsSummary) : '';
+
+      Swal.fire({
+        title: 'ยืนยันการรับเสื้อ',
+        html: `
+          <div class="text-left text-xs sm:text-sm space-y-2.5">
+            <p class="text-slate-600">ยืนยันว่านักศึกษามารับเสื้อสำหรับคำสั่งจองนี้เรียบร้อยแล้วใช่หรือไม่?</p>
+            <div class="p-3 rounded-xl bg-slate-50 border border-slate-200 text-xs text-slate-700 space-y-1">
+              <div><b>รหัสคำสั่งจอง:</b> <span class="font-mono font-bold">${escapeHtml(orderId)}</span></div>
+              <div><b>นักศึกษา:</b> ${name} (${studentId})</div>
+              <div><b>รายการเสื้อ:</b> <div class="text-slate-600 mt-0.5 whitespace-pre-line">${items}</div></div>
+            </div>
+            <div class="p-2.5 rounded-lg bg-amber-50 border border-amber-200 text-[11px] text-amber-800 flex items-start gap-1.5">
+              <i class="fa-solid fa-circle-info mt-0.5 text-amber-600"></i>
+              <span><b>หมายเหตุ:</b> หากกดบันทึกผิด สามารถกดปุ่ม <b>"แก้ไขสถานะรับเสื้อ"</b> เพื่อย้อนสถานะกลับได้ตลอดเวลา</span>
+            </div>
+          </div>
+        `,
+        icon: 'question',
+        showCancelButton: true,
+        confirmButtonText: '<i class="fa-solid fa-check mr-1"></i> ยืนยันรับเสื้อแล้ว',
+        cancelButtonText: 'ยกเลิก',
+        confirmButtonColor: '#1e293b'
+      }).then(result => {
+        if (result.isConfirmed) {
+          executeAdminUpdateStatus(orderId, 'รับเสื้อแล้ว');
+        }
+      });
+    }
+
+    function adminPromptRevertPickup(orderId) {
+      const item = adminOrdersList.find(o => o.orderId === orderId);
+      const name = item ? escapeHtml(item.customerName) : '';
+      const studentId = item ? escapeHtml(item.studentId) : '';
+      const items = item ? escapeHtml(item.itemsSummary) : '';
+
+      Swal.fire({
+        title: 'แก้ไขสถานะการรับเสื้อ',
+        html: `
+          <div class="text-left text-xs sm:text-sm space-y-2.5">
+            <p class="text-slate-600">ต้องการแก้ไขสถานะสำหรับคำสั่งจอง <b>${escapeHtml(orderId)}</b> ใช่หรือไม่?</p>
+            <div class="p-3 rounded-xl bg-slate-50 border border-slate-200 text-xs text-slate-700 space-y-1">
+              <div><b>นักศึกษา:</b> ${name} (${studentId})</div>
+              <div><b>สถานะปัจจุบัน:</b> <span class="inline-block px-2 py-0.5 rounded-full text-[11px] font-bold bg-slate-200 text-slate-800">รับเสื้อแล้ว</span></div>
+              <div><b>รายการเสื้อ:</b> <div class="text-slate-600 mt-0.5 whitespace-pre-line">${items}</div></div>
+            </div>
+            <div class="p-2.5 rounded-lg bg-amber-50 border border-amber-200 text-xs text-amber-900">
+              <div class="font-bold flex items-center gap-1.5"><i class="fa-solid fa-rotate-left text-amber-600"></i> ย้อนสถานะกลับเป็น "พร้อมรับเสื้อที่ห้องสโมสร"</div>
+              <p class="text-[11px] text-amber-700 mt-1">ใช้ในกรณีแอดมินกดบันทึกผิด หรือนักศึกษายังไม่ได้รับเสื้อ ระบบจะปรับสถานะให้กลับมารอรับเสื้อได้ตามเดิม</p>
+            </div>
+            <label class="flex items-center gap-2 text-xs text-slate-600 pt-1 cursor-pointer select-none">
+              <input type="checkbox" id="swalRevertNotifyEmail" class="rounded border-slate-300 text-indigo-600 focus:ring-indigo-500">
+              <span>ส่งอีเมลแจ้งเตือนนักศึกษาซ้ำอีกครั้ง (ปกติไม่ต้องส่งซ้ำ)</span>
+            </label>
+          </div>
+        `,
+        icon: 'warning',
+        showCancelButton: true,
+        showDenyButton: true,
+        confirmButtonText: '<i class="fa-solid fa-rotate-left mr-1"></i> ย้อนเป็น "พร้อมรับเสื้อ"',
+        denyButtonText: '<i class="fa-solid fa-list mr-1"></i> เลือกสถานะอื่น...',
+        cancelButtonText: 'ยกเลิก',
+        confirmButtonColor: '#f59e0b',
+        denyButtonColor: '#4338ca',
+      }).then(result => {
+        if (result.isConfirmed) {
+          const sendEmail = document.getElementById('swalRevertNotifyEmail')?.checked || false;
+          executeAdminUpdateStatus(orderId, 'พร้อมรับเสื้อที่ห้องสโมสร', sendEmail, 'แอดมินแก้ไขย้อนสถานะรับเสื้อ');
+        } else if (result.isDenied) {
+          adminEditOrderStatusModal(orderId, 'รับเสื้อแล้ว');
+        }
+      });
+    }
+
+    function adminEditOrderStatusModal(orderId, currentStatus) {
+      const item = adminOrdersList.find(o => o.orderId === orderId);
+      const name = item ? escapeHtml(item.customerName) : '';
+      const studentId = item ? escapeHtml(item.studentId) : '';
+      const curr = currentStatus || (item ? item.status : '');
+
+      const statuses = [
+        { val: 'รอตรวจสอบการชำระเงิน', desc: 'รอนักศึกษาแนบสลิป / รอตรวจสอบยอดเงิน' },
+        { val: 'ชำระเงินเรียบร้อย', desc: 'ตรวจสลิปผ่านแล้ว กำลังจัดเตรียมเสื้อ' },
+        { val: 'พร้อมรับเสื้อที่ห้องสโมสร', desc: 'เสื้อพร้อมส่งมอบที่ห้องสโมสร' },
+        { val: 'รับเสื้อแล้ว', desc: 'ส่งมอบเสื้อให้นักศึกษาเรียบร้อยแล้ว' },
+        { val: 'ยกเลิกคำสั่งซื้อ', desc: 'ยกเลิกคำสั่งจอง (คืนสต็อกเสื้อ)' }
+      ];
+
+      const optionsHtml = statuses.map(s => {
+        const isSelected = s.val === curr ? 'selected' : '';
+        return `<option value="${s.val}" ${isSelected}>${s.val} — ${s.desc}</option>`;
+      }).join('');
+
+      Swal.fire({
+        title: 'แก้ไขสถานะคำสั่งจอง',
+        html: `
+          <div class="text-left text-xs sm:text-sm space-y-3">
+            <div class="p-3 rounded-xl bg-slate-50 border border-slate-200 text-xs text-slate-700 space-y-1">
+              <div><b>รหัสคำสั่งจอง:</b> <span class="font-mono font-bold">${escapeHtml(orderId)}</span></div>
+              <div><b>ผู้สั่งจอง:</b> ${name} (${studentId})</div>
+              <div><b>สถานะปัจจุบัน:</b> <span class="font-bold text-indigo-700">${escapeHtml(curr)}</span></div>
+            </div>
+
+            <div>
+              <label class="block font-semibold text-slate-700 mb-1">เลือกสถานะใหม่:</label>
+              <select id="modalNewStatusSelect" class="w-full p-2 border border-slate-300 rounded-lg text-xs sm:text-sm focus:ring-1 focus:ring-indigo-500 focus:outline-none bg-white">
+                ${optionsHtml}
+              </select>
+            </div>
+
+            <div id="modalNotifyEmailContainer" class="p-2.5 rounded-lg bg-emerald-50 border border-emerald-200 hidden">
+              <label class="flex items-center gap-2 text-xs text-emerald-900 cursor-pointer select-none">
+                <input type="checkbox" id="modalNotifyEmailCheck" class="rounded border-emerald-400 text-emerald-600 focus:ring-emerald-500">
+                <span class="font-medium">ส่งอีเมลแจ้งเตือนนักศึกษาว่าพร้อมรับเสื้อ</span>
+              </label>
+              <p class="text-[10px] text-emerald-700 mt-1 pl-5">* หากเป็นการแก้ไขย้อนสถานะที่แอดมินกดผิด ไม่จำเป็นต้องติ๊กส่งอีเมลซ้ำ</p>
+            </div>
+
+            <div>
+              <label class="block font-semibold text-slate-700 mb-1">หมายเหตุบันทึกแอดมิน (ถ้ามี):</label>
+              <input type="text" id="modalAdminNotesInput" placeholder="เช่น แก้ไขเนื่องจากกดผิด, นักศึกษามารับแล้ว..." value="${escapeHtml(item?.adminNotes || '')}" class="w-full p-2 border border-slate-300 rounded-lg text-xs focus:ring-1 focus:ring-indigo-500 focus:outline-none">
+            </div>
+          </div>
+        `,
+        showCancelButton: true,
+        confirmButtonText: '<i class="fa-solid fa-floppy-disk mr-1"></i> บันทึกการแก้ไข',
+        cancelButtonText: 'ยกเลิก',
+        confirmButtonColor: '#4338ca',
+        didOpen: () => {
+          const sel = document.getElementById('modalNewStatusSelect');
+          const emailBox = document.getElementById('modalNotifyEmailContainer');
+          const emailCheck = document.getElementById('modalNotifyEmailCheck');
+          const updateEmailBox = () => {
+            if (sel && emailBox) {
+              if (sel.value === 'พร้อมรับเสื้อที่ห้องสโมสร') {
+                emailBox.classList.remove('hidden');
+                if (curr === 'รับเสื้อแล้ว') {
+                  if (emailCheck) emailCheck.checked = false;
+                } else {
+                  if (emailCheck) emailCheck.checked = true;
+                }
+              } else {
+                emailBox.classList.add('hidden');
+              }
+            }
+          };
+          if (sel) sel.addEventListener('change', updateEmailBox);
+          updateEmailBox();
+        }
+      }).then(result => {
+        if (result.isConfirmed) {
+          const newStatus = document.getElementById('modalNewStatusSelect')?.value;
+          const adminNotes = document.getElementById('modalAdminNotesInput')?.value || '';
+          const sendEmail = document.getElementById('modalNotifyEmailCheck')?.checked ?? true;
+          if (!newStatus) return;
+
+          if (newStatus === curr) {
+            Swal.fire({ icon: 'info', title: 'สถานะไม่มีการเปลี่ยนแปลง', timer: 1500, showConfirmButton: false });
+            return;
+          }
+
+          if (newStatus === 'ยกเลิกคำสั่งซื้อ') {
+            Swal.fire({
+              title: 'ยืนยันยกเลิกคำสั่งจอง?',
+              text: 'การเปลี่ยนสถานะเป็นยกเลิกคำสั่งซื้อจะทำการคืนสต็อกเสื้อกลับสู่คลังอัตโนมัติ',
+              icon: 'warning',
+              showCancelButton: true,
+              confirmButtonText: 'ยืนยันยกเลิก',
+              cancelButtonText: 'ไม่ยกเลิก',
+              confirmButtonColor: '#e11d48'
+            }).then(subRes => {
+              if (subRes.isConfirmed) {
+                executeAdminUpdateStatus(orderId, newStatus, false, adminNotes);
+              }
+            });
+            return;
+          }
+
+          executeAdminUpdateStatus(orderId, newStatus, sendEmail, adminNotes);
         }
       });
     }
@@ -1778,17 +1978,21 @@
       });
     }
 
-    async function executeAdminUpdateStatus(orderId, newStatus) {
+    async function executeAdminUpdateStatus(orderId, newStatus, notifyEmail, adminNotes) {
       Swal.showLoading();
       try {
+        const payload = {
+          pin: adminTokenPin,
+          orderId: orderId,
+          newStatus: newStatus
+        };
+        if (notifyEmail !== undefined) payload.notifyEmail = notifyEmail;
+        if (adminNotes !== undefined) payload.adminNotes = adminNotes;
+
         const res = await fetch(API_BASE + '/api/admin/orders/status', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            pin: adminTokenPin,
-            orderId: orderId,
-            newStatus: newStatus
-          })
+          body: JSON.stringify(payload)
         });
         const resData = await res.json();
         Swal.close();

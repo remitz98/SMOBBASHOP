@@ -781,14 +781,15 @@ app.post('/api/admin/orders/status', async (c) => {
 
     if (!isValid) return c.json({ success: false, message: 'รหัส PIN ไม่ถูกต้อง' }, 401);
 
-    const { orderId, newStatus, adminNotes } = body;
+    const { orderId, newStatus, adminNotes, notifyEmail } = body;
     const order = await db.prepare("SELECT * FROM orders WHERE order_id = ?").bind(orderId).first();
     if (!order) return c.json({ success: false, message: 'ไม่พบคำสั่งซื้อนี้' }, 404);
 
     const oldStatus = order.status;
+    const finalAdminNotes = (adminNotes !== undefined) ? adminNotes : (order.admin_notes || '');
     const batchOps = [
-      db.prepare("UPDATE orders SET status = ?, admin_notes = ? WHERE order_id = ?").bind(newStatus, adminNotes || '', orderId),
-      db.prepare("UPDATE payments SET verify_status = ?, admin_notes = ? WHERE order_id = ?").bind(newStatus, adminNotes || '', orderId)
+      db.prepare("UPDATE orders SET status = ?, admin_notes = ? WHERE order_id = ?").bind(newStatus, finalAdminNotes, orderId),
+      db.prepare("UPDATE payments SET verify_status = ?, admin_notes = ? WHERE order_id = ?").bind(newStatus, finalAdminNotes, orderId)
     ];
 
     // คืนสต็อกสินค้าอัตโนมัติหากเปลี่ยนเป็น 'ยกเลิกคำสั่งซื้อ'
@@ -821,11 +822,41 @@ app.post('/api/admin/orders/status', async (c) => {
       }
     }
 
+    // กรณีเปลี่ยนจาก 'ยกเลิกคำสั่งซื้อ' กลับมาเป็นสถานะปกติ (ตัดสต็อกกลับ)
+    if (oldStatus === 'ยกเลิกคำสั่งซื้อ' && newStatus !== 'ยกเลิกคำสั่งซื้อ') {
+      let items = [];
+      try { items = JSON.parse(order.items_json || '[]'); } catch (e) {}
+
+      for (const item of items) {
+        const prod = await db.prepare("SELECT * FROM products WHERE product_id = ?").bind(item.productId).first();
+        if (prod) {
+          let sizeStock = {};
+          try { sizeStock = JSON.parse(prod.size_stock || '{}'); } catch (e) {}
+
+          let newTotal = Math.max(0, Number(prod.stock) - item.qty);
+          if (item.size && sizeStock[item.size] !== undefined) {
+            sizeStock[item.size] = Math.max(0, Number(sizeStock[item.size]) - item.qty);
+            newTotal = Object.values(sizeStock).reduce((acc, v) => acc + (Number(v) || 0), 0);
+          }
+
+          let newProdStatus = prod.status;
+          if (newTotal <= 0 && newProdStatus === 'พร้อมจำหน่าย') {
+            newProdStatus = 'สินค้าหมด';
+          }
+
+          batchOps.push(
+            db.prepare("UPDATE products SET stock = ?, size_stock = ?, status = ? WHERE product_id = ?")
+              .bind(newTotal, JSON.stringify(sizeStock), newProdStatus, item.productId)
+          );
+        }
+      }
+    }
+
     await db.batch(batchOps);
 
     // ส่งอีเมลแจ้งเตือนนักศึกษาเมื่อเปลี่ยนสถานะเป็น 'พร้อมรับเสื้อที่ห้องสโมสร'
     let emailNotice = '';
-    if (newStatus === 'พร้อมรับเสื้อที่ห้องสโมสร') {
+    if (newStatus === 'พร้อมรับเสื้อที่ห้องสโมสร' && notifyEmail !== false) {
       const studentEmail = String(order.student_email || '').trim();
       if (studentEmail && studentEmail.includes('@')) {
         try {
