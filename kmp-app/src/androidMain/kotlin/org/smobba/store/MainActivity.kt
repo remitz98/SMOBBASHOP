@@ -142,10 +142,10 @@ class MainActivity : ComponentActivity() {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             val channel = NotificationChannel(
                 NOTIFICATION_CHANNEL_ID,
-                "คำสั่งซื้อใหม่ SMO BBA SHOP",
+                "การแจ้งเตือน SMO BBA SHOP",
                 NotificationManager.IMPORTANCE_HIGH
             ).apply {
-                description = "แจ้งเตือนเมื่อมีคำสั่งซื้อใหม่เข้ามาในระบบแบบ Realtime"
+                description = "แจ้งเตือนคำสั่งซื้อใหม่และอัปเดตสถานะคำสั่งจองเสื้อแบบ Realtime"
                 enableVibration(true)
                 enableLights(true)
             }

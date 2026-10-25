@@ -927,7 +927,7 @@ app.post('/api/admin/orders/status', async (c) => {
       }
     }
 
-    // กระจายสัญญาณอัปเดตสถานะคำสั่งซื้อไปยังหน้าจอแอดมินทุกเครื่อง
+    // กระจายสัญญาณอัปเดตสถานะคำสั่งซื้อไปยังหน้าจอแอดมินและนักศึกษาเจ้าของคำสั่งซื้อ
     try {
       if (c.env.ORDER_NOTIFIER) {
         const doId = c.env.ORDER_NOTIFIER.idFromName('global_order_notifier');
@@ -938,6 +938,9 @@ app.post('/api/admin/orders/status', async (c) => {
             type: 'ORDER_UPDATED',
             orderId: orderId,
             newStatus: newStatus,
+            studentId: order.student_id,
+            customerName: order.customer_name,
+            itemsSummary: order.items_summary,
             adminNotes: finalAdminNotes,
             timestamp: new Date().toISOString()
           })
@@ -1231,7 +1234,7 @@ export class OrderNotifier {
   constructor(state, env) {
     this.state = state;
     this.env = env;
-    this.sessions = new Set();
+    this.sessions = new Map();
   }
 
   async fetch(request) {
@@ -1242,12 +1245,15 @@ export class OrderNotifier {
         return new Response('Expected Upgrade: websocket', { status: 426 });
       }
 
+      const role = url.searchParams.get('role') || 'admin';
+      const studentId = url.searchParams.get('studentId') || '';
+
       const pair = new WebSocketPair();
       const client = pair[0];
       const server = pair[1];
 
       server.accept();
-      this.sessions.add(server);
+      this.sessions.set(server, { role, studentId });
 
       server.addEventListener('message', async (event) => {
         try {
@@ -1267,6 +1273,8 @@ export class OrderNotifier {
       // ส่งข้อความต้อนรับยืนยันการเชื่อมต่อ
       server.send(JSON.stringify({
         type: 'CONNECTED',
+        role: role,
+        studentId: studentId,
         message: 'เชื่อมต่อ Realtime WebSocket (Durable Objects) สำเร็จ',
         connectedAt: new Date().toISOString()
       }));
@@ -1279,10 +1287,28 @@ export class OrderNotifier {
 
     if (url.pathname === '/broadcast' && request.method === 'POST') {
       try {
-        const payload = await request.text();
-        for (const session of this.sessions) {
+        const payloadText = await request.text();
+        const payload = JSON.parse(payloadText);
+
+        for (const [session, meta] of this.sessions.entries()) {
           try {
-            session.send(payload);
+            if (payload.type === 'NEW_ORDER') {
+              // แจ้งเตือนคำสั่งซื้อใหม่: ส่งเฉพาะผู้ใช้ที่เป็น Admin เท่านั้น
+              if (meta.role === 'admin') {
+                session.send(payloadText);
+              }
+            } else if (payload.type === 'ORDER_UPDATED') {
+              // แจ้งเตือนอัปเดตสถานะ: ส่งให้ Admin และส่งให้นักศึกษาเจ้าของคำสั่งซื้อ (studentId ตรงกัน)
+              const cleanPayloadStudentId = String(payload.studentId || '').trim();
+              const cleanMetaStudentId = String(meta.studentId || '').trim();
+              const isTargetStudent = (meta.role === 'student' && cleanMetaStudentId && cleanPayloadStudentId === cleanMetaStudentId);
+
+              if (meta.role === 'admin' || isTargetStudent) {
+                session.send(payloadText);
+              }
+            } else {
+              session.send(payloadText);
+            }
           } catch (err) {
             this.sessions.delete(session);
           }
@@ -1310,7 +1336,24 @@ app.get('/api/admin/ws', async (c) => {
 
   const id = c.env.ORDER_NOTIFIER.idFromName('global_order_notifier');
   const stub = c.env.ORDER_NOTIFIER.get(id);
-  return stub.fetch(new Request('http://order-notifier/ws', c.req.raw));
+  const doUrl = new URL('http://order-notifier/ws?role=admin');
+  return stub.fetch(new Request(doUrl.toString(), c.req.raw));
+});
+
+// WebSocket Endpoint สำหรับ Student Realtime Order Tracking ผ่าน Durable Objects
+app.get('/api/student/ws', async (c) => {
+  if (!c.env.ORDER_NOTIFIER) {
+    return c.text('Durable Object binding ORDER_NOTIFIER is not configured', 503);
+  }
+  const studentId = String(c.req.query('studentId') || '').trim();
+  if (!studentId) {
+    return c.text('Student ID is required', 400);
+  }
+
+  const id = c.env.ORDER_NOTIFIER.idFromName('global_order_notifier');
+  const stub = c.env.ORDER_NOTIFIER.get(id);
+  const doUrl = new URL(`http://order-notifier/ws?role=student&studentId=${encodeURIComponent(studentId)}`);
+  return stub.fetch(new Request(doUrl.toString(), c.req.raw));
 });
 
 // ==================== 3. FRONTEND STATIC ASSET ROUTING ====================

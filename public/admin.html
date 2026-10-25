@@ -1166,7 +1166,10 @@
 
     function exitAdmin() {
       adminTokenPin = '';
-      try { sessionStorage.removeItem('bba_admin_pin'); } catch (e) {}
+      try {
+        localStorage.removeItem('bba_admin_pin');
+        sessionStorage.removeItem('bba_admin_pin');
+      } catch (e) {}
       closeAdminWebSocket();
       switchView('login');
       const input = document.getElementById('inputLoginPin');
@@ -1191,7 +1194,10 @@
         const resData = await res.json();
         if (!silent) Swal.close();
         if (resData && resData.success) {
-          try { sessionStorage.setItem('bba_admin_pin', adminTokenPin); } catch (e) {}
+          try {
+            localStorage.setItem('bba_admin_pin', adminTokenPin);
+            sessionStorage.setItem('bba_admin_pin', adminTokenPin);
+          } catch (e) {}
           switchView('admin');
           initAdminWebSocket();
           document.getElementById('statSales').textContent = '฿' + Number(resData.stats.totalSales || 0).toLocaleString();
@@ -1218,7 +1224,10 @@
           renderProductionSummary();
         } else {
           adminTokenPin = '';
-          try { sessionStorage.removeItem('bba_admin_pin'); } catch (e) {}
+          try {
+            localStorage.removeItem('bba_admin_pin');
+            sessionStorage.removeItem('bba_admin_pin');
+          } catch (e) {}
           closeAdminWebSocket();
           switchView('login');
           if (!silent) Swal.fire('ปฏิเสธการเข้าถึง', (resData && resData.message) || 'รหัส PIN ไม่ถูกต้อง', 'error');
@@ -2837,10 +2846,12 @@
       });
     }
 
-    // Initial load: เช็ก PIN จาก sessionStorage หรือเปิดหน้าล็อกอิน
+    // Initial load: เช็ก PIN จาก localStorage หรือ sessionStorage เพื่อเข้าหน้าแอดมินอัตโนมัติ
     document.addEventListener('DOMContentLoaded', () => {
       let cachedPin = '';
-      try { cachedPin = sessionStorage.getItem('bba_admin_pin') || ''; } catch (e) {}
+      try {
+        cachedPin = localStorage.getItem('bba_admin_pin') || sessionStorage.getItem('bba_admin_pin') || '';
+      } catch (e) {}
       if (cachedPin) {
         adminTokenPin = normalizePin(cachedPin);
         loadAdminData();

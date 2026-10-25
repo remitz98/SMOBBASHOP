@@ -1712,33 +1712,154 @@
       }
     })();
 
-    // Background WebSocket notification listener for Android admin
-    (function initBackgroundAdminNotifier() {
-      const savedPin = sessionStorage.getItem('bba_admin_pin') || localStorage.getItem('bba_admin_pin');
-      if (!savedPin) return;
+    // ==================== REALTIME WEBSOCKET NOTIFICATION SYSTEM ====================
+    let adminBgWs = null;
+    let adminWsReconnectTimer = null;
+    let studentWs = null;
+    let studentWsReconnectTimer = null;
+    let studentWsCurrentId = '';
+
+    function syncRealtimeNotifications() {
+      // 1. ผู้ใช้ที่เป็นแอดมิน: ถ้าล็อกอิน Admin PIN ไว้ในอุปกรณ์ ให้เชื่อมต่อรับแจ้งเตือนเมื่อมีคำสั่งซื้อใหม่เข้ามา
+      const adminPin = localStorage.getItem('bba_admin_pin') || sessionStorage.getItem('bba_admin_pin');
+      if (adminPin) {
+        connectAdminBgWs(adminPin);
+      } else {
+        disconnectAdminBgWs();
+      }
+
+      // 2. ผู้ใช้ที่เป็นนักศึกษาทั่วไป: ถ้าล็อกอินบัญชีนักศึกษาไว้ ให้เชื่อมต่อรับแจ้งเตือนเฉพาะสถานะคำสั่งซื้อของตนเองเท่านั้น
+      if (currentStudent && currentStudent.studentId) {
+        connectStudentWs(currentStudent.studentId);
+      } else {
+        disconnectStudentWs();
+      }
+    }
+
+    function connectAdminBgWs(pin) {
+      if (adminBgWs && (adminBgWs.readyState === WebSocket.OPEN || adminBgWs.readyState === WebSocket.CONNECTING)) {
+        return;
+      }
+      clearTimeout(adminWsReconnectTimer);
 
       const protocol = location.protocol === 'https:' ? 'wss:' : 'ws:';
-      const wsUrl = `${protocol}//${location.host}/api/admin/ws?pin=${encodeURIComponent(savedPin)}`;
+      const wsUrl = `${protocol}//${location.host}/api/admin/ws?pin=${encodeURIComponent(pin)}`;
 
-      let bgWs = null;
       try {
-        bgWs = new WebSocket(wsUrl);
-        bgWs.onmessage = (event) => {
+        adminBgWs = new WebSocket(wsUrl);
+
+        adminBgWs.onmessage = (event) => {
           try {
             const data = JSON.parse(event.data);
             if (data.type === 'NEW_ORDER') {
               if (window.AndroidNative && typeof window.AndroidNative.showOrderNotification === 'function') {
+                const totalFormatted = Number(data.totalAmount || 0).toLocaleString();
                 window.AndroidNative.showOrderNotification(
                   '🛒 คำสั่งซื้อใหม่เข้ามา!',
-                  `${data.customerName} สั่งซื้อเสื้อยอด ฿${Number(data.totalAmount || 0).toLocaleString()} (รหัส ${data.orderId})`,
+                  `${data.customerName} สั่งซื้อเสื้อยอด ฿${totalFormatted} (รหัส ${data.orderId})`,
                   data.orderId
                 );
               }
             }
           } catch (e) {}
         };
-      } catch (e) {}
-    })();
+
+        adminBgWs.onclose = () => {
+          adminBgWs = null;
+          const stillHasPin = localStorage.getItem('bba_admin_pin') || sessionStorage.getItem('bba_admin_pin');
+          if (stillHasPin) {
+            adminWsReconnectTimer = setTimeout(() => connectAdminBgWs(stillHasPin), 5000);
+          }
+        };
+
+        adminBgWs.onerror = () => {
+          try { adminBgWs.close(); } catch (e) {}
+        };
+      } catch (e) {
+        adminWsReconnectTimer = setTimeout(() => connectAdminBgWs(pin), 10000);
+      }
+    }
+
+    function disconnectAdminBgWs() {
+      clearTimeout(adminWsReconnectTimer);
+      if (adminBgWs) {
+        try { adminBgWs.close(); } catch (e) {}
+        adminBgWs = null;
+      }
+    }
+
+    function connectStudentWs(studentId) {
+      const cleanId = String(studentId || '').trim();
+      if (!cleanId) return;
+
+      if (studentWs && studentWsCurrentId === cleanId && (studentWs.readyState === WebSocket.OPEN || studentWs.readyState === WebSocket.CONNECTING)) {
+        return;
+      }
+
+      disconnectStudentWs();
+      clearTimeout(studentWsReconnectTimer);
+      studentWsCurrentId = cleanId;
+
+      const protocol = location.protocol === 'https:' ? 'wss:' : 'ws:';
+      const wsUrl = `${protocol}//${location.host}/api/student/ws?studentId=${encodeURIComponent(cleanId)}`;
+
+      try {
+        studentWs = new WebSocket(wsUrl);
+
+        studentWs.onmessage = (event) => {
+          try {
+            const data = JSON.parse(event.data);
+            if (data.type === 'ORDER_UPDATED') {
+              // แจ้งเตือนสถานะคำสั่งซื้อของนักศึกษาทาง Android Notification
+              let title = '🔔 อัปเดตสถานะคำสั่งซื้อ!';
+              let body = `คำสั่งซื้อ ${data.orderId} เปลี่ยนสถานะเป็น "${data.newStatus}"`;
+
+              if (data.newStatus === 'พร้อมรับเสื้อที่ห้องสโมสร') {
+                title = '🎉 เสื้อสโมสรของคุณพร้อมให้มารับแล้ว!';
+                body = `คำสั่งซื้อ ${data.orderId} พร้อมให้มารับที่ห้องสโมสรนักศึกษาแล้ว`;
+              } else if (data.newStatus === 'ชำระเงินเรียบร้อย') {
+                title = '✅ ยืนยันการชำระเงินเรียบร้อยแล้ว!';
+                body = `คำสั่งซื้อ ${data.orderId} ได้รับการตรวจสอบยอดชำระเงินเรียบร้อย`;
+              } else if (data.newStatus === 'ยกเลิกคำสั่งซื้อ') {
+                title = '❌ คำสั่งซื้อถูกยกเลิก';
+                body = `คำสั่งซื้อ ${data.orderId} ถูกยกเลิกโดยแอดมิน`;
+              }
+
+              if (window.AndroidNative && typeof window.AndroidNative.showOrderNotification === 'function') {
+                window.AndroidNative.showOrderNotification(title, body, data.orderId);
+              }
+
+              // ถ้านักศึกษากำลังเปิดหน้าประวัติการสั่งซื้ออยู่ ให้รีเฟรชข้อมูลอัตโนมัติ
+              if (currentView === 'track') {
+                handleTrackSearch();
+              }
+            }
+          } catch (e) {}
+        };
+
+        studentWs.onclose = () => {
+          studentWs = null;
+          if (currentStudent && currentStudent.studentId) {
+            studentWsReconnectTimer = setTimeout(() => connectStudentWs(currentStudent.studentId), 5000);
+          }
+        };
+
+        studentWs.onerror = () => {
+          try { studentWs.close(); } catch (e) {}
+        };
+      } catch (e) {
+        studentWsReconnectTimer = setTimeout(() => connectStudentWs(cleanId), 10000);
+      }
+    }
+
+    function disconnectStudentWs() {
+      clearTimeout(studentWsReconnectTimer);
+      studentWsCurrentId = '';
+      if (studentWs) {
+        try { studentWs.close(); } catch (e) {}
+        studentWs = null;
+      }
+    }
 
     function updateStoreUI() {
       const setTxt = (id, val) => {
@@ -1790,6 +1911,9 @@
         if (trackNotLoggedInBox) trackNotLoggedInBox.classList.remove('hidden');
         if (trackLoggedInContent) trackLoggedInContent.classList.add('hidden');
       }
+
+      // ซิงค์การเชื่อมต่อ Realtime WebSocket ตามสิทธิ์ (Admin หรือ นักศึกษา)
+      syncRealtimeNotifications();
     }
 
     function openMyOrdersHistory() {
@@ -3636,8 +3760,8 @@
 
     function checkAppUpdateNotification() {
       const isAndroidNative = (window.AndroidNative && typeof window.AndroidNative.isAndroidNativeApp === 'function');
-      const CURRENT_LATEST_VERSION = 'v2.3.5';
-      const CURRENT_LATEST_BUILD = 19;
+      const CURRENT_LATEST_VERSION = 'v2.3.6';
+      const CURRENT_LATEST_BUILD = 20;
       const DISMISS_KEY = 'bba_update_dismissed_' + CURRENT_LATEST_VERSION;
 
       if (isAndroidNative) {
@@ -3655,7 +3779,7 @@
           } catch (e) {}
         }
 
-        // If installedBuild is 0 or less than 17, this is an older APK version!
+        // If installedBuild is less than CURRENT_LATEST_BUILD, this is an older APK version!
         if (installedBuild < CURRENT_LATEST_BUILD) {
           if (sessionStorage.getItem(DISMISS_KEY)) return;
 
@@ -3676,9 +3800,9 @@
                   <div class="pt-1 text-slate-700 leading-relaxed">
                     <b>รายการปรับปรุงในเวอร์ชัน ${CURRENT_LATEST_VERSION}:</b>
                     <ul class="list-disc list-inside mt-1 space-y-1 text-slate-600 text-xs">
-                      <li>ปรับปรุงระบบสั่งซื้อและตัดสต็อกป้องกันการสั่งซื้อพร้อมกัน (Concurrency / Race Condition Safe)</li>
-                      <li>เปลี่ยนระบบสร้าง Order ID เป็นแบบ High-Entropy ป้องกันรหัสชนกัน 100%</li>
-                      <li>ระบบ Atomic Database Transaction และ Trigger ป้องกันสต็อกติดลบ</li>
+                      <li>ระบบจดจำการเข้าสู่ระบบแอดมินอัตโนมัติ ไม่ต้องกรอก PIN ซ้ำทุกครั้ง</li>
+                      <li>ระบบแจ้งเตือนคำสั่งซื้อใหม่เฉพาะเครื่องที่เข้าสู่ระบบแอดมินไว้เท่านั้น</li>
+                      <li>ระบบแจ้งเตือนอัปเดตสถานะรับเสื้อและยอดชำระแบบเรียลไทม์เฉพาะเจ้าของคำสั่งซื้อ</li>
                     </ul>
                   </div>
                 </div>
@@ -3704,13 +3828,13 @@
     function handleMobileAccountClick() {
       const isAndroidNative = (window.AndroidNative && typeof window.AndroidNative.isAndroidNativeApp === 'function');
       let isOldVersion = false;
-      const curVer = 'v2.3.5';
+      const curVer = 'v2.3.6';
       if (isAndroidNative) {
         let build = 0;
         if (typeof window.AndroidNative.getAppVersionCode === 'function') {
           try { build = Number(window.AndroidNative.getAppVersionCode()) || 0; } catch (e) {}
         }
-        if (build < 19) isOldVersion = true;
+        if (build < 20) isOldVersion = true;
       }
 
       if (currentStudent) {
