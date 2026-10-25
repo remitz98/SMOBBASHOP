@@ -122,8 +122,8 @@ jobs:
           node -e "
             const fs = require('fs');
             const path = require('path');
-            const TAG = 'v2.3.6';
-            const VERSION = '1.0.20';
+            const TAG = 'v2.3.7';
+            const VERSION = '1.0.21';
             let merged = {
               version: VERSION,
               notes: 'SMO BBA SHOP ' + TAG + ' (Discord-style Auto-Update)',
@@ -193,7 +193,7 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          TAG="v2.3.6"
+          TAG="v2.3.7"
           shopt -s globstar nullglob
           FILES=(all-dist/**/*.apk all-dist/**/*.msi all-dist/**/*.exe all-dist/**/*.dmg all-dist/**/*.zip all-dist/**/*.tar.gz all-dist/**/*.sig all-dist/**/latest.json)
           echo "Release files found:"
@@ -204,7 +204,7 @@ jobs:
           else
             echo "Creating release $TAG..."
             gh release create "$TAG" \
-              --title "SMO BBA SHOP v2.3.6 (Persistent Admin Login, Targeted Notifications for Admin & Students)" \
-              --notes "เวอร์ชัน v2.3.6: 1. ระบบจดจำการเข้าสู่ระบบแอดมินอัตโนมัติ ไม่ต้องกรอก PIN ซ้ำทุกครั้งที่เปิดแอพ/แท็บ 2. ระบบ Android System Notification แจ้งเตือนคำสั่งซื้อใหม่เฉพาะเครื่องที่เข้าสู่ระบบแอดมินไว้เท่านั้น 3. ระบบแจ้งเตือนอัปเดตสถานะรับเสื้อและยอดเงินแบบ Realtime เจาะจงเฉพาะนักศึกษาเจ้าของคำสั่งซื้อ" \
+              --title "SMO BBA SHOP v2.3.7 (Realtime PC Fix, Reliable Heartbeat & Notification Fixes)" \
+              --notes "เวอร์ชัน v2.3.7: 1. แก้ไขระบบ Realtime บน PC ให้เชื่อมต่อกับ Durable Objects ได้สมบูรณ์ 2. เพิ่ม Heartbeat Ping/Pong ป้องกันการหลุดของ WebSocket ทำให้แจ้งเตือนสถานะและคำสั่งซื้อได้แม่นยำตลอดเวลา 3. แก้ไข Version Code ของ Android ให้อ่านจากระบบอัตโนมัติ ไม่ขึ้นเตือนอัปเดตซ้ำ 4. เพิ่มปุ่มสลับโหมดแอดมินในเมนูบัญชีและหน้าล็อกอินบนมือถือ" \
               "${FILES[@]}"
           fi

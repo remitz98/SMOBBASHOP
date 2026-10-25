@@ -665,7 +665,7 @@ app.post('/api/orders', async (c) => {
       if (c.env.ORDER_NOTIFIER) {
         const doId = c.env.ORDER_NOTIFIER.idFromName('global_order_notifier');
         const stub = c.env.ORDER_NOTIFIER.get(doId);
-        stub.fetch('http://order-notifier/broadcast', {
+        await stub.fetch('http://order-notifier/broadcast', {
           method: 'POST',
           body: JSON.stringify({
             type: 'NEW_ORDER',
@@ -677,7 +677,7 @@ app.post('/api/orders', async (c) => {
             pickupLocation: pickupLocation,
             timestamp: new Date().toISOString()
           })
-        }).catch(e => console.error('DO broadcast error:', e));
+        });
       }
     } catch (wsErr) {
       console.error('Failed to broadcast new order:', wsErr);
@@ -932,7 +932,7 @@ app.post('/api/admin/orders/status', async (c) => {
       if (c.env.ORDER_NOTIFIER) {
         const doId = c.env.ORDER_NOTIFIER.idFromName('global_order_notifier');
         const stub = c.env.ORDER_NOTIFIER.get(doId);
-        stub.fetch('http://order-notifier/broadcast', {
+        await stub.fetch('http://order-notifier/broadcast', {
           method: 'POST',
           body: JSON.stringify({
             type: 'ORDER_UPDATED',
@@ -944,9 +944,11 @@ app.post('/api/admin/orders/status', async (c) => {
             adminNotes: finalAdminNotes,
             timestamp: new Date().toISOString()
           })
-        }).catch(e => console.error('DO broadcast status error:', e));
+        });
       }
-    } catch (e) {}
+    } catch (e) {
+      console.error('DO broadcast status error:', e);
+    }
 
     return c.json({ success: true, message: `อัปเดตสถานะเป็น "${newStatus}" สำเร็จเรียบร้อย${emailNotice}` });
   } catch (error) {

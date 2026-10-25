@@ -203,12 +203,27 @@ class MainActivity : ComponentActivity() {
 
         @JavascriptInterface
         fun getAppVersionCode(): Int {
-            return 19
+            return try {
+                val pInfo = activity.packageManager.getPackageInfo(activity.packageName, 0)
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
+                    pInfo.longVersionCode.toInt()
+                } else {
+                    @Suppress("DEPRECATION")
+                    pInfo.versionCode
+                }
+            } catch (e: Exception) {
+                21
+            }
         }
 
         @JavascriptInterface
         fun getAppVersionName(): String {
-            return "1.0.19"
+            return try {
+                val pInfo = activity.packageManager.getPackageInfo(activity.packageName, 0)
+                pInfo.versionName ?: "1.0.21"
+            } catch (e: Exception) {
+                "1.0.21"
+            }
         }
 
         @JavascriptInterface

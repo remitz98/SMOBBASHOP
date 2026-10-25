@@ -892,6 +892,9 @@
   <script>
     // Base API URL: ถ้าเปิดผ่านเว็บ Worker ใช้ relative path แต่ถ้าเปิดเป็น Tauri App หรืออื่นๆ ให้ชี้ไปยัง Cloudflare Worker
     const API_BASE = (window.location.origin && window.location.origin.includes('workers.dev')) ? '' : 'https://bba-store.smobba.workers.dev';
+    const WS_BASE = (window.location.origin && window.location.origin.includes('workers.dev'))
+      ? (location.protocol === 'https:' ? 'wss://' + location.host : 'ws://' + location.host)
+      : 'wss://bba-store.smobba.workers.dev';
 
     // State Variables
     let adminTokenPin = '';
@@ -1253,8 +1256,7 @@
 
       updateRealtimeBadge('connecting');
 
-      const protocol = location.protocol === 'https:' ? 'wss:' : 'ws:';
-      const wsUrl = `${protocol}//${location.host}/api/admin/ws?pin=${encodeURIComponent(adminTokenPin)}`;
+      const wsUrl = `${WS_BASE}/api/admin/ws?pin=${encodeURIComponent(adminTokenPin)}`;
 
       try {
         adminWs = new WebSocket(wsUrl);
@@ -1331,6 +1333,14 @@
       }
       updateRealtimeBadge('disconnected');
     }
+
+    document.addEventListener('visibilitychange', () => {
+      if (!document.hidden && adminTokenPin) {
+        if (!adminWs || adminWs.readyState !== WebSocket.OPEN) {
+          initAdminWebSocket();
+        }
+      }
+    });
 
     function updateRealtimeBadge(status) {
       const pill = document.getElementById('realtimeStatusPill');

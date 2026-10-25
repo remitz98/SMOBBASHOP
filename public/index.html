@@ -732,6 +732,13 @@
             </button>
           </p>
         </div>
+
+        <div class="text-center pt-1 border-t border-slate-100">
+          <button type="button" onclick="promptAdminLoginOnMobile()" class="text-[11px] font-semibold text-indigo-700 hover:text-indigo-900 flex items-center justify-center gap-1.5 mx-auto py-1.5 px-3 rounded-xl bg-indigo-50 border border-indigo-200/80 hover:bg-indigo-100 transition shadow-sm">
+            <i class="fa-solid fa-shield-halved text-xs text-indigo-600"></i>
+            <span>โหมดแอดมิน (ตั้งค่ารับแจ้งเตือนคำสั่งซื้อใหม่บนมือถือ)</span>
+          </button>
+        </div>
       </div>
 
       <div class="text-center pt-1">
@@ -1430,6 +1437,9 @@
 
     // Base API URL: ถ้าเปิดผ่านเว็บ Worker ใช้ relative path แต่ถ้าเปิดเป็น Tauri App หรืออื่นๆ ให้ชี้ไปยัง Cloudflare Worker
     const API_BASE = (window.location.origin && window.location.origin.includes('workers.dev')) ? '' : 'https://bba-store.smobba.workers.dev';
+    const WS_BASE = (window.location.origin && window.location.origin.includes('workers.dev'))
+      ? (location.protocol === 'https:' ? 'wss://' + location.host : 'ws://' + location.host)
+      : 'wss://bba-store.smobba.workers.dev';
 
     // State Variables
     let storeSettings = {
@@ -1715,8 +1725,11 @@
     // ==================== REALTIME WEBSOCKET NOTIFICATION SYSTEM ====================
     let adminBgWs = null;
     let adminWsReconnectTimer = null;
+    let adminHeartbeatInterval = null;
+
     let studentWs = null;
     let studentWsReconnectTimer = null;
+    let studentHeartbeatInterval = null;
     let studentWsCurrentId = '';
 
     function syncRealtimeNotifications() {
@@ -1741,12 +1754,29 @@
         return;
       }
       clearTimeout(adminWsReconnectTimer);
+      if (adminHeartbeatInterval) {
+        clearInterval(adminHeartbeatInterval);
+        adminHeartbeatInterval = null;
+      }
 
-      const protocol = location.protocol === 'https:' ? 'wss:' : 'ws:';
-      const wsUrl = `${protocol}//${location.host}/api/admin/ws?pin=${encodeURIComponent(pin)}`;
+      const cleanPin = normalizePin(pin);
+      if (!cleanPin) return;
+
+      const wsUrl = `${WS_BASE}/api/admin/ws?pin=${encodeURIComponent(cleanPin)}`;
 
       try {
         adminBgWs = new WebSocket(wsUrl);
+
+        adminBgWs.onopen = () => {
+          console.log('[Admin Realtime] WebSocket connected to Cloudflare Durable Objects');
+          clearTimeout(adminWsReconnectTimer);
+          if (adminHeartbeatInterval) clearInterval(adminHeartbeatInterval);
+          adminHeartbeatInterval = setInterval(() => {
+            if (adminBgWs && adminBgWs.readyState === WebSocket.OPEN) {
+              try { adminBgWs.send(JSON.stringify({ type: 'ping' })); } catch (e) {}
+            }
+          }, 20000);
+        };
 
         adminBgWs.onmessage = (event) => {
           try {
@@ -1766,9 +1796,13 @@
 
         adminBgWs.onclose = () => {
           adminBgWs = null;
+          if (adminHeartbeatInterval) {
+            clearInterval(adminHeartbeatInterval);
+            adminHeartbeatInterval = null;
+          }
           const stillHasPin = localStorage.getItem('bba_admin_pin') || sessionStorage.getItem('bba_admin_pin');
           if (stillHasPin) {
-            adminWsReconnectTimer = setTimeout(() => connectAdminBgWs(stillHasPin), 5000);
+            adminWsReconnectTimer = setTimeout(() => connectAdminBgWs(stillHasPin), 4000);
           }
         };
 
@@ -1776,12 +1810,16 @@
           try { adminBgWs.close(); } catch (e) {}
         };
       } catch (e) {
-        adminWsReconnectTimer = setTimeout(() => connectAdminBgWs(pin), 10000);
+        adminWsReconnectTimer = setTimeout(() => connectAdminBgWs(cleanPin), 5000);
       }
     }
 
     function disconnectAdminBgWs() {
       clearTimeout(adminWsReconnectTimer);
+      if (adminHeartbeatInterval) {
+        clearInterval(adminHeartbeatInterval);
+        adminHeartbeatInterval = null;
+      }
       if (adminBgWs) {
         try { adminBgWs.close(); } catch (e) {}
         adminBgWs = null;
@@ -1800,11 +1838,21 @@
       clearTimeout(studentWsReconnectTimer);
       studentWsCurrentId = cleanId;
 
-      const protocol = location.protocol === 'https:' ? 'wss:' : 'ws:';
-      const wsUrl = `${protocol}//${location.host}/api/student/ws?studentId=${encodeURIComponent(cleanId)}`;
+      const wsUrl = `${WS_BASE}/api/student/ws?studentId=${encodeURIComponent(cleanId)}`;
 
       try {
         studentWs = new WebSocket(wsUrl);
+
+        studentWs.onopen = () => {
+          console.log('[Student Realtime] WebSocket connected for student:', cleanId);
+          clearTimeout(studentWsReconnectTimer);
+          if (studentHeartbeatInterval) clearInterval(studentHeartbeatInterval);
+          studentHeartbeatInterval = setInterval(() => {
+            if (studentWs && studentWs.readyState === WebSocket.OPEN) {
+              try { studentWs.send(JSON.stringify({ type: 'ping' })); } catch (e) {}
+            }
+          }, 20000);
+        };
 
         studentWs.onmessage = (event) => {
           try {
@@ -1839,8 +1887,12 @@
 
         studentWs.onclose = () => {
           studentWs = null;
+          if (studentHeartbeatInterval) {
+            clearInterval(studentHeartbeatInterval);
+            studentHeartbeatInterval = null;
+          }
           if (currentStudent && currentStudent.studentId) {
-            studentWsReconnectTimer = setTimeout(() => connectStudentWs(currentStudent.studentId), 5000);
+            studentWsReconnectTimer = setTimeout(() => connectStudentWs(currentStudent.studentId), 4000);
           }
         };
 
@@ -1848,18 +1900,28 @@
           try { studentWs.close(); } catch (e) {}
         };
       } catch (e) {
-        studentWsReconnectTimer = setTimeout(() => connectStudentWs(cleanId), 10000);
+        studentWsReconnectTimer = setTimeout(() => connectStudentWs(cleanId), 5000);
       }
     }
 
     function disconnectStudentWs() {
       clearTimeout(studentWsReconnectTimer);
+      if (studentHeartbeatInterval) {
+        clearInterval(studentHeartbeatInterval);
+        studentHeartbeatInterval = null;
+      }
       studentWsCurrentId = '';
       if (studentWs) {
         try { studentWs.close(); } catch (e) {}
         studentWs = null;
       }
     }
+
+    document.addEventListener('visibilitychange', () => {
+      if (!document.hidden) {
+        syncRealtimeNotifications();
+      }
+    });
 
     function updateStoreUI() {
       const setTxt = (id, val) => {
@@ -3760,8 +3822,8 @@
 
     function checkAppUpdateNotification() {
       const isAndroidNative = (window.AndroidNative && typeof window.AndroidNative.isAndroidNativeApp === 'function');
-      const CURRENT_LATEST_VERSION = 'v2.3.6';
-      const CURRENT_LATEST_BUILD = 20;
+      const CURRENT_LATEST_VERSION = 'v2.3.7';
+      const CURRENT_LATEST_BUILD = 21;
       const DISMISS_KEY = 'bba_update_dismissed_' + CURRENT_LATEST_VERSION;
 
       if (isAndroidNative) {
@@ -3800,9 +3862,10 @@
                   <div class="pt-1 text-slate-700 leading-relaxed">
                     <b>รายการปรับปรุงในเวอร์ชัน ${CURRENT_LATEST_VERSION}:</b>
                     <ul class="list-disc list-inside mt-1 space-y-1 text-slate-600 text-xs">
-                      <li>ระบบจดจำการเข้าสู่ระบบแอดมินอัตโนมัติ ไม่ต้องกรอก PIN ซ้ำทุกครั้ง</li>
-                      <li>ระบบแจ้งเตือนคำสั่งซื้อใหม่เฉพาะเครื่องที่เข้าสู่ระบบแอดมินไว้เท่านั้น</li>
-                      <li>ระบบแจ้งเตือนอัปเดตสถานะรับเสื้อและยอดชำระแบบเรียลไทม์เฉพาะเจ้าของคำสั่งซื้อ</li>
+                      <li>แก้ไขปัญหา Realtime บน PC เชื่อมต่อไปยัง Cloudflare Durable Objects ได้ 100%</li>
+                      <li>ระบบ Heartbeat ป้องกันการหลุดของ WebSocket ทำให้แจ้งเตือนสถานะและคำสั่งซื้อได้แม่นยำตลอดเวลา</li>
+                      <li>แก้ไข Version Code ของ Android ให้อ่านจากระบบอัตโนมัติ ไม่แสดงการแจ้งเตือนอัปเดตซ้ำซ้อน</li>
+                      <li>เพิ่มปุ่มสลับโหมดแอดมินในเมนูบัญชีและหน้าล็อกอินบนมือถือ</li>
                     </ul>
                   </div>
                 </div>
@@ -3828,14 +3891,16 @@
     function handleMobileAccountClick() {
       const isAndroidNative = (window.AndroidNative && typeof window.AndroidNative.isAndroidNativeApp === 'function');
       let isOldVersion = false;
-      const curVer = 'v2.3.6';
+      const curVer = 'v2.3.7';
       if (isAndroidNative) {
         let build = 0;
         if (typeof window.AndroidNative.getAppVersionCode === 'function') {
           try { build = Number(window.AndroidNative.getAppVersionCode()) || 0; } catch (e) {}
         }
-        if (build < 20) isOldVersion = true;
+        if (build < 21) isOldVersion = true;
       }
+
+      const hasAdminPin = Boolean(localStorage.getItem('bba_admin_pin') || sessionStorage.getItem('bba_admin_pin'));
 
       if (currentStudent) {
         Swal.fire({
@@ -3847,6 +3912,20 @@
               <div><span class="text-slate-500">อีเมล:</span> ${escapeHtml(currentStudent.email || '-')}</div>
               <div><span class="text-slate-500">เบอร์โทรศัพท์:</span> ${escapeHtml(currentStudent.phone || '-')}</div>
             </div>
+
+            <!-- Admin Mode Banner -->
+            <div class="mt-3 p-3 rounded-xl border text-left text-xs ${hasAdminPin ? 'bg-emerald-50 border-emerald-200 text-emerald-900' : 'bg-slate-50 border-slate-200 text-slate-700'}">
+              <div class="font-bold flex items-center justify-between">
+                <span class="flex items-center gap-1.5">
+                  <i class="fa-solid ${hasAdminPin ? 'fa-circle-check text-emerald-600' : 'fa-shield-halved text-indigo-600'}"></i>
+                  ${hasAdminPin ? 'โหมดแอดมิน: เปิดรับแจ้งเตือนออเดอร์ใหม่แล้ว' : 'โหมดแอดมิน: ยังไม่ได้เปิดใช้งาน'}
+                </span>
+                <button type="button" onclick="promptAdminLoginOnMobile()" class="underline text-indigo-700 font-bold ml-2">
+                  ${hasAdminPin ? 'ตั้งค่า' : 'เปิดใช้งาน'}
+                </button>
+              </div>
+            </div>
+
             ${isOldVersion ? `
               <div class="mt-3 p-3 bg-amber-50 border border-amber-200 rounded-xl text-left text-xs text-amber-900">
                 <div class="font-bold flex items-center gap-1.5"><i class="fa-solid fa-triangle-exclamation text-amber-600"></i> มีเวอร์ชันใหม่ (${curVer})</div>
@@ -3871,6 +3950,80 @@
         });
       } else {
         openLoginModal();
+      }
+    }
+
+    async function promptAdminLoginOnMobile() {
+      const savedPin = localStorage.getItem('bba_admin_pin') || sessionStorage.getItem('bba_admin_pin');
+      if (savedPin) {
+        Swal.fire({
+          title: 'สถานะผู้ดูแลระบบ (Admin)',
+          html: `
+            <div class="text-left text-xs space-y-2 p-3 bg-emerald-50 text-emerald-900 rounded-xl border border-emerald-200">
+              <div class="font-bold flex items-center gap-1.5"><i class="fa-solid fa-circle-check text-emerald-600 text-sm"></i> อุปกรณ์นี้เปิดโหมดแอดมินอยู่แล้ว</div>
+              <div class="text-slate-600 leading-relaxed">เครื่องนี้จะได้รับการแจ้งเตือนทางแถบ Notification ของ Android แบบเรียลไทม์ทันทีที่มีคำสั่งซื้อใหม่เข้ามา</div>
+            </div>
+          `,
+          showCancelButton: true,
+          confirmButtonText: '<i class="fa-solid fa-arrow-up-right-from-square"></i> ไปที่หน้าจัดการหลังบ้าน',
+          cancelButtonText: '<i class="fa-solid fa-power-off"></i> ออกจากระบบแอดมิน',
+          confirmButtonColor: '#4338ca',
+          cancelButtonColor: '#e11d48'
+        }).then(res => {
+          if (res.isConfirmed) {
+            closeLoginModal();
+            goToAdmin();
+          } else if (res.dismiss === Swal.DismissReason.cancel) {
+            localStorage.removeItem('bba_admin_pin');
+            sessionStorage.removeItem('bba_admin_pin');
+            syncRealtimeNotifications();
+            Swal.fire({ icon: 'info', title: 'ออกจากระบบแอดมินแล้ว', text: 'เครื่องนี้จะไม่ได้รับการแจ้งเตือนคำสั่งซื้อใหม่อีกต่อไป', timer: 2000, showConfirmButton: false });
+          }
+        });
+        return;
+      }
+
+      const { value: pin } = await Swal.fire({
+        title: 'เข้าสู่ระบบแอดมิน',
+        input: 'password',
+        inputLabel: 'กรุณากรอกรหัส PIN แอดมิน เพื่อเปิดรับแจ้งเตือนคำสั่งซื้อใหม่บนอุปกรณ์นี้',
+        inputPlaceholder: 'กรอกรหัส PIN',
+        showCancelButton: true,
+        confirmButtonText: 'ยืนยัน',
+        cancelButtonText: 'ยกเลิก',
+        confirmButtonColor: '#4338ca',
+        inputValidator: (value) => {
+          if (!value) return 'กรุณากรอกรหัส PIN';
+        }
+      });
+
+      if (pin) {
+        Swal.showLoading();
+        try {
+          const res = await fetch(API_BASE + '/api/admin/data', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ pin: normalizePin(pin) })
+          });
+          const data = await res.json();
+          Swal.close();
+          if (data && data.success) {
+            localStorage.setItem('bba_admin_pin', normalizePin(pin));
+            sessionStorage.setItem('bba_admin_pin', normalizePin(pin));
+            syncRealtimeNotifications();
+            closeLoginModal();
+            Swal.fire({
+              icon: 'success',
+              title: 'เข้าสู่ระบบแอดมินสำเร็จ!',
+              text: 'อุปกรณ์นี้จะได้รับการแจ้งเตือน Realtime ทันทีเมื่อมีคำสั่งซื้อใหม่เข้ามา',
+              timer: 2500
+            });
+          } else {
+            Swal.fire('รหัส PIN ไม่ถูกต้อง', (data && data.message) || 'ไม่สามารถเข้าสู่ระบบแอดมินได้', 'error');
+          }
+        } catch (err) {
+          Swal.fire('ข้อผิดพลาด', err.message, 'error');
+        }
       }
     }
 

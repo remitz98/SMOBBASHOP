@@ -63,8 +63,8 @@ android {
         applicationId = "org.smobba.store"
         minSdk = 24
         targetSdk = 35
-        versionCode = 20
-        versionName = "1.0.20"
+        versionCode = 21
+        versionName = "1.0.21"
     }
 
     signingConfigs {
@@ -109,7 +109,7 @@ compose.desktop {
                 org.jetbrains.compose.desktop.application.dsl.TargetFormat.Exe
             )
             packageName = "SMO BBA SHOP"
-            packageVersion = "1.0.20"
+            packageVersion = "1.0.21"
             description = "SMO BBA SHOP Official Store Application"
             vendor = "SMO BBA UBRU"
             windows {
