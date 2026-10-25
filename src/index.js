@@ -934,6 +934,26 @@ app.post('/api/admin/products/toggle-preorder', async (c) => {
   }
 });
 
+// 2.5.1 ลบรายการสินค้าออกจากระบบสต็อก
+app.post('/api/admin/products/delete', async (c) => {
+  try {
+    const db = c.env.DB;
+    const body = await c.req.json();
+    const isValid = await verifyAdminPin(db, body.pin);
+
+    if (!isValid) return c.json({ success: false, message: 'รหัส PIN ไม่ถูกต้อง' }, 401);
+
+    const productId = String(body.productId || '').trim();
+    if (!productId) return c.json({ success: false, message: 'กรุณาระบุรหัสสินค้าที่ต้องการลบ' }, 400);
+
+    await db.prepare("DELETE FROM products WHERE product_id = ?").bind(productId).run();
+
+    return c.json({ success: true, message: `ลบรายการสินค้า ${productId} ออกจากระบบเรียบร้อยแล้ว` });
+  } catch (error) {
+    return c.json({ success: false, message: error.toString() }, 500);
+  }
+});
+
 // 2.6 เพิ่มหมวดหมู่เสื้อ
 app.post('/api/admin/categories/add', async (c) => {
   try {

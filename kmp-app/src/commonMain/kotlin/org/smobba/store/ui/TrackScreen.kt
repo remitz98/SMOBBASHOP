@@ -36,6 +36,7 @@ fun TrackScreen(
     var orders by remember { mutableStateOf<List<Order>>(emptyList()) }
     var isSearching by remember { mutableStateOf(false) }
     var searched by remember { mutableStateOf(false) }
+    var activeSlipUrl by remember { mutableStateOf<String?>(null) }
 
     Column(
         modifier = Modifier
@@ -211,15 +212,64 @@ fun TrackScreen(
                         }
 
                         Spacer(modifier = Modifier.height(14.dp))
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.spacedBy(8.dp)
+                        ) {
+                            if (order.slipUrl.isNotBlank()) {
+                                OutlinedButton(
+                                    onClick = { activeSlipUrl = order.slipUrl },
+                                    modifier = Modifier.weight(1f).height(42.dp),
+                                    shape = RoundedCornerShape(10.dp)
+                                ) {
+                                    Text("ดูสลิปโอนเงิน", fontSize = 12.sp, fontWeight = FontWeight.Bold, color = EmeraldSuccess)
+                                }
+                            }
+                            Button(
+                                onClick = { onViewReceipt(order) },
+                                colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFEEF2FF), contentColor = IndigoPrimary),
+                                modifier = Modifier.weight(1f).height(42.dp),
+                                shape = RoundedCornerShape(10.dp)
+                            ) {
+                                Icon(Icons.Default.Receipt, contentDescription = null, modifier = Modifier.size(16.dp))
+                                Spacer(modifier = Modifier.width(4.dp))
+                                Text("ดูใบเสร็จ", fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        activeSlipUrl?.let { slipUrl ->
+            val fullUrl = if (slipUrl.startsWith("http")) slipUrl else "https://bba-store.smobba.workers.dev$slipUrl"
+            androidx.compose.ui.window.Dialog(onDismissRequest = { activeSlipUrl = null }) {
+                Card(
+                    shape = RoundedCornerShape(16.dp),
+                    colors = CardDefaults.cardColors(containerColor = Color.White),
+                    modifier = Modifier.fillMaxWidth(0.95f).fillMaxHeight(0.85f)
+                ) {
+                    Column(
+                        modifier = Modifier.padding(16.dp),
+                        horizontalAlignment = Alignment.CenterHorizontally
+                    ) {
+                        Text("สลิปหลักฐานการโอนเงิน", fontWeight = FontWeight.Bold, fontSize = 16.sp, color = NavyDark)
+                        Spacer(modifier = Modifier.height(12.dp))
+                        Box(modifier = Modifier.weight(1f).fillMaxWidth()) {
+                            coil3.compose.AsyncImage(
+                                model = fullUrl,
+                                contentDescription = "Slip Image",
+                                modifier = Modifier.fillMaxSize(),
+                                contentScale = androidx.compose.ui.layout.ContentScale.Fit
+                            )
+                        }
+                        Spacer(modifier = Modifier.height(12.dp))
                         Button(
-                            onClick = { onViewReceipt(order) },
-                            colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFEEF2FF), contentColor = IndigoPrimary),
-                            modifier = Modifier.fillMaxWidth().height(42.dp),
+                            onClick = { activeSlipUrl = null },
+                            colors = ButtonDefaults.buttonColors(containerColor = IndigoPrimary),
                             shape = RoundedCornerShape(10.dp)
                         ) {
-                            Icon(Icons.Default.Receipt, contentDescription = null, modifier = Modifier.size(16.dp))
-                            Spacer(modifier = Modifier.width(6.dp))
-                            Text("ดูใบเสร็จรับเงิน (E-Receipt)", fontSize = 13.sp, fontWeight = FontWeight.Bold)
+                            Text("ปิด")
                         }
                     }
                 }

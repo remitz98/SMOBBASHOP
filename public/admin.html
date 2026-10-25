@@ -701,19 +701,42 @@
 
           <div>
             <div class="flex items-center justify-between mb-1">
-              <label class="block text-slate-700 font-semibold">หมวดหมู่ (Category): <span class="text-rose-500">*</span></label>
+              <label class="block text-slate-700 font-semibold text-xs">หมวดหมู่เสื้อ: <span class="text-rose-500">*</span></label>
               <button type="button" onclick="openCategoryManageModal()" class="text-[11px] text-indigo-600 hover:text-indigo-800 hover:underline inline-flex items-center gap-1">
                 <i class="fa-solid fa-gear text-[10px]"></i> จัดการหมวดหมู่
               </button>
             </div>
-            <input type="text" id="prodFormCategory" list="categorySuggestions" placeholder="เช่น เสื้อโปโล, เสื้อยืด, เสื้อกิจกรรม" 
-                   class="w-full px-3.5 py-2 rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-indigo-500 text-xs">
-            <datalist id="categorySuggestions">
-              <option value="เสื้อโปโล">
-              <option value="เสื้อยืด Oversize">
-              <option value="เสื้อกิจกรรม">
-              <option value="เสื้อกันหนาว/แจ็คเก็ต">
-            </datalist>
+            
+            <!-- Clickable Category Pills -->
+            <div id="categoryClickablePills" class="flex flex-wrap gap-1.5 mb-2">
+              <button type="button" onclick="selectCategoryChip('เสื้อกิจกรรม')" class="cat-chip px-2.5 py-1 rounded-lg border border-slate-200 bg-white hover:bg-slate-50 text-[11px] font-semibold text-slate-700 transition" data-cat="เสื้อกิจกรรม">
+                เสื้อกิจกรรม
+              </button>
+              <button type="button" onclick="selectCategoryChip('เสื้อโปโล')" class="cat-chip px-2.5 py-1 rounded-lg border border-slate-200 bg-white hover:bg-slate-50 text-[11px] font-semibold text-slate-700 transition" data-cat="เสื้อโปโล">
+                เสื้อโปโล
+              </button>
+              <button type="button" onclick="selectCategoryChip('เสื้อยืด Oversize')" class="cat-chip px-2.5 py-1 rounded-lg border border-slate-200 bg-white hover:bg-slate-50 text-[11px] font-semibold text-slate-700 transition" data-cat="เสื้อยืด Oversize">
+                เสื้อยืด Oversize
+              </button>
+              <button type="button" onclick="selectCategoryChip('เสื้อกันหนาว/แจ็คเก็ต')" class="cat-chip px-2.5 py-1 rounded-lg border border-slate-200 bg-white hover:bg-slate-50 text-[11px] font-semibold text-slate-700 transition" data-cat="เสื้อกันหนาว/แจ็คเก็ต">
+                แจ็คเก็ต
+              </button>
+              <button type="button" onclick="selectCategoryChip('เสื้อทั่วไป')" class="cat-chip px-2.5 py-1 rounded-lg border border-slate-200 bg-white hover:bg-slate-50 text-[11px] font-semibold text-slate-700 transition" data-cat="เสื้อทั่วไป">
+                เสื้อทั่วไป
+              </button>
+            </div>
+
+            <select id="prodFormCategory" onchange="handleCategorySelectChange(this)"
+                    class="w-full px-3.5 py-2 rounded-xl border border-slate-200 bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500 text-xs font-semibold text-slate-800">
+              <option value="เสื้อกิจกรรม">เสื้อกิจกรรม</option>
+              <option value="เสื้อโปโล">เสื้อโปโล</option>
+              <option value="เสื้อยืด Oversize">เสื้อยืด Oversize</option>
+              <option value="เสื้อกันหนาว/แจ็คเก็ต">เสื้อกันหนาว/แจ็คเก็ต</option>
+              <option value="เสื้อทั่วไป">เสื้อทั่วไป</option>
+              <option value="__custom__">+ เพิ่ม/พิมพ์ระบุหมวดหมู่อื่น...</option>
+            </select>
+            <input type="text" id="prodFormCategoryCustom" placeholder="พิมพ์ชื่อหมวดหมู่ที่ต้องการ..." 
+                   class="hidden w-full mt-1.5 px-3.5 py-1.5 rounded-xl border border-indigo-300 focus:outline-none focus:ring-2 focus:ring-indigo-500 text-xs">
           </div>
 
           <div class="sm:col-span-2">
@@ -810,13 +833,20 @@
 
       </div>
 
-      <div class="p-4 sm:p-5 border-t border-slate-200 bg-slate-50 flex items-center justify-end gap-3">
-        <button onclick="closeAdminProductModal()" type="button" class="px-4 py-2 rounded-xl border border-slate-300 text-slate-700 font-medium hover:bg-slate-100 transition text-xs sm:text-sm">
-          ยกเลิก
-        </button>
-        <button onclick="saveAdminProductForm()" id="btnSaveAdminProd" type="button" class="px-5 py-2 rounded-xl bg-indigo-700 text-white font-bold hover:bg-indigo-800 transition flex items-center gap-2 text-xs sm:text-sm shadow-md">
-          <i class="fa-solid fa-floppy-disk"></i> บันทึกข้อมูลสินค้า
-        </button>
+      <div class="p-4 sm:p-5 border-t border-slate-200 bg-slate-50 flex items-center justify-between gap-3">
+        <div>
+          <button onclick="adminDeleteCurrentEditingProduct()" id="btnDeleteCurrentProd" type="button" class="hidden px-3.5 py-2 rounded-xl bg-rose-50 border border-rose-200 text-rose-600 hover:bg-rose-100 font-bold transition text-xs flex items-center gap-1.5 shadow-sm">
+            <i class="fa-solid fa-trash-can"></i> ลบสินค้านี้
+          </button>
+        </div>
+        <div class="flex items-center gap-2.5">
+          <button onclick="closeAdminProductModal()" type="button" class="px-4 py-2 rounded-xl border border-slate-300 text-slate-700 font-medium hover:bg-slate-100 transition text-xs sm:text-sm">
+            ยกเลิก
+          </button>
+          <button onclick="saveAdminProductForm()" id="btnSaveAdminProd" type="button" class="px-5 py-2 rounded-xl bg-indigo-700 text-white font-bold hover:bg-indigo-800 transition flex items-center gap-2 text-xs sm:text-sm shadow-md">
+            <i class="fa-solid fa-floppy-disk"></i> บันทึกข้อมูลสินค้า
+          </button>
+        </div>
       </div>
 
     </div>
@@ -1907,12 +1937,137 @@
       return str.split(/[\n,]+/).map(s => s.trim()).filter(Boolean).map(resolveApi);
     }
 
+    function selectCategoryChip(cat) {
+      const select = document.getElementById('prodFormCategory');
+      if (select) select.value = cat;
+      setCategorySelection(cat);
+    }
+
+    function handleCategorySelectChange(sel) {
+      const customInput = document.getElementById('prodFormCategoryCustom');
+      if (sel.value === '__custom__') {
+        customInput.classList.remove('hidden');
+        customInput.focus();
+      } else {
+        customInput.classList.add('hidden');
+      }
+      setCategorySelection(sel.value, false);
+    }
+
+    function setCategorySelection(cat, updateSelect = true) {
+      const select = document.getElementById('prodFormCategory');
+      const customInput = document.getElementById('prodFormCategoryCustom');
+      if (!select) return;
+
+      if (updateSelect) {
+        let found = false;
+        for (let i = 0; i < select.options.length; i++) {
+          if (select.options[i].value === cat) {
+            select.selectedIndex = i;
+            found = true;
+            break;
+          }
+        }
+        if (!found && cat) {
+          const customOpt = select.querySelector('option[value="__custom__"]');
+          const newOpt = new Option(cat, cat, true, true);
+          if (customOpt) {
+            select.insertBefore(newOpt, customOpt);
+          } else {
+            select.add(newOpt);
+          }
+          select.value = cat;
+        }
+      }
+
+      if (select.value === '__custom__') {
+        if (customInput) customInput.classList.remove('hidden');
+      } else {
+        if (customInput) customInput.classList.add('hidden');
+      }
+
+      const chips = document.querySelectorAll('.cat-chip');
+      chips.forEach(chip => {
+        if (chip.getAttribute('data-cat') === cat) {
+          chip.className = 'cat-chip px-2.5 py-1 rounded-lg border border-indigo-600 bg-indigo-600 text-[11px] font-bold text-white shadow-sm transition';
+        } else {
+          chip.className = 'cat-chip px-2.5 py-1 rounded-lg border border-slate-200 bg-white hover:bg-slate-50 text-[11px] font-semibold text-slate-700 transition';
+        }
+      });
+    }
+
+    async function adminDeleteProduct(productId, productName) {
+      if (!productId) return;
+      const pName = productName || productId;
+
+      const confirmResult = await Swal.fire({
+        title: 'ยืนยันการลบสินค้า?',
+        html: `คุณแน่ใจหรือไม่ว่าต้องการลบรายการเสื้อ <b>${escapeHtml(pName)}</b> (${escapeHtml(productId)}) ออกจากระบบสต็อกและหน้าร้าน?<br><br><span class="text-rose-600 font-semibold text-xs">⚠️ การลบนี้จะไม่สามารถเรียกคืนข้อมูลได้</span>`,
+        icon: 'warning',
+        showCancelButton: true,
+        confirmButtonColor: '#e11d48',
+        cancelButtonColor: '#64748b',
+        confirmButtonText: '<i class="fa-solid fa-trash-can"></i> ใช่, ลบสินค้านี้',
+        cancelButtonText: 'ยกเลิก'
+      });
+
+      if (!confirmResult.isConfirmed) return;
+
+      Swal.fire({
+        title: 'กำลังลบสินค้า...',
+        allowOutsideClick: false,
+        didOpen: () => Swal.showLoading()
+      });
+
+      try {
+        const pin = adminTokenPin;
+        const res = await fetch(API_BASE + '/api/admin/products/delete', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ pin, productId })
+        });
+        const data = await res.json();
+
+        if (data && data.success) {
+          closeAdminProductModal();
+          Swal.fire({
+            icon: 'success',
+            title: 'ลบสินค้าสำเร็จ!',
+            text: data.message || `ลบ ${pName} เรียบร้อยแล้ว`,
+            timer: 2000,
+            showConfirmButton: false
+          });
+          loadAdminData();
+        } else {
+          Swal.fire({
+            icon: 'error',
+            title: 'ไม่สามารถลบสินค้าได้',
+            text: data ? data.message : 'เกิดข้อผิดพลาดในการเชื่อมต่อ'
+          });
+        }
+      } catch (err) {
+        Swal.fire({
+          icon: 'error',
+          title: 'เกิดข้อผิดพลาด',
+          text: err.message
+        });
+      }
+    }
+
+    function adminDeleteCurrentEditingProduct() {
+      const pid = document.getElementById('prodFormId').value.trim();
+      const pname = document.getElementById('prodFormName').value.trim();
+      adminDeleteProduct(pid, pname);
+    }
+
     function openAddProductModal() {
       document.getElementById('prodFormMode').value = 'add';
       document.getElementById('adminProductModalTitle').textContent = 'เพิ่มสินค้าใหม่เข้าระบบ';
       document.getElementById('prodFormId').value = '';
       document.getElementById('prodFormId').readOnly = false;
-      document.getElementById('prodFormCategory').value = 'เสื้อโปโล';
+      setCategorySelection('เสื้อกิจกรรม');
+      const delBtn = document.getElementById('btnDeleteCurrentProd');
+      if (delBtn) delBtn.classList.add('hidden');
       document.getElementById('prodFormName').value = '';
       document.getElementById('prodFormPrice').value = '';
       document.getElementById('prodFormSizes').value = 'S, M, L, XL, 2XL, 3XL';
@@ -1942,7 +2097,9 @@
       document.getElementById('adminProductModalTitle').textContent = 'แก้ไขข้อมูลเสื้อ: ' + p.productId;
       document.getElementById('prodFormId').value = p.productId;
       document.getElementById('prodFormId').readOnly = true;
-      document.getElementById('prodFormCategory').value = p.category || '';
+      setCategorySelection(p.category || 'เสื้อกิจกรรม');
+      const delBtn = document.getElementById('btnDeleteCurrentProd');
+      if (delBtn) delBtn.classList.remove('hidden');
       document.getElementById('prodFormName').value = p.name || '';
       document.getElementById('prodFormPrice').value = p.price !== undefined ? p.price : '';
       document.getElementById('prodFormSizes').value = Array.isArray(p.sizes) ? p.sizes.join(', ') : (p.sizes || '');
@@ -1992,7 +2149,10 @@
       const isNew = mode === 'add';
       const productId = document.getElementById('prodFormId').value.trim();
       const name = document.getElementById('prodFormName').value.trim();
-      const category = document.getElementById('prodFormCategory').value.trim();
+      const catSelect = document.getElementById('prodFormCategory');
+      const category = (catSelect.value === '__custom__'
+        ? (document.getElementById('prodFormCategoryCustom').value || 'เสื้อทั่วไป')
+        : catSelect.value).trim();
       const price = parseFloat(document.getElementById('prodFormPrice').value) || 0;
       const sizes = document.getElementById('prodFormSizes').value.trim();
       const colors = document.getElementById('prodFormColors').value.trim();
@@ -2192,6 +2352,7 @@
           '<td class="p-3.5 text-right"><div class="inline-flex items-center justify-end gap-1.5">' +
             toggleBtn +
             '<button onclick="openEditProductModal(\'' + safeId + '\')" class="px-2.5 py-1 bg-white border border-slate-300 text-slate-700 hover:bg-slate-100 rounded-lg text-xs font-semibold shadow-sm transition inline-flex items-center gap-1"><i class="fa-solid fa-pen-to-square"></i> แก้ไข</button>' +
+            '<button onclick="adminDeleteProduct(\'' + safeId + '\', \'' + safeName + '\')" class="px-2.5 py-1 bg-rose-50 border border-rose-200 text-rose-600 hover:bg-rose-100 rounded-lg text-xs font-semibold shadow-sm transition inline-flex items-center gap-1"><i class="fa-solid fa-trash-can"></i> ลบ</button>' +
           '</div></td>' +
         '</tr>';
       }).join('');

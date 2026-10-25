@@ -71,7 +71,7 @@ class MainActivity : ComponentActivity() {
             }
 
             webChromeClient = object : WebChromeClient() {
-                // Support file uploads for payment slips
+                // Support file uploads for payment slips and product photos (single & multiple)
                 override fun onShowFileChooser(
                     webView: WebView?,
                     filePathCallback: ValueCallback<Array<Uri>>?,
@@ -80,14 +80,26 @@ class MainActivity : ComponentActivity() {
                     fileUploadCallback?.onReceiveValue(null)
                     fileUploadCallback = filePathCallback
 
-                    val intent = fileChooserParams?.createIntent() ?: Intent(Intent.ACTION_GET_CONTENT).apply {
-                        type = "image/*"
-                        addCategory(Intent.CATEGORY_OPENABLE)
+                    val intent = try {
+                        fileChooserParams?.createIntent() ?: Intent(Intent.ACTION_GET_CONTENT).apply {
+                            type = "image/*"
+                            addCategory(Intent.CATEGORY_OPENABLE)
+                        }
+                    } catch (e: Exception) {
+                        Intent(Intent.ACTION_GET_CONTENT).apply {
+                            type = "image/*"
+                            addCategory(Intent.CATEGORY_OPENABLE)
+                        }
+                    }
+
+                    if (fileChooserParams?.mode == WebChromeClient.FileChooserParams.MODE_OPEN_MULTIPLE) {
+                        intent.putExtra(Intent.EXTRA_ALLOW_MULTIPLE, true)
                     }
 
                     try {
-                        startActivityForResult(intent, FILE_CHOOSER_REQUEST_CODE)
+                        startActivityForResult(Intent.createChooser(intent, "เลือกรูปภาพ"), FILE_CHOOSER_REQUEST_CODE)
                     } catch (e: Exception) {
+                        fileUploadCallback?.onReceiveValue(null)
                         fileUploadCallback = null
                         return false
                     }
@@ -114,9 +126,22 @@ class MainActivity : ComponentActivity() {
     override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
         super.onActivityResult(requestCode, resultCode, data)
         if (requestCode == FILE_CHOOSER_REQUEST_CODE) {
-            val results = if (resultCode == Activity.RESULT_OK && data != null) {
-                if (data.data != null) arrayOf(data.data!!) else null
-            } else null
+            var results: Array<Uri>? = null
+            if (resultCode == Activity.RESULT_OK && data != null) {
+                val clipData = data.clipData
+                if (clipData != null && clipData.itemCount > 0) {
+                    val list = ArrayList<Uri>()
+                    for (i in 0 until clipData.itemCount) {
+                        val itemUri = clipData.getItemAt(i).uri
+                        if (itemUri != null) list.add(itemUri)
+                    }
+                    if (list.isNotEmpty()) {
+                        results = list.toTypedArray()
+                    }
+                } else if (data.data != null) {
+                    results = arrayOf(data.data!!)
+                }
+            }
             fileUploadCallback?.onReceiveValue(results)
             fileUploadCallback = null
         }

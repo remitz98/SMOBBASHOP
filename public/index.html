@@ -199,55 +199,52 @@
 
   <!-- ==================== 1. TOP NAVBAR ==================== -->
   <header class="sticky top-0 z-40 bg-white/95 backdrop-blur shadow-sm border-b border-slate-100">
-    <div class="max-w-7xl mx-auto px-2.5 sm:px-6 lg:px-8 h-14 sm:h-16 flex items-center justify-between gap-1.5 sm:gap-3">
+    <div class="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8 h-14 sm:h-16 flex items-center justify-between gap-3">
       
       <!-- Logo & Brand -->
-      <div class="flex items-center gap-1.5 sm:gap-3 cursor-pointer min-w-0" onclick="switchView('shop')">
-        <img src="logo.png" alt="BBA UBRU Logo" class="w-8 h-8 sm:w-10 sm:h-10 rounded-lg sm:rounded-xl object-contain shadow-sm shrink-0">
+      <div class="flex items-center gap-2 sm:gap-3 cursor-pointer shrink-0" onclick="switchView('shop')">
+        <img src="logo.png" alt="BBA UBRU Logo" class="w-8 h-8 sm:w-10 sm:h-10 rounded-xl object-contain shadow-sm shrink-0">
         <div class="min-w-0">
-          <span id="navStoreName" class="font-bold text-xs sm:text-base lg:text-lg text-slate-900 tracking-tight block leading-tight truncate">สโมสรนักศึกษา BBA UBRU</span>
-          <span class="hidden sm:block text-[11px] sm:text-xs text-indigo-700 font-medium truncate">คณะบริหารธุรกิจและการจัดการ มรภ.อุบลฯ</span>
+          <span id="navStoreName" class="font-extrabold text-sm sm:text-base lg:text-lg text-slate-900 tracking-tight block leading-tight truncate">SMO BBA SHOP</span>
+          <span class="hidden sm:block text-[11px] text-indigo-700 font-semibold truncate">สโมสรนักศึกษา คณะบริหารธุรกิจและการจัดการ มรภ.อุบลฯ</span>
         </div>
       </div>
 
-      <!-- Navigation & Auth -->
-      <nav class="flex items-center gap-1 sm:gap-2 shrink-0">
-        <button onclick="switchView('shop')" id="btnNavShop" title="เสื้อสโมสร" class="p-1.5 sm:px-3 sm:py-1.5 rounded-lg text-xs sm:text-sm font-medium text-indigo-700 bg-indigo-50 transition flex items-center gap-1.5">
-          <i class="fa-solid fa-shirt"></i>
-          <span class="hidden md:inline">เสื้อสโมสร</span>
+      <!-- Center: Desktop Navigation Segmented Pills (Hidden on mobile, mobile has bottom bar) -->
+      <nav class="hidden md:flex items-center bg-slate-100/90 p-1 rounded-xl border border-slate-200/80 shadow-inner gap-1">
+        <button onclick="switchView('shop')" id="btnNavShop" title="เสื้อสโมสร" class="px-4 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center gap-2 text-indigo-700 bg-white shadow-sm">
+          <i class="fa-solid fa-shirt text-sm text-indigo-600"></i>
+          <span>เสื้อสโมสร</span>
         </button>
 
-        <button onclick="openMyOrdersHistory()" id="btnNavHistory" title="ประวัติการสั่งซื้อ" class="p-1.5 sm:px-3 sm:py-1.5 rounded-lg text-xs sm:text-sm font-medium text-slate-600 hover:text-slate-900 hover:bg-slate-100 transition flex items-center gap-1.5">
-          <i class="fa-solid fa-clock-rotate-left"></i>
-          <span class="hidden md:inline">ประวัติการสั่งซื้อ</span>
+        <button onclick="switchView('track')" id="btnNavTrack" title="ประวัติการสั่งซื้อ" class="px-4 py-1.5 rounded-lg text-xs font-medium transition-all flex items-center gap-2 text-slate-600 hover:text-slate-900 hover:bg-white/60">
+          <i class="fa-solid fa-clock-rotate-left text-sm text-slate-500"></i>
+          <span>ประวัติการสั่งซื้อ</span>
         </button>
+      </nav>
 
-        <button onclick="switchView('track')" id="btnNavTrack" title="เช็กสถานะรับเสื้อ" class="p-1.5 sm:px-3 sm:py-1.5 rounded-lg text-xs sm:text-sm font-medium text-slate-600 hover:text-slate-900 hover:bg-slate-100 transition flex items-center gap-1.5">
-          <i class="fa-solid fa-clipboard-check"></i>
-          <span class="hidden md:inline">เช็กสถานะรับเสื้อ</span>
-        </button>
-
-        <a href="javascript:void(0)" onclick="goToAdmin(event)" id="btnNavAdmin" title="ระบบจัดการหลังบ้าน (สำหรับแอดมิน)" class="p-1.5 sm:px-2.5 sm:py-1.5 rounded-lg text-xs sm:text-sm font-medium text-slate-500 hover:text-indigo-700 hover:bg-indigo-50 border border-slate-200 bg-white transition flex items-center gap-1.5 shadow-sm cursor-pointer">
+      <!-- Right: Navigation Actions & Auth -->
+      <div class="flex items-center gap-1.5 sm:gap-2.5 shrink-0">
+        <!-- Admin Link -->
+        <a href="javascript:void(0)" onclick="goToAdmin(event)" id="btnNavAdmin" title="ระบบจัดการหลังบ้าน (สำหรับแอดมิน)" class="p-2 sm:px-3 sm:py-1.5 rounded-xl text-xs font-semibold text-slate-600 hover:text-indigo-700 hover:bg-indigo-50/80 border border-slate-200 bg-white transition flex items-center gap-1.5 shadow-sm cursor-pointer">
           <i class="fa-solid fa-lock text-xs text-indigo-600"></i>
-          <span class="hidden md:inline">ระบบแอดมิน</span>
+          <span class="hidden lg:inline text-xs">ระบบแอดมิน</span>
         </a>
 
         <!-- Student Auth Button / Profile Badge -->
-        <div id="studentAuthArea" class="flex items-center gap-1 sm:gap-1.5">
-          <button onclick="openLoginModal()" id="btnOpenLogin" class="px-2 py-1.5 sm:px-3 sm:py-1.5 rounded-lg sm:rounded-xl bg-slate-900 hover:bg-slate-800 text-white text-[11px] sm:text-xs font-bold transition flex items-center gap-1 sm:gap-1.5 shadow-sm">
-            <i class="fa-solid fa-right-to-bracket text-[11px] sm:text-xs"></i>
-            <span class="hidden sm:inline">เข้าสู่ระบบ</span>
-            <span class="inline sm:hidden">เข้าสู่ระบบ</span>
+        <div id="studentAuthArea" class="flex items-center gap-1.5">
+          <button onclick="openLoginModal()" id="btnOpenLogin" class="px-2.5 py-1.5 sm:px-3.5 sm:py-1.5 rounded-xl bg-slate-900 hover:bg-slate-800 text-white text-xs font-bold transition flex items-center gap-1.5 shadow-sm">
+            <i class="fa-solid fa-right-to-bracket text-xs"></i>
+            <span>เข้าสู่ระบบ</span>
           </button>
 
-          <button onclick="openRegisterModal()" id="btnOpenRegister" class="px-2 py-1.5 sm:px-3 sm:py-1.5 rounded-lg sm:rounded-xl bg-amber-500 hover:bg-amber-600 text-white text-[11px] sm:text-xs font-bold transition flex items-center gap-1 sm:gap-1.5 shadow-sm">
-            <i class="fa-solid fa-user-plus text-[11px] sm:text-xs"></i>
-            <span class="hidden sm:inline">ลงทะเบียน</span>
-            <span class="inline sm:hidden">ลงทะเบียน</span>
+          <button onclick="openRegisterModal()" id="btnOpenRegister" class="hidden sm:flex px-3 sm:py-1.5 rounded-xl bg-amber-500 hover:bg-amber-600 text-white text-xs font-bold transition items-center gap-1.5 shadow-sm">
+            <i class="fa-solid fa-user-plus text-xs"></i>
+            <span>ลงทะเบียน</span>
           </button>
 
-          <div id="studentProfilePill" class="hidden flex items-center gap-1.5 sm:gap-2 bg-slate-100 pl-2 sm:pl-3 pr-1 sm:pr-1.5 py-1 rounded-xl text-xs border border-slate-200 max-w-[105px] sm:max-w-[180px]">
-            <div onclick="openMyOrdersHistory()" class="text-left min-w-0 cursor-pointer" title="คลิกเพื่อดูประวัติการสั่งซื้อของคุณ">
+          <div id="studentProfilePill" class="hidden flex items-center gap-1.5 sm:gap-2 bg-slate-100/90 pl-2.5 pr-1.5 py-1 rounded-xl text-xs border border-slate-200 max-w-[140px] sm:max-w-[200px]">
+            <div onclick="switchView('track')" class="text-left min-w-0 cursor-pointer" title="คลิกเพื่อดูประวัติการสั่งซื้อของคุณ">
               <span id="profileStudentName" class="font-bold text-slate-800 block text-[10px] sm:text-[11px] leading-tight truncate"></span>
               <span id="profileStudentId" class="text-[9px] sm:text-[10px] text-slate-500 font-mono truncate block"></span>
             </div>
@@ -258,17 +255,18 @@
         </div>
 
         <!-- Cart Button -->
-        <button onclick="openCartDrawer()" title="ตะกร้าสินค้า" class="relative p-2 sm:p-2.5 rounded-lg sm:rounded-xl bg-slate-900 text-white hover:bg-indigo-900 transition flex items-center gap-1.5 sm:gap-2 shadow-sm">
+        <button onclick="openCartDrawer()" title="ตะกร้าสินค้า" class="relative p-2 sm:px-3.5 sm:py-2 rounded-xl bg-slate-900 text-white hover:bg-indigo-900 transition flex items-center gap-1.5 sm:gap-2 shadow-sm">
           <i class="fa-solid fa-bag-shopping text-sm sm:text-base"></i>
+          <span class="hidden sm:inline text-xs font-bold">ตะกร้า</span>
           <span id="cartCountBadge" class="inline-flex items-center justify-center bg-rose-500 text-white text-[10px] sm:text-xs font-bold rounded-full h-4 sm:h-5 min-w-[16px] sm:min-w-[20px] px-1">0</span>
         </button>
-      </nav>
+      </div>
 
     </div>
   </header>
 
   <!-- ==================== 2. MAIN CONTAINER ==================== -->
-  <main class="flex-1 max-w-7xl mx-auto w-full px-4 sm:px-6 lg:px-8 py-6">
+  <main class="flex-1 max-w-7xl mx-auto w-full px-4 sm:px-6 lg:px-8 py-6 pb-24 md:pb-8">
 
     <!-- ========== VIEW A: SHOP (รายการเสื้อสโมสร) ========== -->
     <section id="viewShop">
@@ -1054,6 +1052,42 @@
     </div>
   </footer>
 
+  <!-- ==================== MOBILE BOTTOM NAVIGATION (Lazada Style) ==================== -->
+  <nav class="md:hidden fixed bottom-0 left-0 right-0 z-40 bg-white/95 backdrop-blur-md border-t border-slate-200/90 shadow-[0_-4px_16px_rgba(0,0,0,0.08)] px-2 py-1.5 flex items-center justify-around no-print">
+    <!-- 1. เสื้อสโมสร (Home / Shop) -->
+    <button onclick="switchView('shop')" id="btnBottomNavShop" class="flex-1 flex flex-col items-center justify-center py-1 text-indigo-700 transition active:scale-95">
+      <div class="relative">
+        <i class="fa-solid fa-shirt text-lg"></i>
+      </div>
+      <span class="text-[10px] font-bold mt-0.5 tracking-tight">เสื้อสโมสร</span>
+    </button>
+
+    <!-- 2. ประวัติการสั่งซื้อ (Lazada Orders style) -->
+    <button onclick="switchView('track')" id="btnBottomNavTrack" class="flex-1 flex flex-col items-center justify-center py-1 text-slate-400 hover:text-slate-700 transition active:scale-95">
+      <div class="relative">
+        <i class="fa-solid fa-clock-rotate-left text-lg"></i>
+      </div>
+      <span class="text-[10px] font-medium mt-0.5 tracking-tight">ประวัติสั่งซื้อ</span>
+    </button>
+
+    <!-- 3. ตะกร้าสินค้า -->
+    <button onclick="openCartDrawer()" id="btnBottomNavCart" class="flex-1 flex flex-col items-center justify-center py-1 text-slate-400 hover:text-slate-700 transition active:scale-95">
+      <div class="relative">
+        <i class="fa-solid fa-bag-shopping text-lg"></i>
+        <span id="cartCountBadgeMobile" class="absolute -top-1.5 -right-2.5 inline-flex items-center justify-center bg-rose-500 text-white text-[9px] font-extrabold rounded-full h-4 min-w-[16px] px-1">0</span>
+      </div>
+      <span class="text-[10px] font-medium mt-0.5 tracking-tight">ตะกร้า</span>
+    </button>
+
+    <!-- 4. บัญชีของฉัน -->
+    <button onclick="handleMobileAccountClick()" id="btnBottomNavAccount" class="flex-1 flex flex-col items-center justify-center py-1 text-slate-400 hover:text-slate-700 transition active:scale-95">
+      <div class="relative">
+        <i class="fa-solid fa-user text-lg"></i>
+      </div>
+      <span class="text-[10px] font-medium mt-0.5 tracking-tight" id="lblBottomNavAccount">บัญชี</span>
+    </button>
+  </nav>
+
   <!-- ==================== 5. JAVASCRIPT LOGIC ==================== -->
   <script>
     // Helper: XSS Protection
@@ -1313,7 +1347,10 @@
       const trackName = document.getElementById('loggedInTrackName');
       const trackId = document.getElementById('loggedInTrackId');
 
+      const lblBottomNavAccount = document.getElementById('lblBottomNavAccount');
+
       if (currentStudent) {
+        if (lblBottomNavAccount) lblBottomNavAccount.textContent = currentStudent.name ? currentStudent.name.split(' ')[0] : 'บัญชี';
         if (btnOpenLogin) btnOpenLogin.classList.add('hidden');
         if (btnOpenRegister) btnOpenRegister.classList.add('hidden');
         if (profilePill) profilePill.classList.remove('hidden');
@@ -1327,6 +1364,7 @@
         if (trackName) trackName.textContent = currentStudent.name || 'นักศึกษา';
         if (trackId) trackId.textContent = 'รหัสนักศึกษา: ' + currentStudent.studentId;
       } else {
+        if (lblBottomNavAccount) lblBottomNavAccount.textContent = 'เข้าสู่ระบบ';
         if (btnOpenLogin) btnOpenLogin.classList.remove('hidden');
         if (btnOpenRegister) btnOpenRegister.classList.remove('hidden');
         if (profilePill) profilePill.classList.add('hidden');
@@ -2188,8 +2226,10 @@
 
     function updateCartUI() {
       const badge = document.getElementById('cartCountBadge');
+      const badgeMobile = document.getElementById('cartCountBadgeMobile');
       const totalCount = cart.reduce((sum, item) => sum + (Number(item.qty) || 0), 0);
-      badge.textContent = totalCount;
+      if (badge) badge.textContent = totalCount;
+      if (badgeMobile) badgeMobile.textContent = totalCount;
       renderCartDrawerItems();
     }
 
@@ -3014,6 +3054,11 @@
                 '<div class="text-xs text-slate-500 font-mono">รหัสนักศึกษา: <span class="font-bold text-slate-900">' + safeStudentId + '</span> (' + safeName + ')</div>' +
               '</div>' +
               '<div class="flex items-center gap-2">' +
+                (ord.slipUrl ? (
+                  '<button type="button" onclick="viewCustomerSlip(\'' + escapeHtml(ord.slipUrl) + '\', \'' + safeOrderId + '\')" class="px-2.5 py-1 rounded-lg bg-emerald-50 hover:bg-emerald-100 text-emerald-700 border border-emerald-200 text-xs font-semibold shadow-sm transition flex items-center gap-1.5" title="ดูรูปสลิปหลักฐานการโอนเงิน">' +
+                    '<i class="fa-solid fa-receipt"></i> <span>ดูสลิปโอนเงิน</span>' +
+                  '</button>'
+                ) : '') +
                 '<button type="button" onclick="viewTrackOrderReceipt(\'' + safeOrderId + '\')" class="px-2.5 py-1 rounded-lg bg-indigo-50 hover:bg-indigo-100 text-indigo-700 border border-indigo-200 text-xs font-semibold shadow-sm transition flex items-center gap-1.5" title="ดูใบเสร็จและบันทึกรูปภาพ">' +
                   '<i class="fa-solid fa-file-invoice"></i> <span>ดูใบเสร็จ</span>' +
                 '</button>' +
@@ -3072,26 +3117,122 @@
       }).join('');
     }
 
+    function viewCustomerSlip(slipUrl, orderId) {
+      if (!slipUrl) {
+        Swal.fire({
+          icon: 'info',
+          title: 'ไม่พบรูปภาพสลิป',
+          text: 'คำสั่งจองนี้ไม่มีไฟล์สลิปหลักฐานการโอนเงินแนบมา',
+          confirmButtonColor: '#4338ca'
+        });
+        return;
+      }
+      Swal.fire({
+        title: 'สลิปการโอนเงิน (' + orderId + ')',
+        html: `
+          <div class="max-h-[65vh] overflow-y-auto rounded-xl border border-slate-200 bg-slate-50 p-2 flex justify-center">
+            <img src="${slipUrl}" alt="สลิปหลักฐานการโอนเงิน" class="max-w-full h-auto rounded-lg shadow-sm" />
+          </div>
+          <div class="mt-2 text-right">
+            <a href="${slipUrl}" target="_blank" class="text-xs text-indigo-600 hover:underline"><i class="fa-solid fa-arrow-up-right-from-square"></i> เปิดดูรูปภาพขนาดเต็ม</a>
+          </div>
+        `,
+        confirmButtonText: 'ปิด',
+        confirmButtonColor: '#4338ca',
+        showCloseButton: true
+      });
+    }
+
+    function handleMobileAccountClick() {
+      if (currentStudent) {
+        Swal.fire({
+          title: 'บัญชีนักศึกษา',
+          html: `
+            <div class="text-left text-xs space-y-2 p-3.5 bg-slate-50 rounded-xl border border-slate-200">
+              <div><span class="text-slate-500">ชื่อนักศึกษา:</span> <b>${escapeHtml(currentStudent.name)}</b></div>
+              <div><span class="text-slate-500">รหัสนักศึกษา:</span> <b class="font-mono text-indigo-700">${escapeHtml(currentStudent.studentId)}</b></div>
+              <div><span class="text-slate-500">อีเมล:</span> ${escapeHtml(currentStudent.email || '-')}</div>
+              <div><span class="text-slate-500">เบอร์โทรศัพท์:</span> ${escapeHtml(currentStudent.phone || '-')}</div>
+            </div>
+          `,
+          showCancelButton: true,
+          confirmButtonText: '<i class="fa-solid fa-clock-rotate-left"></i> ดูประวัติการจอง',
+          cancelButtonText: '<i class="fa-solid fa-power-off"></i> ออกจากระบบ',
+          confirmButtonColor: '#4338ca',
+          cancelButtonColor: '#e11d48'
+        }).then(result => {
+          if (result.isConfirmed) {
+            switchView('track');
+          } else if (result.dismiss === Swal.DismissReason.cancel) {
+            logoutStudent();
+          }
+        });
+      } else {
+        openLoginModal();
+      }
+    }
+
     function switchView(viewName) {
       document.getElementById('viewShop').classList.add('hidden');
       document.getElementById('viewTrack').classList.add('hidden');
 
       const btnNavShop = document.getElementById('btnNavShop');
       const btnNavTrack = document.getElementById('btnNavTrack');
-      const btnNavHistory = document.getElementById('btnNavHistory');
-
-      if (btnNavShop) btnNavShop.className = 'p-1.5 sm:px-3 sm:py-1.5 rounded-lg text-xs sm:text-sm font-medium text-slate-600 hover:text-slate-900 hover:bg-slate-100 transition flex items-center gap-1.5';
-      if (btnNavTrack) btnNavTrack.className = 'p-1.5 sm:px-3 sm:py-1.5 rounded-lg text-xs sm:text-sm font-medium text-slate-600 hover:text-slate-900 hover:bg-slate-100 transition flex items-center gap-1.5';
-      if (btnNavHistory) btnNavHistory.className = 'p-1.5 sm:px-3 sm:py-1.5 rounded-lg text-xs sm:text-sm font-medium text-slate-600 hover:text-slate-900 hover:bg-slate-100 transition flex items-center gap-1.5';
+      const btnBottomNavShop = document.getElementById('btnBottomNavShop');
+      const btnBottomNavTrack = document.getElementById('btnBottomNavTrack');
 
       if (viewName === 'shop') {
         document.getElementById('viewShop').classList.remove('hidden');
-        if (btnNavShop) btnNavShop.className = 'p-1.5 sm:px-3 sm:py-1.5 rounded-lg text-xs sm:text-sm font-medium text-indigo-700 bg-indigo-50 transition flex items-center gap-1.5';
+        if (btnNavShop) {
+          btnNavShop.className = 'px-4 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center gap-2 text-indigo-700 bg-white shadow-sm';
+          const icon = btnNavShop.querySelector('i');
+          if (icon) icon.className = 'fa-solid fa-shirt text-sm text-indigo-600';
+        }
+        if (btnNavTrack) {
+          btnNavTrack.className = 'px-4 py-1.5 rounded-lg text-xs font-medium transition-all flex items-center gap-2 text-slate-600 hover:text-slate-900 hover:bg-white/60';
+          const icon = btnNavTrack.querySelector('i');
+          if (icon) icon.className = 'fa-solid fa-clock-rotate-left text-sm text-slate-500';
+        }
+
+        // Mobile Bottom Nav Active States (Lazada Style)
+        if (btnBottomNavShop) {
+          btnBottomNavShop.className = 'flex-1 flex flex-col items-center justify-center py-1 text-indigo-700 transition active:scale-95';
+          const span = btnBottomNavShop.querySelector('span');
+          if (span) span.className = 'text-[10px] font-bold mt-0.5 tracking-tight';
+        }
+        if (btnBottomNavTrack) {
+          btnBottomNavTrack.className = 'flex-1 flex flex-col items-center justify-center py-1 text-slate-400 hover:text-slate-700 transition active:scale-95';
+          const span = btnBottomNavTrack.querySelector('span');
+          if (span) span.className = 'text-[10px] font-medium mt-0.5 tracking-tight';
+        }
+
         window.scrollTo({ top: 0, behavior: 'smooth' });
         renderProducts(allProducts);
       } else if (viewName === 'track') {
         document.getElementById('viewTrack').classList.remove('hidden');
-        if (btnNavTrack) btnNavTrack.className = 'p-1.5 sm:px-3 sm:py-1.5 rounded-lg text-xs sm:text-sm font-medium text-indigo-700 bg-indigo-50 transition flex items-center gap-1.5';
+        if (btnNavShop) {
+          btnNavShop.className = 'px-4 py-1.5 rounded-lg text-xs font-medium transition-all flex items-center gap-2 text-slate-600 hover:text-slate-900 hover:bg-white/60';
+          const icon = btnNavShop.querySelector('i');
+          if (icon) icon.className = 'fa-solid fa-shirt text-sm text-slate-500';
+        }
+        if (btnNavTrack) {
+          btnNavTrack.className = 'px-4 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center gap-2 text-indigo-700 bg-white shadow-sm';
+          const icon = btnNavTrack.querySelector('i');
+          if (icon) icon.className = 'fa-solid fa-clock-rotate-left text-sm text-indigo-600';
+        }
+
+        // Mobile Bottom Nav Active States (Lazada Style)
+        if (btnBottomNavShop) {
+          btnBottomNavShop.className = 'flex-1 flex flex-col items-center justify-center py-1 text-slate-400 hover:text-slate-700 transition active:scale-95';
+          const span = btnBottomNavShop.querySelector('span');
+          if (span) span.className = 'text-[10px] font-medium mt-0.5 tracking-tight';
+        }
+        if (btnBottomNavTrack) {
+          btnBottomNavTrack.className = 'flex-1 flex flex-col items-center justify-center py-1 text-indigo-700 transition active:scale-95';
+          const span = btnBottomNavTrack.querySelector('span');
+          if (span) span.className = 'text-[10px] font-bold mt-0.5 tracking-tight';
+        }
+
         window.scrollTo({ top: 0, behavior: 'smooth' });
 
         const notLoggedInBox = document.getElementById('trackNotLoggedInBox');
