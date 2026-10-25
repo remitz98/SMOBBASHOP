@@ -171,12 +171,12 @@ class MainActivity : ComponentActivity() {
 
         @JavascriptInterface
         fun getAppVersionCode(): Int {
-            return 8
+            return 9
         }
 
         @JavascriptInterface
         fun getAppVersionName(): String {
-            return "1.0.8"
+            return "1.0.9"
         }
 
         @JavascriptInterface

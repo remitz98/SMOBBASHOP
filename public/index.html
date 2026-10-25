@@ -110,13 +110,51 @@
       scrollbar-color: #cbd5e1 #f1f5f9;
     }
 
-    /* 5. Android & Mobile Safe Area Status Bar Support */
-    html.is-android header {
+    /* 5. Header Fixed at Top & Android/PC Safe Area */
+    #mainHeader {
+      position: fixed !important;
+      top: 0 !important;
+      left: 0 !important;
+      right: 0 !important;
+      width: 100% !important;
+      z-index: 40 !important;
+    }
+    #headerSpacer {
+      height: 3.5rem; /* 56px (h-14) on mobile */
+      display: block;
+      width: 100%;
+    }
+    @media (min-width: 640px) {
+      #headerSpacer {
+        height: 4rem; /* 64px (h-16) on PC/Desktop */
+      }
+    }
+    html.is-android header#mainHeader {
       padding-top: max(env(safe-area-inset-top, 0px), 30px) !important;
     }
+    html.is-android #headerSpacer {
+      height: calc(3.5rem + max(env(safe-area-inset-top, 0px), 30px)) !important;
+    }
     @supports (padding-top: env(safe-area-inset-top)) {
-      header {
+      #mainHeader {
         padding-top: max(env(safe-area-inset-top, 0px), 0px);
+      }
+    }
+
+    /* 6. Cart Drawer Header Safe Area on Mobile */
+    #cartDrawerHeader {
+      padding-top: max(env(safe-area-inset-top, 0px), 28px) !important;
+      padding-bottom: 0.875rem !important;
+    }
+    html.is-android #cartDrawerHeader {
+      padding-top: max(env(safe-area-inset-top, 0px), 42px) !important;
+      padding-bottom: 1rem !important;
+    }
+    @media (min-width: 640px) {
+      #cartDrawerHeader,
+      html.is-android #cartDrawerHeader {
+        padding-top: 1.25rem !important; /* Standard 20px on PC/Desktop */
+        padding-bottom: 1.25rem !important;
       }
     }
 
@@ -228,7 +266,7 @@
 <body class="text-slate-800 antialiased min-h-screen flex flex-col">
 
   <!-- ==================== 1. TOP NAVBAR ==================== -->
-  <header class="sticky top-0 z-40 bg-white/95 backdrop-blur shadow-sm border-b border-slate-100 w-full">
+  <header id="mainHeader" class="fixed top-0 left-0 right-0 z-40 bg-white/95 backdrop-blur shadow-sm border-b border-slate-100 w-full" style="position: fixed !important; top: 0 !important; left: 0 !important; right: 0 !important; width: 100% !important; z-index: 40 !important;">
     <div class="max-w-7xl mx-auto px-2.5 sm:px-6 lg:px-8 h-14 sm:h-16 flex items-center justify-between gap-2 sm:gap-4 w-full">
       
       <!-- Logo & Brand (Left) -->
@@ -296,6 +334,9 @@
 
     </div>
   </header>
+
+  <!-- Spacer to prevent content from jumping behind fixed navbar -->
+  <div id="headerSpacer" class="w-full shrink-0" aria-hidden="true"></div>
 
   <!-- ==================== 2. MAIN CONTAINER ==================== -->
   <main class="flex-1 max-w-7xl mx-auto w-full px-4 sm:px-6 lg:px-8 py-6 pb-24 md:pb-8">
@@ -736,13 +777,13 @@
     
     <div class="absolute inset-y-0 right-0 max-w-md w-full bg-white shadow-2xl flex flex-col z-10">
       
-      <div class="p-4 sm:p-5 border-b border-slate-200 flex items-center justify-between bg-slate-50">
+      <div id="cartDrawerHeader" class="p-4 sm:p-5 border-b border-slate-200 flex items-center justify-between bg-slate-50 shrink-0">
         <div class="flex items-center gap-2">
           <i class="fa-solid fa-bag-shopping text-indigo-700"></i>
           <h3 class="font-bold text-slate-900">รายการเสื้อที่เลือกไว้</h3>
         </div>
-        <button onclick="closeCartDrawer()" class="w-8 h-8 rounded-full text-slate-400 hover:text-slate-700 hover:bg-slate-200/50 flex items-center justify-center">
-          <i class="fa-solid fa-xmark"></i>
+        <button onclick="closeCartDrawer()" class="w-9 h-9 rounded-full bg-slate-200/70 hover:bg-slate-200 text-slate-600 hover:text-slate-900 flex items-center justify-center transition shadow-sm" title="ปิดหน้าต่างตะกร้า">
+          <i class="fa-solid fa-xmark text-sm"></i>
         </button>
       </div>
 
@@ -3204,7 +3245,7 @@
 
     // ==================== APP UPDATE CHECKER ====================
     function promptManualAppUpdate() {
-      const CURRENT_LATEST_VERSION = 'v2.2.4';
+      const CURRENT_LATEST_VERSION = 'v2.2.5';
       Swal.fire({
         icon: 'info',
         title: 'อัปเดตแอปพลิเคชัน',
@@ -3223,8 +3264,8 @@
 
     function checkAppUpdateNotification() {
       const isAndroidNative = (window.AndroidNative && typeof window.AndroidNative.isAndroidNativeApp === 'function');
-      const CURRENT_LATEST_VERSION = 'v2.2.4';
-      const CURRENT_LATEST_BUILD = 8;
+      const CURRENT_LATEST_VERSION = 'v2.2.5';
+      const CURRENT_LATEST_BUILD = 9;
       const DISMISS_KEY = 'bba_update_dismissed_' + CURRENT_LATEST_VERSION;
 
       if (isAndroidNative) {
@@ -3242,7 +3283,7 @@
           } catch (e) {}
         }
 
-        // If installedBuild is 0 or less than 8, this is an older APK version!
+        // If installedBuild is 0 or less than 9, this is an older APK version!
         if (installedBuild < CURRENT_LATEST_BUILD) {
           if (sessionStorage.getItem(DISMISS_KEY)) return;
 
@@ -3263,9 +3304,9 @@
                   <div class="pt-1 text-slate-700 leading-relaxed">
                     <b>รายการปรับปรุงในเวอร์ชัน ${CURRENT_LATEST_VERSION}:</b>
                     <ul class="list-disc list-inside mt-1 space-y-1 text-slate-600 text-xs">
+                      <li>ตรึงแถบนำทางด้านบน (Top Navigation Bar) ให้คงอยู่ตลอดเวลาเมื่อเลื่อนหน้าจอ ทั้งบนคอมและมือถือ</li>
+                      <li>ปรับปรุงระยะห่างแถบด้านบนของหน้าต่างตะกร้าสินค้าบนมือถือ ไม่ให้ชิด Status Bar</li>
                       <li>เพิ่มการรองรับระบบปฏิบัติการ Android รุ่นใหม่ล่าสุดครอบคลุมถึง Android 17</li>
-                      <li>แก้ไขแถบนำทางด้านล่างไม่ให้บังปุ่มสั่งจองเสื้อ</li>
-                      <li>ปรับปรุงประสิทธิภาพและความเสถียรในการทำงาน</li>
                     </ul>
                   </div>
                 </div>
@@ -3291,13 +3332,13 @@
     function handleMobileAccountClick() {
       const isAndroidNative = (window.AndroidNative && typeof window.AndroidNative.isAndroidNativeApp === 'function');
       let isOldVersion = false;
-      const curVer = 'v2.2.4';
+      const curVer = 'v2.2.5';
       if (isAndroidNative) {
         let build = 0;
         if (typeof window.AndroidNative.getAppVersionCode === 'function') {
           try { build = Number(window.AndroidNative.getAppVersionCode()) || 0; } catch (e) {}
         }
-        if (build < 8) isOldVersion = true;
+        if (build < 9) isOldVersion = true;
       }
 
       if (currentStudent) {
