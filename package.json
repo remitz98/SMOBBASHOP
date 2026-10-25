@@ -1,6 +1,6 @@
 {
   "name": "bba-store-cloudflare",
-  "version": "1.0.25",
+  "version": "2.3.12",
   "type": "module",
   "scripts": {
     "dev": "wrangler dev",

@@ -4344,7 +4344,7 @@
 
     // ==================== APP UPDATE CHECKER ====================
     function promptManualAppUpdate() {
-      const CURRENT_LATEST_VERSION = 'v2.3.5';
+      const CURRENT_LATEST_VERSION = 'v2.3.12';
       Swal.fire({
         icon: 'info',
         title: 'อัปเดตแอปพลิเคชัน',
@@ -4361,10 +4361,10 @@
       });
     }
 
-    function checkAppUpdateNotification() {
+    async function checkAppUpdateNotification() {
       const isAndroidNative = (window.AndroidNative && typeof window.AndroidNative.isAndroidNativeApp === 'function');
-      const CURRENT_LATEST_VERSION = 'v2.3.11';
-      const CURRENT_LATEST_BUILD = 25;
+      const CURRENT_LATEST_VERSION = 'v2.3.12';
+      const CURRENT_LATEST_BUILD = 26;
       const DISMISS_KEY = 'bba_update_dismissed_' + CURRENT_LATEST_VERSION;
 
       if (isAndroidNative) {
@@ -4378,13 +4378,34 @@
         }
         if (typeof window.AndroidNative.getAppVersionName === 'function') {
           try {
-            installedVersionName = 'v' + window.AndroidNative.getAppVersionName();
+            let vName = String(window.AndroidNative.getAppVersionName() || '').trim();
+            if (vName && !vName.startsWith('v')) vName = 'v' + vName;
+            installedVersionName = vName || 'เวอร์ชันเดิม';
           } catch (e) {}
         }
 
         // If installedBuild is less than CURRENT_LATEST_BUILD, this is an older APK version!
-        if (installedBuild < CURRENT_LATEST_BUILD) {
+        if (installedBuild > 0 && installedBuild < CURRENT_LATEST_BUILD) {
           if (sessionStorage.getItem(DISMISS_KEY)) return;
+
+          // *** CRITICAL GUARD: ตรวจสอบสถานะการ Build บน GitHub ให้เสร็จ 100% และไฟล์ APK พร้อมดาวน์โหลดก่อนแจ้งเตือน ***
+          try {
+            const checkUrl = 'https://api.github.com/repos/remitz98/SMOBBASHOP/releases/tags/' + CURRENT_LATEST_VERSION;
+            const res = await fetch(checkUrl, { cache: 'no-store' });
+            if (!res.ok) {
+              console.log('[UpdateCheck] Release ' + CURRENT_LATEST_VERSION + ' กำลังอยู่ในระหว่างการ Build บน GitHub (Status: ' + res.status + ') - จะรอให้ Build เสร็จสมบูรณ์ก่อนแจ้งเตือน');
+              return;
+            }
+            const relData = await res.json();
+            const hasApk = Array.isArray(relData.assets) && relData.assets.some(a => a.name === 'SMO-BBA-SHOP.apk');
+            if (!hasApk) {
+              console.log('[UpdateCheck] Release ' + CURRENT_LATEST_VERSION + ' สร้างแล้วแต่ไฟล์ APK ยังอัปโหลดไม่เสร็จ - รอให้พร้อมก่อน');
+              return;
+            }
+          } catch (netErr) {
+            console.warn('[UpdateCheck] ไม่สามารถตรวจสอบความพร้อมของไฟล์อัปเดตได้ (ออฟไลน์หรือติดเน็ตเวิร์ก):', netErr);
+            return;
+          }
 
           setTimeout(() => {
             Swal.fire({
@@ -4403,10 +4424,10 @@
                   <div class="pt-1 text-slate-700 leading-relaxed">
                     <b>รายการปรับปรุงในเวอร์ชัน ${CURRENT_LATEST_VERSION}:</b>
                     <ul class="list-disc list-inside mt-1 space-y-1 text-slate-600 text-xs">
+                      <li>ปรับหมายเลขเวอร์ชันโปรแกรมและตัวติดตั้งให้ตรงกันทุกแพลตฟอร์ม (${CURRENT_LATEST_VERSION})</li>
+                      <li>ระบบตรวจสอบความพร้อมของการ Build ก่อนแจ้งเตือน ป้องกันการแจ้งเตือนก่อนที่ไฟล์จะพร้อมดาวน์โหลด</li>
                       <li>ล็อกสีใบเสร็จ (Receipt Paper) สไตล์กระดาษขาวคมชัดมาตรฐาน ไม่เปลี่ยนสีตามธีมมืด</li>
-                      <li>ตัวหนังสือ ตาราง ยอดรวมสุทธิ และกล่องข้อมูลในใบเสร็จคมชัดสูง ไม่ว่าจะแสดงผล พิมพ์ หรือบันทึกรูปภาพ</li>
-                      <li>ปรับแต่งแถบเลื่อน (Scrollbar) ให้บางเรียบหรู 6px เข้ากับธีมมืดและสว่างกลมกลืน</li>
-                      <li>ระบบเปลี่ยนธีม มืด/สว่าง บน Desktop, Android และ Web</li>
+                      <li>ปรับแต่งแถบเลื่อน (Scrollbar) ให้บางเรียบหรู 6px เข้ากับธีมมืดและสว่าง</li>
                     </ul>
                   </div>
                 </div>
@@ -4432,13 +4453,13 @@
     function handleMobileAccountClick() {
       const isAndroidNative = (window.AndroidNative && typeof window.AndroidNative.isAndroidNativeApp === 'function');
       let isOldVersion = false;
-      const curVer = 'v2.3.11';
+      const curVer = 'v2.3.12';
       if (isAndroidNative) {
         let build = 0;
         if (typeof window.AndroidNative.getAppVersionCode === 'function') {
           try { build = Number(window.AndroidNative.getAppVersionCode()) || 0; } catch (e) {}
         }
-        if (build < 25) isOldVersion = true;
+        if (build > 0 && build < 26) isOldVersion = true;
       }
 
       const hasAdminPin = Boolean(localStorage.getItem('bba_admin_pin') || sessionStorage.getItem('bba_admin_pin'));
@@ -4655,7 +4676,7 @@
           console.log('[AutoUpdater] Check result:', update);
 
           if (update) {
-            const newVersion = update.version || 'v2.3.5';
+            const newVersion = update.version || 'v2.3.12';
             if (statusText) statusText.innerText = `พบเวอร์ชันใหม่ (${newVersion})!`;
             if (detailText) detailText.innerText = 'กำลังดาวน์โหลดและติดตั้งอัปเดตอัตโนมัติ...';
             if (progressBar) progressBar.style.width = '30%';
