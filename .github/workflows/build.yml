@@ -122,8 +122,8 @@ jobs:
           node -e "
             const fs = require('fs');
             const path = require('path');
-            const TAG = 'v2.3.8';
-            const VERSION = '1.0.22';
+            const TAG = 'v2.3.9';
+            const VERSION = '1.0.23';
             let merged = {
               version: VERSION,
               notes: 'SMO BBA SHOP ' + TAG + ' (Discord-style Auto-Update)',
@@ -193,7 +193,7 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          TAG="v2.3.8"
+          TAG="v2.3.9"
           shopt -s globstar nullglob
           FILES=(all-dist/**/*.apk all-dist/**/*.msi all-dist/**/*.exe all-dist/**/*.dmg all-dist/**/*.zip all-dist/**/*.tar.gz all-dist/**/*.sig all-dist/**/latest.json)
           echo "Release files found:"
@@ -204,7 +204,7 @@ jobs:
           else
             echo "Creating release $TAG..."
             gh release create "$TAG" \
-              --title "SMO BBA SHOP v2.3.8 (Firebase Push Notifications & Role-based Alerts)" \
-              --notes "เวอร์ชัน v2.3.8: 1. ระบบแจ้งเตือน Firebase Cloud Messaging (FCM) แบบ Push Notification แม้เคลียร์แอป/ปิดแอป หรือรีสตาร์ทเครื่อง 2. แยกการแจ้งเตือนตามบทบาท: แจ้งเตือนคำสั่งซื้อใหม่เฉพาะผู้ที่เข้าสู่ระบบแอดมิน, แจ้งเตือนอัปเดตสถานะเฉพาะนักศึกษาเจ้าของคำสั่งซื้อ 3. เพิ่มระบบเสียงและสั่นแจ้งเตือนแบบ High Priority บน Android 4. ทำงานควบคู่กับ Durable Objects Realtime WebSocket เพื่อความเร็วสูงสุดขณะเปิดแอป" \
+              --title "SMO BBA SHOP v2.3.9 (Dark Mode for Desktop & Category Badge Contrast Fix)" \
+              --notes "เวอร์ชัน v2.3.9: 1. รวมปุ่มสลับธีม มืด/สว่าง (Dark / Light Mode) เข้าสู่เวอร์ชัน Desktop (Windows & macOS) 2. ปรับแต่งป้ายหมวดหมู่เสื้อในโหมดมืดให้อ่านง่าย คมชัด ไม่กลืนกับพื้นหลังสีขาว 3. รองรับ Discord-style Auto Update บน Desktop 4. ระบบแจ้งเตือน Firebase Cloud Messaging (FCM) แบบ Push Notification บน Android" \
               "${FILES[@]}"
           fi

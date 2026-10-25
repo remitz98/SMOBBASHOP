@@ -232,7 +232,7 @@ class MainActivity : ComponentActivity() {
                     pInfo.versionCode
                 }
             } catch (e: Exception) {
-                22
+                23
             }
         }
 
@@ -240,9 +240,9 @@ class MainActivity : ComponentActivity() {
         fun getAppVersionName(): String {
             return try {
                 val pInfo = activity.packageManager.getPackageInfo(activity.packageName, 0)
-                pInfo.versionName ?: "1.0.22"
+                pInfo.versionName ?: "1.0.23"
             } catch (e: Exception) {
-                "1.0.22"
+                "1.0.23"
             }
         }
 
