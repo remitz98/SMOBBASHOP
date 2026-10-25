@@ -108,7 +108,7 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          TAG="v2.2.1"
+          TAG="v2.2.2"
           shopt -s globstar nullglob
           FILES=(all-dist/**/*.apk all-dist/**/*.msi all-dist/**/*.exe all-dist/**/*.dmg)
           echo "Release files found:"
@@ -119,7 +119,7 @@ jobs:
           else
             echo "Creating release $TAG..."
             gh release create "$TAG" \
-              --title "SMO BBA SHOP v2.2.1 (Official Native Release)" \
-              --notes "เวอร์ชัน v2.2.1 แก้ไข UI สมบูรณ์แบบ: 1. คงปุ่มแถบด้านบนทั้งหมดของ PC และ Web ครบถ้วน (เสื้อสโมสร, ประวัติการสั่งซื้อ, ระบบแอดมิน, โปรไฟล์/ล็อกอิน, ตะกร้า) 2. แก้ไข Android WebView viewport ไม่ให้ล้นหน้าจอ (ไม่ต้องเลื่อนขวาเจอตะกร้า) 3. ตรึงแถบปุ่มกดล่างสไตล์ Lazada ให้ลอยติดขอบล่างของจอตลอดเวลาโดยไม่ต้องเลื่อนลงล่างสุด 4. ปรับขนาด UI มือถือให้พอดีขอบจอ 100vw 100%" \
+              --title "SMO BBA SHOP v2.2.2 (Official Native Release)" \
+              --notes "เวอร์ชัน v2.2.2 แก้ไขการแสดงผลปุ่มนำทางด้านบนบน PC และ Web ให้แสดงผลชัดเจน 100% (เสื้อสโมสร, ประวัติการสั่งซื้อ, ระบบแอดมิน, โปรไฟล์/ล็อกอิน, ตะกร้าสินค้า) โดยใช้คลาสแยกพิเศษไม่ชนกับ display: none และคงแถบล่าง Lazada สำหรับมือถือ" \
               "${FILES[@]}"
           fi
