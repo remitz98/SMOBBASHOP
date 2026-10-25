@@ -265,6 +265,55 @@
 </head>
 <body class="text-slate-800 antialiased min-h-screen flex flex-col">
 
+  <!-- ==================== DISCORD-STYLE DESKTOP SPLASH & AUTO-UPDATER ==================== -->
+  <div id="discordSplashScreen" class="fixed inset-0 z-[99999] bg-[#1e1f22] text-[#f2f3f5] flex flex-col items-center justify-center select-none" style="display: none;">
+    <!-- Background Ambient Glow -->
+    <div class="absolute w-96 h-96 bg-indigo-600/15 rounded-full blur-3xl pointer-events-none"></div>
+
+    <div class="relative z-10 flex flex-col items-center max-w-sm px-6 text-center">
+      <!-- Animated Logo Container with Rotating Ring -->
+      <div class="relative w-28 h-28 mb-6 flex items-center justify-center">
+        <!-- Glowing pulse ring -->
+        <div class="absolute inset-0 rounded-3xl bg-indigo-500/20 animate-ping opacity-60"></div>
+        <!-- Outer rotating dashed border like Discord -->
+        <div class="absolute -inset-2 rounded-3xl border-2 border-indigo-500/30 border-t-indigo-400 animate-spin" style="animation-duration: 2.5s;"></div>
+        <!-- Logo -->
+        <img src="logo.png" alt="SMO BBA Logo" class="relative z-10 w-24 h-24 rounded-2xl object-contain shadow-2xl shadow-indigo-950 bg-slate-900/60 p-2 border border-white/10">
+      </div>
+
+      <!-- App Title -->
+      <h1 class="text-xl font-black tracking-wider text-white mb-1 uppercase">SMO BBA SHOP</h1>
+      <p class="text-xs text-indigo-400 font-semibold tracking-wide uppercase mb-6">Desktop Edition</p>
+
+      <!-- Status Indicator -->
+      <div class="flex items-center gap-2 mb-3">
+        <span class="relative flex h-2.5 w-2.5">
+          <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+          <span class="relative inline-flex rounded-full h-2.5 w-2.5 bg-emerald-500"></span>
+        </span>
+        <span id="splashStatusText" class="text-sm font-medium text-slate-200">กำลังตรวจสอบการอัปเดต...</span>
+      </div>
+
+      <!-- Discord-style Progress Bar -->
+      <div class="w-72 h-2.5 bg-[#2b2d31] rounded-full overflow-hidden p-0.5 border border-white/10 relative shadow-inner">
+        <div id="splashProgressBar" class="h-full bg-gradient-to-r from-indigo-500 via-indigo-400 to-cyan-400 rounded-full transition-all duration-300 w-1/4"></div>
+      </div>
+
+      <!-- Detail Info -->
+      <p id="splashDetailText" class="text-xs text-[#949ba4] mt-2.5 h-4 font-mono truncate max-w-xs">Checking for updates...</p>
+
+      <!-- Skip Button (Appears if check takes longer than 5s) -->
+      <button id="btnSkipSplash" onclick="forceDismissSplashScreen()" class="mt-6 px-4 py-1.5 rounded-lg bg-white/5 hover:bg-white/10 text-xs text-slate-400 hover:text-white transition opacity-0 pointer-events-none">
+        ข้ามเพื่อเข้าสู่แอป <i class="fa-solid fa-arrow-right text-[10px] ml-1"></i>
+      </button>
+    </div>
+
+    <!-- Window Footer info -->
+    <div class="absolute bottom-4 text-[11px] text-[#949ba4]/60 font-mono">
+      คณะบริหารธุรกิจและการจัดการ มรภ.อุบลฯ
+    </div>
+  </div>
+
   <!-- ==================== 1. TOP NAVBAR ==================== -->
   <header id="mainHeader" class="fixed top-0 left-0 right-0 z-40 bg-white/95 backdrop-blur shadow-sm border-b border-slate-100 w-full" style="position: fixed !important; top: 0 !important; left: 0 !important; right: 0 !important; width: 100% !important; z-index: 40 !important;">
     <div class="max-w-7xl mx-auto px-2.5 sm:px-6 lg:px-8 h-14 sm:h-16 flex items-center justify-between gap-2 sm:gap-4 w-full">
@@ -3245,7 +3294,7 @@
 
     // ==================== APP UPDATE CHECKER ====================
     function promptManualAppUpdate() {
-      const CURRENT_LATEST_VERSION = 'v2.2.6';
+      const CURRENT_LATEST_VERSION = 'v2.2.7';
       Swal.fire({
         icon: 'info',
         title: 'อัปเดตแอปพลิเคชัน',
@@ -3264,8 +3313,8 @@
 
     function checkAppUpdateNotification() {
       const isAndroidNative = (window.AndroidNative && typeof window.AndroidNative.isAndroidNativeApp === 'function');
-      const CURRENT_LATEST_VERSION = 'v2.2.6';
-      const CURRENT_LATEST_BUILD = 10;
+      const CURRENT_LATEST_VERSION = 'v2.2.7';
+      const CURRENT_LATEST_BUILD = 11;
       const DISMISS_KEY = 'bba_update_dismissed_' + CURRENT_LATEST_VERSION;
 
       if (isAndroidNative) {
@@ -3283,7 +3332,7 @@
           } catch (e) {}
         }
 
-        // If installedBuild is 0 or less than 10, this is an older APK version!
+        // If installedBuild is 0 or less than 11, this is an older APK version!
         if (installedBuild < CURRENT_LATEST_BUILD) {
           if (sessionStorage.getItem(DISMISS_KEY)) return;
 
@@ -3304,14 +3353,11 @@
                   <div class="pt-1 text-slate-700 leading-relaxed">
                     <b>รายการปรับปรุงในเวอร์ชัน ${CURRENT_LATEST_VERSION}:</b>
                     <ul class="list-disc list-inside mt-1 space-y-1 text-slate-600 text-xs">
-                      <li>เพิ่มกุญแจลายเซ็นดิจิทัลถาวร (Permanent Signing Key) เพื่อรองรับการกดอัปเดตแอปโดยตรง</li>
-                      <li>ตรึงแถบนำทางด้านบน (Top Navigation Bar) ให้คงอยู่ตลอดเวลาเมื่อเลื่อนหน้าจอ ทั้งบนคอมและมือถือ</li>
-                      <li>ปรับปรุงระยะห่างแถบด้านบนของหน้าต่างตะกร้าสินค้าบนมือถือ ไม่ให้ชิด Status Bar</li>
-                      <li>เพิ่มการรองรับระบบปฏิบัติการ Android รุ่นใหม่ล่าสุดครอบคลุมถึง Android 17</li>
+                      <li>เพิ่มระบบ Auto-Update สไตล์ Discord สำหรับเวอร์ชัน Windows และ macOS</li>
+                      <li>เพิ่มหน้าจอ Splash Screen ตรวจสอบอัปเดตก่อนเข้าใช้งานโปรแกรม</li>
+                      <li>เพิ่มกุญแจลายเซ็นดิจิทัลถาวร (Permanent Signing Key) สำหรับ Android</li>
+                      <li>ตรึงแถบนำทางด้านบน (Top Navigation Bar) ตลอดการเลื่อนจอ</li>
                     </ul>
-                    <div class="mt-2.5 p-2 bg-amber-50 border border-amber-200 rounded-lg text-amber-900 text-[11px] leading-snug">
-                      💡 <b>คำแนะนำสำหรับการเปลี่ยนผ่าน:</b> หากมือถือขึ้นเตือน <i>"การอัปเดตไม่เข้ากัน (Signatures do not match)"</i> ให้ถอนการติดตั้งเวอร์ชันเก่าออก 1 ครั้งก่อน จากนั้นลงเวอร์ชันใหม่นี้ แล้วในเวอร์ชันถัดไปทั้งหมดจะสามารถกดอัปเดตทับได้โดยตรงทันที
-                    </div>
                   </div>
                 </div>
               `,
@@ -3336,13 +3382,13 @@
     function handleMobileAccountClick() {
       const isAndroidNative = (window.AndroidNative && typeof window.AndroidNative.isAndroidNativeApp === 'function');
       let isOldVersion = false;
-      const curVer = 'v2.2.6';
+      const curVer = 'v2.2.7';
       if (isAndroidNative) {
         let build = 0;
         if (typeof window.AndroidNative.getAppVersionCode === 'function') {
           try { build = Number(window.AndroidNative.getAppVersionCode()) || 0; } catch (e) {}
         }
-        if (build < 10) isOldVersion = true;
+        if (build < 11) isOldVersion = true;
       }
 
       if (currentStudent) {
@@ -3379,6 +3425,134 @@
         });
       } else {
         openLoginModal();
+      }
+    }
+
+    // ==================== DISCORD-STYLE DESKTOP AUTO-UPDATER ====================
+    function isTauriDesktopApp() {
+      return Boolean(
+        (typeof window !== 'undefined' && (window.__TAURI__ || window.__TAURI_INTERNALS__)) ||
+        (window.__TAURI_METADATA__)
+      );
+    }
+
+    function forceDismissSplashScreen() {
+      const splash = document.getElementById('discordSplashScreen');
+      if (!splash) return;
+      splash.style.transition = 'opacity 0.4s ease, transform 0.4s ease';
+      splash.style.opacity = '0';
+      splash.style.transform = 'scale(1.02)';
+      setTimeout(() => {
+        splash.style.display = 'none';
+      }, 400);
+    }
+
+    async function initDiscordAutoUpdater() {
+      // Only execute on Desktop (Tauri on Windows & macOS)
+      if (!isTauriDesktopApp()) {
+        const splash = document.getElementById('discordSplashScreen');
+        if (splash) splash.style.display = 'none';
+        return;
+      }
+
+      const splash = document.getElementById('discordSplashScreen');
+      const statusText = document.getElementById('splashStatusText');
+      const progressBar = document.getElementById('splashProgressBar');
+      const detailText = document.getElementById('splashDetailText');
+      const btnSkip = document.getElementById('btnSkipSplash');
+
+      if (!splash) return;
+      splash.style.display = 'flex';
+
+      // Safety timeout: If checking or updating takes longer than 6 seconds, show skip button
+      setTimeout(() => {
+        if (btnSkip) {
+          btnSkip.classList.remove('opacity-0', 'pointer-events-none');
+          btnSkip.classList.add('opacity-100');
+        }
+      }, 6000);
+
+      const formatBytes = (bytes) => {
+        if (!bytes || bytes === 0) return '0 B';
+        const k = 1024;
+        const sizes = ['B', 'KB', 'MB', 'GB'];
+        const i = Math.floor(Math.log(bytes) / Math.log(k));
+        return parseFloat((bytes / Math.pow(k, i)).toFixed(1)) + ' ' + sizes[i];
+      };
+
+      try {
+        if (statusText) statusText.innerText = 'กำลังตรวจสอบการอัปเดต...';
+        if (detailText) detailText.innerText = 'Connecting to update server...';
+        if (progressBar) progressBar.style.width = '25%';
+
+        // Check Tauri v2 updater plugin
+        const updater = window.__TAURI__?.updater;
+        const process = window.__TAURI__?.process;
+
+        if (updater && typeof updater.check === 'function') {
+          const update = await updater.check();
+
+          if (update && (update.available || update.shouldUpdate)) {
+            if (statusText) statusText.innerText = `พบเวอร์ชันใหม่ (${update.version || 'v2.2.7'})!`;
+            if (detailText) detailText.innerText = 'กำลังดาวน์โหลดและติดตั้งอัปเดตอัตโนมัติ...';
+            if (progressBar) progressBar.style.width = '35%';
+
+            let downloaded = 0;
+            let contentLength = 0;
+
+            await update.downloadAndInstall((event) => {
+              if (!event) return;
+              switch (event.event) {
+                case 'Started':
+                  contentLength = event.data?.contentLength || 0;
+                  if (statusText) statusText.innerText = `กำลังดาวน์โหลดอัปเดต (${update.version})...`;
+                  break;
+                case 'Progress':
+                  downloaded += (event.data?.chunkLength || 0);
+                  if (contentLength > 0) {
+                    const pct = Math.min(Math.round((downloaded / contentLength) * 100), 99);
+                    if (progressBar) progressBar.style.width = `${Math.max(pct, 20)}%`;
+                    if (detailText) detailText.innerText = `${formatBytes(downloaded)} / ${formatBytes(contentLength)} (${pct}%)`;
+                  } else {
+                    if (progressBar) progressBar.style.width = '65%';
+                    if (detailText) detailText.innerText = `ดาวน์โหลดแล้ว ${formatBytes(downloaded)}...`;
+                  }
+                  break;
+                case 'Finished':
+                  if (progressBar) progressBar.style.width = '100%';
+                  if (statusText) statusText.innerText = 'การติดตั้งเสร็จสมบูรณ์!';
+                  if (detailText) detailText.innerText = 'กำลังรีสตาร์ตเข้าสู่เวอร์ชันใหม่...';
+                  break;
+              }
+            });
+
+            // Relaunch the app to apply update
+            if (statusText) statusText.innerText = 'กำลังเริ่มโปรแกรมใหม่...';
+            await new Promise(r => setTimeout(r, 900));
+            if (process && typeof process.relaunch === 'function') {
+              await process.relaunch();
+              return;
+            } else {
+              window.location.reload();
+              return;
+            }
+          }
+        }
+
+        // If up to date
+        if (progressBar) progressBar.style.width = '100%';
+        if (statusText) statusText.innerText = 'ระบบเป็นเวอร์ชันล่าสุดแล้ว';
+        if (detailText) detailText.innerText = 'กำลังเริ่มระบบ...';
+        await new Promise(r => setTimeout(r, 800));
+        forceDismissSplashScreen();
+
+      } catch (err) {
+        console.warn('Auto updater check finished/offline:', err);
+        if (progressBar) progressBar.style.width = '100%';
+        if (statusText) statusText.innerText = 'เข้าสู่โปรแกรม';
+        if (detailText) detailText.innerText = 'กำลังเริ่มระบบ...';
+        await new Promise(r => setTimeout(r, 600));
+        forceDismissSplashScreen();
       }
     }
 
@@ -3471,6 +3645,7 @@
     function initializeApp() {
       if (appInitialized) return;
       appInitialized = true;
+      initDiscordAutoUpdater();
       loadStudentFromStorage();
       loadCartFromStorage();
       fetchStoreData();
