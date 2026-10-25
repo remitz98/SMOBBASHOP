@@ -178,6 +178,35 @@
       }
     }
 
+    /* ==================== SLEEK THEME-MATCHED SCROLLBAR ==================== */
+    ::-webkit-scrollbar {
+      width: 6px;
+      height: 6px;
+    }
+    ::-webkit-scrollbar-track {
+      background: transparent;
+    }
+    ::-webkit-scrollbar-thumb {
+      background: #cbd5e1;
+      border-radius: 9999px;
+    }
+    ::-webkit-scrollbar-thumb:hover {
+      background: #94a3b8;
+    }
+    html.dark ::-webkit-scrollbar-thumb {
+      background: #334155;
+    }
+    html.dark ::-webkit-scrollbar-thumb:hover {
+      background: #475569;
+    }
+    * {
+      scrollbar-width: thin;
+      scrollbar-color: #cbd5e1 transparent;
+    }
+    html.dark * {
+      scrollbar-color: #334155 transparent;
+    }
+
     /* ==================== DARK THEME GLOBAL STYLES ==================== */
     html.dark {
       color-scheme: dark;
@@ -200,13 +229,41 @@
       background-color: #1e293b !important;
       color: #f1f5f9 !important;
     }
+    html.dark [class*="bg-slate-50"],
+    html.dark [class*="bg-slate-100"],
     html.dark .bg-slate-50,
     html.dark .bg-slate-100 {
       background-color: #0f172a !important;
       color: #e2e8f0 !important;
+      border-color: #334155 !important;
     }
+    html.dark [class*="bg-slate-200"],
     html.dark .bg-slate-200 {
-      background-color: #334155 !important;
+      background-color: #1e293b !important;
+      border-color: #334155 !important;
+    }
+
+    /* Info / Pickup Notice Cards (Indigo Tint) in Dark Mode */
+    html.dark [class*="bg-indigo-50"],
+    html.dark .bg-indigo-50 {
+      background-color: rgba(30, 41, 59, 0.9) !important;
+      border-color: #334155 !important;
+      color: #f1f5f9 !important;
+    }
+    html.dark [class*="bg-indigo-50"] b,
+    html.dark [class*="bg-indigo-50"] div,
+    html.dark [class*="bg-indigo-50"] p,
+    html.dark .bg-indigo-50 b,
+    html.dark .bg-indigo-50 div {
+      color: #f1f5f9 !important;
+    }
+    html.dark [class*="bg-indigo-50"] .text-slate-500,
+    html.dark [class*="bg-indigo-50"] .text-slate-400,
+    html.dark [class*="bg-indigo-50"] span {
+      color: #94a3b8 !important;
+    }
+    html.dark [class*="bg-indigo-50"] i {
+      color: #818cf8 !important;
     }
 
     /* Text Adjustments */
@@ -310,6 +367,43 @@
     }
     html.dark #receiptPaper .border-slate-200 {
       border-color: #e2e8f0 !important;
+    }
+
+    /* Modal Close Buttons in Dark Mode */
+    html.dark button[onclick*="close"],
+    html.dark .rounded-full[class*="bg-slate-200"] {
+      background-color: #334155 !important;
+      color: #f8fafc !important;
+      border: 1px solid #475569 !important;
+    }
+    html.dark button[onclick*="close"]:hover,
+    html.dark .rounded-full[class*="bg-slate-200"]:hover {
+      background-color: #475569 !important;
+      color: #ffffff !important;
+    }
+    html.dark button[onclick*="close"] i,
+    html.dark .rounded-full[class*="bg-slate-200"] i {
+      color: #f8fafc !important;
+    }
+
+    /* Golden Rule: Any forced light card/container MUST strictly use dark font */
+    html.dark .light-box,
+    html.dark .light-box *,
+    html.dark #receiptPaper,
+    html.dark #receiptPaper * {
+      color: #0f172a !important;
+    }
+    html.dark #receiptPaper {
+      background-color: #ffffff !important;
+    }
+    html.dark #receiptPaper .text-slate-500,
+    html.dark #receiptPaper .text-slate-600,
+    html.dark #receiptPaper .text-slate-400 {
+      color: #475569 !important;
+    }
+    html.dark #receiptPaper .border-slate-200,
+    html.dark #receiptPaper .border-slate-100 {
+      border-color: #cbd5e1 !important;
     }
 
     /* SweetAlert2 in Dark Mode */

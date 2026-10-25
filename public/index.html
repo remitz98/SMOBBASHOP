@@ -376,6 +376,35 @@
       }
     }
 
+    /* ==================== SLEEK THEME-MATCHED SCROLLBAR ==================== */
+    ::-webkit-scrollbar {
+      width: 6px;
+      height: 6px;
+    }
+    ::-webkit-scrollbar-track {
+      background: transparent;
+    }
+    ::-webkit-scrollbar-thumb {
+      background: #cbd5e1;
+      border-radius: 9999px;
+    }
+    ::-webkit-scrollbar-thumb:hover {
+      background: #94a3b8;
+    }
+    html.dark ::-webkit-scrollbar-thumb {
+      background: #334155;
+    }
+    html.dark ::-webkit-scrollbar-thumb:hover {
+      background: #475569;
+    }
+    * {
+      scrollbar-width: thin;
+      scrollbar-color: #cbd5e1 transparent;
+    }
+    html.dark * {
+      scrollbar-color: #334155 transparent;
+    }
+
     /* ==================== DARK THEME GLOBAL STYLES ==================== */
     html.dark {
       color-scheme: dark;
@@ -398,13 +427,80 @@
       background-color: #1e293b !important;
       color: #f1f5f9 !important;
     }
+    html.dark [class*="bg-slate-50"],
+    html.dark [class*="bg-slate-100"],
     html.dark .bg-slate-50,
     html.dark .bg-slate-100 {
       background-color: #0f172a !important;
       color: #e2e8f0 !important;
+      border-color: #334155 !important;
     }
+    html.dark [class*="bg-slate-200"],
     html.dark .bg-slate-200 {
+      background-color: #1e293b !important;
+      border-color: #334155 !important;
+    }
+
+    /* Info / Pickup Notice Cards (Indigo Tint) in Dark Mode */
+    html.dark [class*="bg-indigo-50"],
+    html.dark .bg-indigo-50 {
+      background-color: rgba(30, 41, 59, 0.9) !important;
+      border-color: #334155 !important;
+      color: #f1f5f9 !important;
+    }
+    html.dark [class*="bg-indigo-50"] b,
+    html.dark [class*="bg-indigo-50"] div,
+    html.dark [class*="bg-indigo-50"] p,
+    html.dark .bg-indigo-50 b,
+    html.dark .bg-indigo-50 div {
+      color: #f1f5f9 !important;
+    }
+    html.dark [class*="bg-indigo-50"] .text-slate-500,
+    html.dark [class*="bg-indigo-50"] .text-slate-400,
+    html.dark [class*="bg-indigo-50"] span {
+      color: #94a3b8 !important;
+    }
+    html.dark [class*="bg-indigo-50"] i {
+      color: #818cf8 !important;
+    }
+
+    /* Warning / Size Guide Cards (Amber Tint) in Dark Mode */
+    html.dark [class*="bg-amber-50"],
+    html.dark .bg-amber-50 {
+      background-color: rgba(69, 26, 3, 0.45) !important;
+      border-color: rgba(245, 158, 11, 0.4) !important;
+      color: #fef3c7 !important;
+    }
+    html.dark [class*="bg-amber-50"] * {
+      color: #fde68a !important;
+    }
+
+    /* Success / Green Tinted Cards in Dark Mode */
+    html.dark [class*="bg-emerald-50"],
+    html.dark .bg-emerald-50 {
+      background-color: rgba(6, 78, 59, 0.35) !important;
+      border-color: rgba(16, 185, 129, 0.4) !important;
+      color: #d1fae5 !important;
+    }
+    html.dark [class*="bg-emerald-50"] * {
+      color: #a7f3d0 !important;
+    }
+
+    /* Modal Close Buttons in Dark Mode */
+    html.dark button[onclick*="close"],
+    html.dark .rounded-full[class*="bg-slate-200"] {
       background-color: #334155 !important;
+      color: #f8fafc !important;
+      border: 1px solid #475569 !important;
+    }
+    html.dark button[onclick*="close"]:hover,
+    html.dark .rounded-full[class*="bg-slate-200"]:hover {
+      background-color: #475569 !important;
+      color: #ffffff !important;
+    }
+    html.dark button[onclick*="close"] i,
+    html.dark .rounded-full[class*="bg-slate-200"] i {
+      color: #f8fafc !important;
     }
 
     /* Text Adjustments */
@@ -487,24 +583,24 @@
       box-shadow: 0 0 12px rgba(99, 102, 241, 0.4) !important;
     }
 
-    /* Preserve Receipt Paper Clean Official Look */
+    /* Golden Rule: Any forced light card/container MUST strictly use dark font */
+    html.dark .light-box,
+    html.dark .light-box *,
+    html.dark #receiptPaper,
+    html.dark #receiptPaper * {
+      color: #0f172a !important;
+    }
     html.dark #receiptPaper {
       background-color: #ffffff !important;
-      color: #0f172a !important;
-    }
-    html.dark #receiptPaper * {
-      color: initial;
-    }
-    html.dark #receiptPaper .text-slate-800,
-    html.dark #receiptPaper .text-slate-900 {
-      color: #0f172a !important;
     }
     html.dark #receiptPaper .text-slate-500,
-    html.dark #receiptPaper .text-slate-600 {
-      color: #64748b !important;
+    html.dark #receiptPaper .text-slate-600,
+    html.dark #receiptPaper .text-slate-400 {
+      color: #475569 !important;
     }
-    html.dark #receiptPaper .border-slate-200 {
-      border-color: #e2e8f0 !important;
+    html.dark #receiptPaper .border-slate-200,
+    html.dark #receiptPaper .border-slate-100 {
+      border-color: #cbd5e1 !important;
     }
 
     /* Ambient Dots in Dark Mode */
@@ -4045,8 +4141,8 @@
 
     function checkAppUpdateNotification() {
       const isAndroidNative = (window.AndroidNative && typeof window.AndroidNative.isAndroidNativeApp === 'function');
-      const CURRENT_LATEST_VERSION = 'v2.3.9';
-      const CURRENT_LATEST_BUILD = 23;
+      const CURRENT_LATEST_VERSION = 'v2.3.10';
+      const CURRENT_LATEST_BUILD = 24;
       const DISMISS_KEY = 'bba_update_dismissed_' + CURRENT_LATEST_VERSION;
 
       if (isAndroidNative) {
@@ -4085,10 +4181,10 @@
                   <div class="pt-1 text-slate-700 leading-relaxed">
                     <b>รายการปรับปรุงในเวอร์ชัน ${CURRENT_LATEST_VERSION}:</b>
                     <ul class="list-disc list-inside mt-1 space-y-1 text-slate-600 text-xs">
-                      <li>เพิ่มปุ่มเปลี่ยนธีม มืด/สว่าง (Dark / Light Mode) สำหรับทุกแพลตฟอร์ม (Desktop, Android, Web)</li>
-                      <li>แก้ไขการแสดงผลป้ายหมวดหมู่เสื้อในโหมดมืดให้อ่านง่าย คมชัด ไม่กลืนกับพื้นหลังสีขาว</li>
-                      <li>ระบบแจ้งเตือน Firebase Cloud Messaging (FCM) แบบ Push Notification แม้เคลียร์แอป/ปิดแอป หรือรีสตาร์ทเครื่อง</li>
-                      <li>แยกการแจ้งเตือนตามบทบาท: คำสั่งซื้อใหม่แจ้งเฉพาะแอดมิน, อัปเดตสถานะแจ้งเฉพาะนักศึกษาเจ้าของคำสั่งซื้อ</li>
+                      <li>ปรับแต่งแถบเลื่อน (Scrollbar) ให้บางเรียบหรู 6px เข้ากับธีมมืดและสว่างกลมกลืน</li>
+                      <li>ปรับแต่งสีตัวอักษรบนกรอบ/การ์ดและแถบหัวตารางให้มี Contrast คมชัด อ่านง่ายทุกส่วน</li>
+                      <li>ปรับแต่งปุ่มปิด Modal (X) ในโหมดมืดให้มองเห็นชัดเจน</li>
+                      <li>ระบบเปลี่ยนธีม มืด/สว่าง บน Desktop, Android และ Web</li>
                     </ul>
                   </div>
                 </div>
@@ -4114,13 +4210,13 @@
     function handleMobileAccountClick() {
       const isAndroidNative = (window.AndroidNative && typeof window.AndroidNative.isAndroidNativeApp === 'function');
       let isOldVersion = false;
-      const curVer = 'v2.3.9';
+      const curVer = 'v2.3.10';
       if (isAndroidNative) {
         let build = 0;
         if (typeof window.AndroidNative.getAppVersionCode === 'function') {
           try { build = Number(window.AndroidNative.getAppVersionCode()) || 0; } catch (e) {}
         }
-        if (build < 23) isOldVersion = true;
+        if (build < 24) isOldVersion = true;
       }
 
       const hasAdminPin = Boolean(localStorage.getItem('bba_admin_pin') || sessionStorage.getItem('bba_admin_pin'));
