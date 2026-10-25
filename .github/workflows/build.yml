@@ -108,7 +108,7 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          TAG="v2.2.5"
+          TAG="v2.2.6"
           shopt -s globstar nullglob
           FILES=(all-dist/**/*.apk all-dist/**/*.msi all-dist/**/*.exe all-dist/**/*.dmg)
           echo "Release files found:"
@@ -119,7 +119,7 @@ jobs:
           else
             echo "Creating release $TAG..."
             gh release create "$TAG" \
-              --title "SMO BBA SHOP v2.2.5 (Official Native Release - Sticky Header & Mobile Safe Areas)" \
-              --notes "เวอร์ชัน v2.2.5: 1. ตรึงแถบนำทางด้านบน (Top Navigation Bar) ให้คงอยู่ตลอดเวลาเมื่อเลื่อนหน้าจอ ทั้งบนคอมพิวเตอร์และมือถือ 2. ปรับปรุงระยะห่างด้านบนของหน้าต่างตะกร้าสินค้าบนมือถือ ไม่ให้ชิด Status Bar หรือรอยบากกล้อง 3. รองรับ Android 17 เต็มรูปแบบ" \
+              --title "SMO BBA SHOP v2.2.6 (Official Native Release - Permanent Signing Key & Sticky Header)" \
+              --notes "เวอร์ชัน v2.2.6: 1. เพิ่ม Permanent Signing Key กุญแจลายเซ็นดิจิทัลถาวรเพื่อรองรับการกดอัปเดตแอปโดยตรง 2. ตรึงแถบนำทางด้านบน (Top Navigation Bar) ตลอดการเลื่อนจอ 3. ปรับปรุงระยะห่างด้านบนของหน้าต่างตะกร้าสินค้าบนมือถือ ไม่ให้ชิด Status Bar 4. รองรับ Android 17 เต็มรูปแบบ" \
               "${FILES[@]}"
           fi

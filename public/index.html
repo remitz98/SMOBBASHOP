@@ -3245,7 +3245,7 @@
 
     // ==================== APP UPDATE CHECKER ====================
     function promptManualAppUpdate() {
-      const CURRENT_LATEST_VERSION = 'v2.2.5';
+      const CURRENT_LATEST_VERSION = 'v2.2.6';
       Swal.fire({
         icon: 'info',
         title: 'อัปเดตแอปพลิเคชัน',
@@ -3264,8 +3264,8 @@
 
     function checkAppUpdateNotification() {
       const isAndroidNative = (window.AndroidNative && typeof window.AndroidNative.isAndroidNativeApp === 'function');
-      const CURRENT_LATEST_VERSION = 'v2.2.5';
-      const CURRENT_LATEST_BUILD = 9;
+      const CURRENT_LATEST_VERSION = 'v2.2.6';
+      const CURRENT_LATEST_BUILD = 10;
       const DISMISS_KEY = 'bba_update_dismissed_' + CURRENT_LATEST_VERSION;
 
       if (isAndroidNative) {
@@ -3283,7 +3283,7 @@
           } catch (e) {}
         }
 
-        // If installedBuild is 0 or less than 9, this is an older APK version!
+        // If installedBuild is 0 or less than 10, this is an older APK version!
         if (installedBuild < CURRENT_LATEST_BUILD) {
           if (sessionStorage.getItem(DISMISS_KEY)) return;
 
@@ -3304,10 +3304,14 @@
                   <div class="pt-1 text-slate-700 leading-relaxed">
                     <b>รายการปรับปรุงในเวอร์ชัน ${CURRENT_LATEST_VERSION}:</b>
                     <ul class="list-disc list-inside mt-1 space-y-1 text-slate-600 text-xs">
+                      <li>เพิ่มกุญแจลายเซ็นดิจิทัลถาวร (Permanent Signing Key) เพื่อรองรับการกดอัปเดตแอปโดยตรง</li>
                       <li>ตรึงแถบนำทางด้านบน (Top Navigation Bar) ให้คงอยู่ตลอดเวลาเมื่อเลื่อนหน้าจอ ทั้งบนคอมและมือถือ</li>
                       <li>ปรับปรุงระยะห่างแถบด้านบนของหน้าต่างตะกร้าสินค้าบนมือถือ ไม่ให้ชิด Status Bar</li>
                       <li>เพิ่มการรองรับระบบปฏิบัติการ Android รุ่นใหม่ล่าสุดครอบคลุมถึง Android 17</li>
                     </ul>
+                    <div class="mt-2.5 p-2 bg-amber-50 border border-amber-200 rounded-lg text-amber-900 text-[11px] leading-snug">
+                      💡 <b>คำแนะนำสำหรับการเปลี่ยนผ่าน:</b> หากมือถือขึ้นเตือน <i>"การอัปเดตไม่เข้ากัน (Signatures do not match)"</i> ให้ถอนการติดตั้งเวอร์ชันเก่าออก 1 ครั้งก่อน จากนั้นลงเวอร์ชันใหม่นี้ แล้วในเวอร์ชันถัดไปทั้งหมดจะสามารถกดอัปเดตทับได้โดยตรงทันที
+                    </div>
                   </div>
                 </div>
               `,
@@ -3332,13 +3336,13 @@
     function handleMobileAccountClick() {
       const isAndroidNative = (window.AndroidNative && typeof window.AndroidNative.isAndroidNativeApp === 'function');
       let isOldVersion = false;
-      const curVer = 'v2.2.5';
+      const curVer = 'v2.2.6';
       if (isAndroidNative) {
         let build = 0;
         if (typeof window.AndroidNative.getAppVersionCode === 'function') {
           try { build = Number(window.AndroidNative.getAppVersionCode()) || 0; } catch (e) {}
         }
-        if (build < 9) isOldVersion = true;
+        if (build < 10) isOldVersion = true;
       }
 
       if (currentStudent) {
