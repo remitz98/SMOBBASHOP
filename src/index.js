@@ -660,6 +660,29 @@ app.post('/api/orders', async (c) => {
       }
     }
 
+    // กระจายสัญญาณคำสั่งซื้อใหม่แบบ Realtime ไปยังหน้าจอแอดมินผ่าน WebSocket + Durable Objects
+    try {
+      if (c.env.ORDER_NOTIFIER) {
+        const doId = c.env.ORDER_NOTIFIER.idFromName('global_order_notifier');
+        const stub = c.env.ORDER_NOTIFIER.get(doId);
+        stub.fetch('http://order-notifier/broadcast', {
+          method: 'POST',
+          body: JSON.stringify({
+            type: 'NEW_ORDER',
+            orderId: orderId,
+            customerName: customerName,
+            studentId: studentId,
+            totalAmount: calculatedTotal,
+            itemsSummary: itemsSummary,
+            pickupLocation: pickupLocation,
+            timestamp: new Date().toISOString()
+          })
+        }).catch(e => console.error('DO broadcast error:', e));
+      }
+    } catch (wsErr) {
+      console.error('Failed to broadcast new order:', wsErr);
+    }
+
     return c.json({
       success: true,
       message: 'บันทึกคำสั่งซื้อสำเร็จ',
@@ -903,6 +926,24 @@ app.post('/api/admin/orders/status', async (c) => {
         emailNotice = '\n(ไม่พบอีเมลนักศึกษาสำหรับคำสั่งซื้อนี้)';
       }
     }
+
+    // กระจายสัญญาณอัปเดตสถานะคำสั่งซื้อไปยังหน้าจอแอดมินทุกเครื่อง
+    try {
+      if (c.env.ORDER_NOTIFIER) {
+        const doId = c.env.ORDER_NOTIFIER.idFromName('global_order_notifier');
+        const stub = c.env.ORDER_NOTIFIER.get(doId);
+        stub.fetch('http://order-notifier/broadcast', {
+          method: 'POST',
+          body: JSON.stringify({
+            type: 'ORDER_UPDATED',
+            orderId: orderId,
+            newStatus: newStatus,
+            adminNotes: finalAdminNotes,
+            timestamp: new Date().toISOString()
+          })
+        }).catch(e => console.error('DO broadcast status error:', e));
+      }
+    } catch (e) {}
 
     return c.json({ success: true, message: `อัปเดตสถานะเป็น "${newStatus}" สำเร็จเรียบร้อย${emailNotice}` });
   } catch (error) {
@@ -1183,6 +1224,93 @@ app.post('/api/admin/email/test', async (c) => {
   } catch (error) {
     return c.json({ success: false, message: error.toString() }, 500);
   }
+});
+
+// ==================== 2.8 WEBSOCKET REALTIME NOTIFICATION (DURABLE OBJECTS) ====================
+export class OrderNotifier {
+  constructor(state, env) {
+    this.state = state;
+    this.env = env;
+    this.sessions = new Set();
+  }
+
+  async fetch(request) {
+    const url = new URL(request.url);
+    if (url.pathname === '/ws') {
+      const upgradeHeader = request.headers.get('Upgrade');
+      if (!upgradeHeader || upgradeHeader.toLowerCase() !== 'websocket') {
+        return new Response('Expected Upgrade: websocket', { status: 426 });
+      }
+
+      const pair = new WebSocketPair();
+      const client = pair[0];
+      const server = pair[1];
+
+      server.accept();
+      this.sessions.add(server);
+
+      server.addEventListener('message', async (event) => {
+        try {
+          const msg = JSON.parse(event.data);
+          if (msg.type === 'ping') {
+            server.send(JSON.stringify({ type: 'pong', timestamp: Date.now() }));
+          }
+        } catch (e) {}
+      });
+
+      const closeHandler = () => {
+        this.sessions.delete(server);
+      };
+      server.addEventListener('close', closeHandler);
+      server.addEventListener('error', closeHandler);
+
+      // ส่งข้อความต้อนรับยืนยันการเชื่อมต่อ
+      server.send(JSON.stringify({
+        type: 'CONNECTED',
+        message: 'เชื่อมต่อ Realtime WebSocket (Durable Objects) สำเร็จ',
+        connectedAt: new Date().toISOString()
+      }));
+
+      return new Response(null, {
+        status: 101,
+        webSocket: client
+      });
+    }
+
+    if (url.pathname === '/broadcast' && request.method === 'POST') {
+      try {
+        const payload = await request.text();
+        for (const session of this.sessions) {
+          try {
+            session.send(payload);
+          } catch (err) {
+            this.sessions.delete(session);
+          }
+        }
+        return new Response('OK', { status: 200 });
+      } catch (err) {
+        return new Response(err.message, { status: 500 });
+      }
+    }
+
+    return new Response('Not found', { status: 404 });
+  }
+}
+
+// WebSocket Endpoint สำหรับ Admin Realtime Updates ผ่าน Durable Objects
+app.get('/api/admin/ws', async (c) => {
+  if (!c.env.ORDER_NOTIFIER) {
+    return c.text('Durable Object binding ORDER_NOTIFIER is not configured', 503);
+  }
+  const pin = c.req.query('pin');
+  const isValid = await verifyAdminPin(c.env.DB, pin);
+  if (!isValid) {
+    return c.text('Unauthorized: Invalid PIN', 401);
+  }
+
+  const id = c.env.ORDER_NOTIFIER.idFromName('global_order_notifier');
+  const stub = c.env.ORDER_NOTIFIER.get(id);
+  return stub.fetch(new Request('http://order-notifier/ws', c.req.raw));
 });
 
 // ==================== 3. FRONTEND STATIC ASSET ROUTING ====================

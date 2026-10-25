@@ -16,6 +16,15 @@ database_id = "072702ec-42a1-46f0-8697-da945b137f56"
 binding = "BUCKET"
 bucket_name = "bba-store-bucket"
 
+[durable_objects]
+bindings = [
+  { name = "ORDER_NOTIFIER", class_name = "OrderNotifier" }
+]
+
+[[migrations]]
+tag = "v1"
+new_sqlite_classes = ["OrderNotifier"]
+
 
 # ========== STAGING ENVIRONMENT ==========
 

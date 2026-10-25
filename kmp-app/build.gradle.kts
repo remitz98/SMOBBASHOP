@@ -44,6 +44,8 @@ kotlin {
         androidMain.dependencies {
             implementation(libs.androidx.activity.compose)
             implementation(libs.ktor.client.okhttp)
+            implementation("androidx.swiperefreshlayout:swiperefreshlayout:1.1.0")
+            implementation("androidx.core:core-ktx:1.13.1")
         }
 
         val desktopMain by getting {
@@ -63,8 +65,8 @@ android {
         applicationId = "org.smobba.store"
         minSdk = 24
         targetSdk = 35
-        versionCode = 18
-        versionName = "1.0.18"
+        versionCode = 19
+        versionName = "1.0.19"
     }
 
     signingConfigs {
@@ -109,7 +111,7 @@ compose.desktop {
                 org.jetbrains.compose.desktop.application.dsl.TargetFormat.Exe
             )
             packageName = "SMO BBA SHOP"
-            packageVersion = "1.0.18"
+            packageVersion = "1.0.19"
             description = "SMO BBA SHOP Official Store Application"
             vendor = "SMO BBA UBRU"
             windows {

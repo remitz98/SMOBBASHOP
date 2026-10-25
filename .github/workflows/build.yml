@@ -122,8 +122,8 @@ jobs:
           node -e "
             const fs = require('fs');
             const path = require('path');
-            const TAG = 'v2.3.4';
-            const VERSION = '1.0.18';
+            const TAG = 'v2.3.5';
+            const VERSION = '1.0.19';
             let merged = {
               version: VERSION,
               notes: 'SMO BBA SHOP ' + TAG + ' (Discord-style Auto-Update)',
@@ -193,7 +193,7 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          TAG="v2.3.4"
+          TAG="v2.3.5"
           shopt -s globstar nullglob
           FILES=(all-dist/**/*.apk all-dist/**/*.msi all-dist/**/*.exe all-dist/**/*.dmg all-dist/**/*.zip all-dist/**/*.tar.gz all-dist/**/*.sig all-dist/**/latest.json)
           echo "Release files found:"
@@ -204,7 +204,7 @@ jobs:
           else
             echo "Creating release $TAG..."
             gh release create "$TAG" \
-              --title "SMO BBA SHOP v2.3.4 (Shirt Pickup Status Revert & Correction)" \
-              --notes "เวอร์ชัน v2.3.4: 1. เพิ่มปุ่มแก้ไข/ย้อนสถานะรับเสื้อในหน้าแอดมิน เพื่อป้องกันและแก้ไขกรณีแอดมินกดบันทึกรับเสื้อผิด 2. เพิ่มระบบ Modal ให้แอดมินปรับเปลี่ยนสถานะคำสั่งซื้อได้ยืดหยุ่นและบันทึกหมายเหตุ 3. ปรับปรุงการจัดการสต็อกและอีเมลแจ้งเตือนเมื่อแก้ไขสถานะ 4. รองรับการแก้ไขย้อนสถานะรับเสื้อบนระบบ Android KMP" \
+              --title "SMO BBA SHOP v2.3.5 (Realtime Admin WebSocket + DO, Android Notification & Pull-to-Refresh)" \
+              --notes "เวอร์ชัน v2.3.5: 1. ระบบ Realtime Admin ผ่าน WebSocket + Cloudflare Durable Objects อัปเดตออเดอร์ใหม่ทันทีโดยไม่ต้องรีเฟรชหน้าเว็บ พร้อมเสียงแจ้งเตือน 2. ระบบ Android System Notification แจ้งเตือนเมื่อมีคำสั่งซื้อใหม่เข้ามา 3. ระบบ Pull-to-Refresh แบบ Lazada/Shopee ดึงหน้าจอลงมาเพื่อรีเฟรชร้านค้า" \
               "${FILES[@]}"
           fi

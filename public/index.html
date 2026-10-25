@@ -464,6 +464,16 @@
     </div>
   </div>
 
+  <!-- ==================== LAZADA-STYLE PULL TO REFRESH INDICATOR ==================== -->
+  <div id="pullToRefreshIndicator" class="fixed top-2 left-0 right-0 z-50 flex items-center justify-center pointer-events-none transition-all duration-200 opacity-0 -translate-y-8">
+    <div class="px-4 py-2 rounded-full bg-white/95 backdrop-blur-md shadow-xl border border-indigo-100 text-xs font-bold text-slate-700 flex items-center gap-2">
+      <div id="ptrIconWrapper" class="w-5 h-5 rounded-full bg-indigo-50 text-indigo-600 flex items-center justify-center transition-transform">
+        <i id="ptrIcon" class="fa-solid fa-arrow-down text-xs"></i>
+      </div>
+      <span id="ptrText" class="text-xs text-slate-800">เลื่อนลงเพื่อรีเฟรช...</span>
+    </div>
+  </div>
+
   <!-- ==================== 1. TOP NAVBAR ==================== -->
   <header id="mainHeader" class="fixed top-0 left-0 right-0 z-40 bg-white/95 backdrop-blur shadow-sm border-b border-slate-100 w-full" style="position: fixed !important; top: 0 !important; left: 0 !important; right: 0 !important; width: 100% !important; z-index: 40 !important;">
     <div class="max-w-7xl mx-auto px-2.5 sm:px-6 lg:px-8 h-14 sm:h-16 flex items-center justify-between gap-2 sm:gap-4 w-full">
@@ -1593,6 +1603,142 @@
         showStoreLoadError(err.message || 'ไม่สามารถเชื่อมต่อร้านค้าได้ กรุณาลองอีกครั้ง');
       }
     }
+
+    // ==================== LAZADA-STYLE STORE REFRESH & PULL-TO-REFRESH ====================
+    window.triggerStoreRefresh = async function() {
+      try {
+        await fetchStoreData();
+      } finally {
+        if (window.AndroidNative && typeof window.AndroidNative.finishRefresh === 'function') {
+          try { window.AndroidNative.finishRefresh(); } catch (e) {}
+        }
+      }
+    };
+
+    (function initPullToRefresh() {
+      let touchStartY = 0;
+      let touchCurrentY = 0;
+      let isPulling = false;
+      let isRefreshing = false;
+      const PULL_THRESHOLD = 85;
+
+      const indicator = document.getElementById('pullToRefreshIndicator');
+      const iconWrapper = document.getElementById('ptrIconWrapper');
+      const icon = document.getElementById('ptrIcon');
+      const text = document.getElementById('ptrText');
+
+      if (!indicator || !icon || !text) return;
+
+      window.addEventListener('touchstart', (e) => {
+        if (window.scrollY <= 2 && !isRefreshing && e.touches.length === 1) {
+          touchStartY = e.touches[0].clientY;
+          touchCurrentY = touchStartY;
+          isPulling = true;
+        } else {
+          isPulling = false;
+        }
+      }, { passive: true });
+
+      window.addEventListener('touchmove', (e) => {
+        if (!isPulling || isRefreshing || e.touches.length !== 1) return;
+        if (window.scrollY > 3) {
+          if (isPulling) {
+            isPulling = false;
+            resetIndicator();
+          }
+          return;
+        }
+
+        touchCurrentY = e.touches[0].clientY;
+        const diff = touchCurrentY - touchStartY;
+
+        if (diff > 0 && window.scrollY <= 2) {
+          const translateY = Math.min(diff * 0.45, 90);
+          indicator.style.transform = `translateY(${translateY}px)`;
+          indicator.style.opacity = Math.min(diff / 35, 1);
+
+          if (diff >= PULL_THRESHOLD) {
+            text.textContent = 'ปล่อยเพื่อรีเฟรช...';
+            if (iconWrapper) iconWrapper.style.transform = 'rotate(180deg)';
+          } else {
+            text.textContent = 'เลื่อนลงเพื่อรีเฟรช...';
+            if (iconWrapper) iconWrapper.style.transform = 'rotate(0deg)';
+          }
+        } else {
+          resetIndicator();
+        }
+      }, { passive: true });
+
+      window.addEventListener('touchend', async () => {
+        if (!isPulling || isRefreshing) return;
+        const diff = touchCurrentY - touchStartY;
+        isPulling = false;
+
+        if (diff >= PULL_THRESHOLD && window.scrollY <= 4) {
+          isRefreshing = true;
+          indicator.style.transform = 'translateY(60px)';
+          text.textContent = 'กำลังอัปเดตข้อมูลร้านค้า...';
+          icon.className = 'fa-solid fa-arrows-rotate text-xs fa-spin text-indigo-600';
+          if (iconWrapper) iconWrapper.style.transform = 'rotate(0deg)';
+
+          if (navigator.vibrate) {
+            try { navigator.vibrate(15); } catch (e) {}
+          }
+
+          try {
+            await fetchStoreData();
+          } catch (err) {
+            console.error('Pull to refresh error:', err);
+          } finally {
+            text.textContent = 'อัปเดตข้อมูลล่าสุดแล้ว!';
+            icon.className = 'fa-solid fa-circle-check text-xs text-emerald-600';
+            setTimeout(() => {
+              resetIndicator();
+              setTimeout(() => {
+                isRefreshing = false;
+                icon.className = 'fa-solid fa-arrow-down text-xs';
+              }, 250);
+            }, 600);
+          }
+        } else {
+          resetIndicator();
+        }
+      }, { passive: true });
+
+      function resetIndicator() {
+        indicator.style.transform = 'translateY(-32px)';
+        indicator.style.opacity = '0';
+        if (iconWrapper) iconWrapper.style.transform = 'rotate(0deg)';
+      }
+    })();
+
+    // Background WebSocket notification listener for Android admin
+    (function initBackgroundAdminNotifier() {
+      const savedPin = sessionStorage.getItem('bba_admin_pin') || localStorage.getItem('bba_admin_pin');
+      if (!savedPin) return;
+
+      const protocol = location.protocol === 'https:' ? 'wss:' : 'ws:';
+      const wsUrl = `${protocol}//${location.host}/api/admin/ws?pin=${encodeURIComponent(savedPin)}`;
+
+      let bgWs = null;
+      try {
+        bgWs = new WebSocket(wsUrl);
+        bgWs.onmessage = (event) => {
+          try {
+            const data = JSON.parse(event.data);
+            if (data.type === 'NEW_ORDER') {
+              if (window.AndroidNative && typeof window.AndroidNative.showOrderNotification === 'function') {
+                window.AndroidNative.showOrderNotification(
+                  '🛒 คำสั่งซื้อใหม่เข้ามา!',
+                  `${data.customerName} สั่งซื้อเสื้อยอด ฿${Number(data.totalAmount || 0).toLocaleString()} (รหัส ${data.orderId})`,
+                  data.orderId
+                );
+              }
+            }
+          } catch (e) {}
+        };
+      } catch (e) {}
+    })();
 
     function updateStoreUI() {
       const setTxt = (id, val) => {
@@ -3471,7 +3617,7 @@
 
     // ==================== APP UPDATE CHECKER ====================
     function promptManualAppUpdate() {
-      const CURRENT_LATEST_VERSION = 'v2.3.4';
+      const CURRENT_LATEST_VERSION = 'v2.3.5';
       Swal.fire({
         icon: 'info',
         title: 'อัปเดตแอปพลิเคชัน',
@@ -3490,8 +3636,8 @@
 
     function checkAppUpdateNotification() {
       const isAndroidNative = (window.AndroidNative && typeof window.AndroidNative.isAndroidNativeApp === 'function');
-      const CURRENT_LATEST_VERSION = 'v2.3.4';
-      const CURRENT_LATEST_BUILD = 18;
+      const CURRENT_LATEST_VERSION = 'v2.3.5';
+      const CURRENT_LATEST_BUILD = 19;
       const DISMISS_KEY = 'bba_update_dismissed_' + CURRENT_LATEST_VERSION;
 
       if (isAndroidNative) {
@@ -3558,13 +3704,13 @@
     function handleMobileAccountClick() {
       const isAndroidNative = (window.AndroidNative && typeof window.AndroidNative.isAndroidNativeApp === 'function');
       let isOldVersion = false;
-      const curVer = 'v2.3.4';
+      const curVer = 'v2.3.5';
       if (isAndroidNative) {
         let build = 0;
         if (typeof window.AndroidNative.getAppVersionCode === 'function') {
           try { build = Number(window.AndroidNative.getAppVersionCode()) || 0; } catch (e) {}
         }
-        if (build < 18) isOldVersion = true;
+        if (build < 19) isOldVersion = true;
       }
 
       if (currentStudent) {
@@ -3679,7 +3825,7 @@
           console.log('[AutoUpdater] Check result:', update);
 
           if (update) {
-            const newVersion = update.version || 'v2.3.4';
+            const newVersion = update.version || 'v2.3.5';
             if (statusText) statusText.innerText = `พบเวอร์ชันใหม่ (${newVersion})!`;
             if (detailText) detailText.innerText = 'กำลังดาวน์โหลดและติดตั้งอัปเดตอัตโนมัติ...';
             if (progressBar) progressBar.style.width = '30%';

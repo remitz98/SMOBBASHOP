@@ -267,7 +267,13 @@
           <p class="text-xs text-slate-500 mt-1">ตรวจสอบประวัติการสั่งซื้อรวมทั้งหมดของนักศึกษา, ตรวจสอบสลิป, แจ้งพร้อมรับเสื้อ และบันทึกการส่งมอบเสื้อ</p>
         </div>
 
-        <div class="flex items-center gap-2">
+        <div class="flex flex-wrap items-center gap-2">
+          <!-- Realtime Status Indicator (WebSocket + Durable Objects) -->
+          <div id="realtimeStatusPill" title="สถานะการเชื่อมต่อ Realtime WebSocket (Durable Objects)" class="px-3 py-1.5 rounded-xl border border-slate-200 bg-white text-slate-500 text-xs font-semibold flex items-center gap-2 shadow-sm transition">
+            <span id="realtimeStatusDot" class="w-2 h-2 rounded-full bg-slate-400"></span>
+            <span id="realtimeStatusText">Realtime เชื่อมต่อ...</span>
+          </div>
+
           <button onclick="loadAdminData()" class="px-3.5 py-2 rounded-xl bg-white border border-slate-200 text-xs font-semibold text-slate-700 hover:bg-slate-50 transition flex items-center gap-1.5 shadow-sm">
             <i class="fa-solid fa-rotate-right"></i> รีเฟรช
           </button>
@@ -1161,6 +1167,7 @@
     function exitAdmin() {
       adminTokenPin = '';
       try { sessionStorage.removeItem('bba_admin_pin'); } catch (e) {}
+      closeAdminWebSocket();
       switchView('login');
       const input = document.getElementById('inputLoginPin');
       if (input) {
@@ -1169,12 +1176,12 @@
       }
     }
 
-    async function loadAdminData() {
+    async function loadAdminData(silent = false) {
       if (!adminTokenPin) {
         switchView('login');
         return;
       }
-      Swal.showLoading();
+      if (!silent) Swal.showLoading();
       try {
         const res = await fetch(API_BASE + '/api/admin/data', {
           method: 'POST',
@@ -1182,10 +1189,11 @@
           body: JSON.stringify({ pin: adminTokenPin })
         });
         const resData = await res.json();
-        Swal.close();
+        if (!silent) Swal.close();
         if (resData && resData.success) {
           try { sessionStorage.setItem('bba_admin_pin', adminTokenPin); } catch (e) {}
           switchView('admin');
+          initAdminWebSocket();
           document.getElementById('statSales').textContent = '฿' + Number(resData.stats.totalSales || 0).toLocaleString();
           document.getElementById('statPending').textContent = resData.stats.pendingCount || 0;
           document.getElementById('statPaid').textContent = resData.stats.paidCount || 0;
@@ -1211,12 +1219,205 @@
         } else {
           adminTokenPin = '';
           try { sessionStorage.removeItem('bba_admin_pin'); } catch (e) {}
+          closeAdminWebSocket();
           switchView('login');
-          Swal.fire('ปฏิเสธการเข้าถึง', (resData && resData.message) || 'รหัส PIN ไม่ถูกต้อง', 'error');
+          if (!silent) Swal.fire('ปฏิเสธการเข้าถึง', (resData && resData.message) || 'รหัส PIN ไม่ถูกต้อง', 'error');
         }
       } catch (err) {
-        Swal.close();
-        Swal.fire('ข้อผิดพลาด', err.message || 'ไม่สามารถเชื่อมต่อเซิร์ฟเวอร์ได้', 'error');
+        if (!silent) {
+          Swal.close();
+          Swal.fire('ข้อผิดพลาด', err.message || 'ไม่สามารถเชื่อมต่อเซิร์ฟเวอร์ได้', 'error');
+        }
+      }
+    }
+
+    // ==================== REALTIME WEBSOCKET (DURABLE OBJECTS) ====================
+    let adminWs = null;
+    let wsReconnectTimeout = null;
+    let wsHeartbeatInterval = null;
+
+    function initAdminWebSocket() {
+      if (!adminTokenPin) return;
+      if (adminWs && (adminWs.readyState === WebSocket.OPEN || adminWs.readyState === WebSocket.CONNECTING)) {
+        return;
+      }
+
+      updateRealtimeBadge('connecting');
+
+      const protocol = location.protocol === 'https:' ? 'wss:' : 'ws:';
+      const wsUrl = `${protocol}//${location.host}/api/admin/ws?pin=${encodeURIComponent(adminTokenPin)}`;
+
+      try {
+        adminWs = new WebSocket(wsUrl);
+
+        adminWs.onopen = () => {
+          console.log('[Realtime] WebSocket connected to Cloudflare Durable Objects');
+          updateRealtimeBadge('connected');
+          if (wsReconnectTimeout) {
+            clearTimeout(wsReconnectTimeout);
+            wsReconnectTimeout = null;
+          }
+          if (wsHeartbeatInterval) clearInterval(wsHeartbeatInterval);
+          wsHeartbeatInterval = setInterval(() => {
+            if (adminWs && adminWs.readyState === WebSocket.OPEN) {
+              try { adminWs.send(JSON.stringify({ type: 'ping' })); } catch (e) {}
+            }
+          }, 25000);
+
+          if ('Notification' in window && Notification.permission === 'default') {
+            Notification.requestPermission().catch(() => {});
+          }
+        };
+
+        adminWs.onmessage = (event) => {
+          try {
+            const data = JSON.parse(event.data);
+            handleRealtimeMessage(data);
+          } catch (e) {
+            console.error('[Realtime] Message parse error:', e);
+          }
+        };
+
+        adminWs.onclose = () => {
+          updateRealtimeBadge('disconnected');
+          if (wsHeartbeatInterval) {
+            clearInterval(wsHeartbeatInterval);
+            wsHeartbeatInterval = null;
+          }
+          scheduleWsReconnect();
+        };
+
+        adminWs.onerror = (err) => {
+          console.warn('[Realtime] WebSocket error:', err);
+          updateRealtimeBadge('disconnected');
+        };
+      } catch (err) {
+        console.error('[Realtime] Connection failed:', err);
+        updateRealtimeBadge('disconnected');
+        scheduleWsReconnect();
+      }
+    }
+
+    function scheduleWsReconnect() {
+      if (!adminTokenPin) return;
+      if (wsReconnectTimeout) return;
+      wsReconnectTimeout = setTimeout(() => {
+        wsReconnectTimeout = null;
+        if (adminTokenPin) initAdminWebSocket();
+      }, 4000);
+    }
+
+    function closeAdminWebSocket() {
+      if (wsReconnectTimeout) {
+        clearTimeout(wsReconnectTimeout);
+        wsReconnectTimeout = null;
+      }
+      if (wsHeartbeatInterval) {
+        clearInterval(wsHeartbeatInterval);
+        wsHeartbeatInterval = null;
+      }
+      if (adminWs) {
+        try { adminWs.close(); } catch (e) {}
+        adminWs = null;
+      }
+      updateRealtimeBadge('disconnected');
+    }
+
+    function updateRealtimeBadge(status) {
+      const pill = document.getElementById('realtimeStatusPill');
+      const dot = document.getElementById('realtimeStatusDot');
+      const text = document.getElementById('realtimeStatusText');
+      if (!pill || !dot || !text) return;
+
+      if (status === 'connected') {
+        pill.className = 'px-3 py-1.5 rounded-xl border border-emerald-300 bg-emerald-50 text-emerald-800 text-xs font-semibold flex items-center gap-2 shadow-sm transition';
+        dot.className = 'w-2 h-2 rounded-full bg-emerald-500 animate-pulse';
+        text.textContent = 'Realtime เชื่อมต่อแล้ว (Durable Objects)';
+      } else if (status === 'connecting') {
+        pill.className = 'px-3 py-1.5 rounded-xl border border-amber-300 bg-amber-50 text-amber-800 text-xs font-semibold flex items-center gap-2 shadow-sm transition';
+        dot.className = 'w-2 h-2 rounded-full bg-amber-500 animate-ping';
+        text.textContent = 'กำลังเชื่อมต่อ Realtime...';
+      } else {
+        pill.className = 'px-3 py-1.5 rounded-xl border border-slate-200 bg-white text-slate-400 text-xs font-semibold flex items-center gap-2 shadow-sm transition';
+        dot.className = 'w-2 h-2 rounded-full bg-slate-300';
+        text.textContent = 'Realtime ออฟไลน์ (กำลังต่อใหม่)';
+      }
+    }
+
+    function playOrderChime() {
+      try {
+        const AudioCtx = window.AudioContext || window.webkitAudioContext;
+        if (!AudioCtx) return;
+        const ctx = new AudioCtx();
+        const now = ctx.currentTime;
+
+        const osc1 = ctx.createOscillator();
+        const gain1 = ctx.createGain();
+        osc1.type = 'sine';
+        osc1.frequency.setValueAtTime(659.25, now);
+        gain1.gain.setValueAtTime(0.35, now);
+        gain1.gain.exponentialRampToValueAtTime(0.001, now + 0.55);
+        osc1.connect(gain1);
+        gain1.connect(ctx.destination);
+        osc1.start(now);
+        osc1.stop(now + 0.55);
+
+        const osc2 = ctx.createOscillator();
+        const gain2 = ctx.createGain();
+        osc2.type = 'sine';
+        osc2.frequency.setValueAtTime(987.77, now + 0.14);
+        gain2.gain.setValueAtTime(0.4, now + 0.14);
+        gain2.gain.exponentialRampToValueAtTime(0.001, now + 0.85);
+        osc2.connect(gain2);
+        gain2.connect(ctx.destination);
+        osc2.start(now + 0.14);
+        osc2.stop(now + 0.85);
+      } catch (e) {
+        console.warn('Web Audio error:', e);
+      }
+    }
+
+    function handleRealtimeMessage(data) {
+      if (!data) return;
+
+      if (data.type === 'NEW_ORDER') {
+        playOrderChime();
+
+        if (window.AndroidNative && typeof window.AndroidNative.showOrderNotification === 'function') {
+          try {
+            window.AndroidNative.showOrderNotification(
+              '🛒 คำสั่งซื้อใหม่เข้ามา!',
+              `${data.customerName} สั่งซื้อเสื้อยอด ฿${Number(data.totalAmount || 0).toLocaleString()} (รหัส ${data.orderId})`,
+              data.orderId
+            );
+          } catch (e) {
+            console.error('AndroidNative notification error:', e);
+          }
+        }
+
+        if ('Notification' in window && Notification.permission === 'granted') {
+          try {
+            new Notification('🛒 มีคำสั่งซื้อใหม่เข้ามา! (SMO BBA SHOP)', {
+              body: `${data.customerName} สั่งซื้อเสื้อยอด ฿${Number(data.totalAmount || 0).toLocaleString()} (รหัส ${data.orderId})`,
+              icon: '/app-icon.png'
+            });
+          } catch (e) {}
+        }
+
+        Swal.fire({
+          toast: true,
+          position: 'top-end',
+          icon: 'success',
+          title: '🛒 มีคำสั่งซื้อใหม่เข้ามาแล้ว!',
+          html: `<div class="text-xs"><b>${escapeHtml(data.customerName)}</b> (${escapeHtml(data.orderId)})<br>ยอดรวม: <b class="text-emerald-700">฿${Number(data.totalAmount || 0).toLocaleString()}</b></div>`,
+          showConfirmButton: false,
+          timer: 6000,
+          timerProgressBar: true
+        });
+
+        loadAdminData(true);
+      } else if (data.type === 'ORDER_UPDATED') {
+        loadAdminData(true);
       }
     }
 

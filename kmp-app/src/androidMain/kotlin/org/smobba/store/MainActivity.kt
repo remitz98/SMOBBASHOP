@@ -2,6 +2,9 @@ package org.smobba.store
 
 import android.annotation.SuppressLint
 import android.app.Activity
+import android.app.NotificationChannel
+import android.app.NotificationManager
+import android.app.PendingIntent
 import android.content.ContentValues
 import android.content.Context
 import android.content.Intent
@@ -19,19 +22,27 @@ import android.webkit.*
 import android.widget.FrameLayout
 import android.widget.Toast
 import androidx.activity.ComponentActivity
+import androidx.core.app.NotificationCompat
+import androidx.swiperefreshlayout.widget.SwipeRefreshLayout
 import java.io.File
 import java.io.FileOutputStream
 
 class MainActivity : ComponentActivity() {
 
     private lateinit var webView: WebView
+    lateinit var swipeRefreshLayout: SwipeRefreshLayout
     private var fileUploadCallback: ValueCallback<Array<Uri>>? = null
     private val FILE_CHOOSER_REQUEST_CODE = 1001
+    private val NOTIFICATION_PERMISSION_REQUEST_CODE = 2001
+    val NOTIFICATION_CHANNEL_ID = "bba_orders_channel"
 
     @SuppressLint("SetJavaScriptEnabled")
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         AppContextHolder.context = applicationContext
+
+        createNotificationChannel()
+        checkNotificationPermission()
 
         webView = WebView(this).apply {
             layoutParams = FrameLayout.LayoutParams(
@@ -59,7 +70,7 @@ class MainActivity : ComponentActivity() {
                 userAgentString = "$userAgentString BBAStoreAndroidNativeApp/1.0"
             }
 
-            // Native Android Bridge for Saving Receipts
+            // Native Android Bridge for Saving Receipts, Notifications & Refresh Control
             addJavascriptInterface(AndroidNativeBridge(this@MainActivity), "AndroidNative")
 
             webViewClient = object : WebViewClient() {
@@ -74,6 +85,13 @@ class MainActivity : ComponentActivity() {
                         }
                     }
                     return false
+                }
+
+                override fun onPageFinished(view: WebView?, url: String?) {
+                    super.onPageFinished(view, url)
+                    if (::swipeRefreshLayout.isInitialized) {
+                        swipeRefreshLayout.isRefreshing = false
+                    }
                 }
             }
 
@@ -115,7 +133,7 @@ class MainActivity : ComponentActivity() {
             }
 
             // Direct download listener
-            setDownloadListener { url, _, _, mimetype, _ ->
+            setDownloadListener { url, _, _, _, _ ->
                 try {
                     val intent = Intent(Intent.ACTION_VIEW, Uri.parse(url))
                     startActivity(intent)
@@ -127,7 +145,50 @@ class MainActivity : ComponentActivity() {
             loadUrl("https://bba-store.smobba.workers.dev")
         }
 
-        setContentView(webView)
+        // Lazada/Shopee-style SwipeRefreshLayout
+        swipeRefreshLayout = SwipeRefreshLayout(this).apply {
+            setColorSchemeColors(
+                android.graphics.Color.parseColor("#4338CA"),
+                android.graphics.Color.parseColor("#059669"),
+                android.graphics.Color.parseColor("#F59E0B")
+            )
+            setOnChildScrollUpCallback { _, _ ->
+                webView.scrollY > 0
+            }
+            setOnRefreshListener {
+                webView.evaluateJavascript(
+                    "(function() { if (typeof window.triggerStoreRefresh === 'function') { window.triggerStoreRefresh(); return 'store_refresh'; } else { window.location.reload(); return 'reload'; } })()",
+                    null
+                )
+            }
+            addView(webView)
+        }
+
+        setContentView(swipeRefreshLayout)
+    }
+
+    private fun createNotificationChannel() {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            val channel = NotificationChannel(
+                NOTIFICATION_CHANNEL_ID,
+                "คำสั่งซื้อใหม่ SMO BBA SHOP",
+                NotificationManager.IMPORTANCE_HIGH
+            ).apply {
+                description = "แจ้งเตือนเมื่อมีคำสั่งซื้อใหม่เข้ามาในระบบแบบ Realtime"
+                enableVibration(true)
+                enableLights(true)
+            }
+            val manager = getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+            manager.createNotificationChannel(channel)
+        }
+    }
+
+    private fun checkNotificationPermission() {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            if (checkSelfPermission(android.Manifest.permission.POST_NOTIFICATIONS) != android.content.pm.PackageManager.PERMISSION_GRANTED) {
+                requestPermissions(arrayOf(android.Manifest.permission.POST_NOTIFICATIONS), NOTIFICATION_PERMISSION_REQUEST_CODE)
+            }
+        }
     }
 
     override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
@@ -171,17 +232,59 @@ class MainActivity : ComponentActivity() {
 
         @JavascriptInterface
         fun getAppVersionCode(): Int {
-            return 18
+            return 19
         }
 
         @JavascriptInterface
         fun getAppVersionName(): String {
-            return "1.0.18"
+            return "1.0.19"
         }
 
         @JavascriptInterface
         fun getAndroidVersion(): Int {
             return Build.VERSION.SDK_INT
+        }
+
+        @JavascriptInterface
+        fun finishRefresh() {
+            activity.runOnUiThread {
+                if (::activity.isInitialized && ::activity.swipeRefreshLayout.isInitialized) {
+                    activity.swipeRefreshLayout.isRefreshing = false
+                }
+            }
+        }
+
+        @JavascriptInterface
+        fun showOrderNotification(title: String, message: String, orderId: String?) {
+            activity.runOnUiThread {
+                try {
+                    val intent = Intent(activity, MainActivity::class.java).apply {
+                        flags = Intent.FLAG_ACTIVITY_SINGLE_TOP or Intent.FLAG_ACTIVITY_CLEAR_TOP
+                    }
+                    val pendingIntent = PendingIntent.getActivity(
+                        activity,
+                        (System.currentTimeMillis() % 100000).toInt(),
+                        intent,
+                        PendingIntent.FLAG_UPDATE_CURRENT or (if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) PendingIntent.FLAG_IMMUTABLE else 0)
+                    )
+
+                    val notification = NotificationCompat.Builder(activity, activity.NOTIFICATION_CHANNEL_ID)
+                        .setSmallIcon(R.mipmap.ic_launcher)
+                        .setContentTitle(title)
+                        .setContentText(message)
+                        .setStyle(NotificationCompat.BigTextStyle().bigText(message))
+                        .setPriority(NotificationCompat.PRIORITY_HIGH)
+                        .setAutoCancel(true)
+                        .setContentIntent(pendingIntent)
+                        .setDefaults(NotificationCompat.DEFAULT_ALL)
+                        .build()
+
+                    val manager = activity.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+                    manager.notify((System.currentTimeMillis() % 100000).toInt(), notification)
+                } catch (e: Exception) {
+                    e.printStackTrace()
+                }
+            }
         }
 
         @JavascriptInterface
