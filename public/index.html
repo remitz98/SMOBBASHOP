@@ -209,61 +209,76 @@
       position: fixed;
       inset: 0;
       pointer-events: none;
-      z-index: 0;
+      z-index: 1;
       overflow: hidden;
     }
-    .ambient-dot-matrix {
+    .ambient-dot-strip-left {
       position: absolute;
-      inset: 0;
-      background-image: radial-gradient(#94a3b8 1.15px, transparent 1.15px);
+      top: 0;
+      bottom: 0;
+      left: 0;
+      width: clamp(220px, 22vw, 420px);
+      background-image: radial-gradient(#6366f1 2px, transparent 2px);
       background-size: 24px 24px;
-      opacity: 0.35;
-      -webkit-mask-image: radial-gradient(ellipse 70% 60% at 50% 45%, transparent 25%, black 80%);
-      mask-image: radial-gradient(ellipse 70% 60% at 50% 45%, transparent 25%, black 80%);
+      opacity: 0.42;
+      -webkit-mask-image: linear-gradient(to right, black 45%, transparent 100%);
+      mask-image: linear-gradient(to right, black 45%, transparent 100%);
+    }
+    .ambient-dot-strip-right {
+      position: absolute;
+      top: 0;
+      bottom: 0;
+      right: 0;
+      width: clamp(220px, 22vw, 420px);
+      background-image: radial-gradient(#8b5cf6 2px, transparent 2px);
+      background-size: 24px 24px;
+      opacity: 0.42;
+      -webkit-mask-image: linear-gradient(to left, black 45%, transparent 100%);
+      mask-image: linear-gradient(to left, black 45%, transparent 100%);
     }
     .ambient-glow-orb {
       position: absolute;
       border-radius: 9999px;
-      filter: blur(90px);
+      filter: blur(55px);
       pointer-events: none;
       will-change: transform, opacity;
-      animation: ambientFloat 16s ease-in-out infinite alternate;
+      animation: ambientFloat 14s ease-in-out infinite alternate;
     }
     .ambient-glow-left {
-      top: 10%;
-      left: -6%;
-      width: 520px;
-      height: 520px;
-      background: radial-gradient(circle, rgba(99, 102, 241, 0.20) 0%, rgba(56, 189, 248, 0.14) 45%, transparent 70%);
+      top: 15%;
+      left: -60px;
+      width: 580px;
+      height: 580px;
+      background: radial-gradient(circle, rgba(99, 102, 241, 0.42) 0%, rgba(56, 189, 248, 0.28) 45%, transparent 70%);
+      opacity: 0.85;
     }
     .ambient-glow-right {
-      top: 20%;
-      right: -6%;
-      width: 560px;
-      height: 560px;
-      background: radial-gradient(circle, rgba(168, 85, 247, 0.18) 0%, rgba(99, 102, 241, 0.14) 45%, transparent 70%);
-      animation-delay: -8s;
+      top: 25%;
+      right: -60px;
+      width: 620px;
+      height: 620px;
+      background: radial-gradient(circle, rgba(168, 85, 247, 0.40) 0%, rgba(99, 102, 241, 0.26) 45%, transparent 70%);
+      animation-delay: -7s;
+      opacity: 0.85;
     }
     .ambient-glow-bottom {
-      bottom: -12%;
-      left: 25%;
-      width: 650px;
-      height: 400px;
-      background: radial-gradient(ellipse, rgba(56, 189, 248, 0.10) 0%, rgba(99, 102, 241, 0.07) 50%, transparent 70%);
-      animation-delay: -4s;
+      bottom: -100px;
+      left: 20%;
+      width: 700px;
+      height: 380px;
+      background: radial-gradient(ellipse, rgba(56, 189, 248, 0.22) 0%, rgba(99, 102, 241, 0.15) 50%, transparent 70%);
+      animation-delay: -3.5s;
+      opacity: 0.75;
     }
     @keyframes ambientFloat {
       0% {
         transform: translate3d(0, 0, 0) scale(1);
-        opacity: 0.75;
       }
       50% {
-        transform: translate3d(15px, -25px, 0) scale(1.05);
-        opacity: 1;
+        transform: translate3d(20px, -30px, 0) scale(1.06);
       }
       100% {
-        transform: translate3d(-10px, 20px, 0) scale(0.95);
-        opacity: 0.7;
+        transform: translate3d(-15px, 20px, 0) scale(0.96);
       }
     }
 
@@ -374,9 +389,10 @@
 
   <!-- ==================== MODERN AMBIENT DESKTOP BACKGROUND & SIDE EFFECTS ==================== -->
   <div class="desktop-ambient-layer hidden sm:block" aria-hidden="true">
-    <!-- Subtle dot matrix pattern with radial falloff -->
-    <div class="ambient-dot-matrix"></div>
-    <!-- Soft luminous glow orbs on sides and bottom -->
+    <!-- Distinct dot matrix strips on left and right margins -->
+    <div class="ambient-dot-strip-left"></div>
+    <div class="ambient-dot-strip-right"></div>
+    <!-- Radiant ambient glow orbs on sides and bottom -->
     <div class="ambient-glow-orb ambient-glow-left"></div>
     <div class="ambient-glow-orb ambient-glow-right"></div>
     <div class="ambient-glow-orb ambient-glow-bottom"></div>
@@ -3445,7 +3461,7 @@
 
     // ==================== APP UPDATE CHECKER ====================
     function promptManualAppUpdate() {
-      const CURRENT_LATEST_VERSION = 'v2.3.0';
+      const CURRENT_LATEST_VERSION = 'v2.3.1';
       Swal.fire({
         icon: 'info',
         title: 'อัปเดตแอปพลิเคชัน',
@@ -3457,15 +3473,15 @@
         cancelButtonColor: '#64748b'
       }).then(res => {
         if (res.isConfirmed) {
-          window.location.href = 'https://github.com/remitz98/SMOBBASHOP/releases/download/' + CURRENT_LATEST_VERSION + '/SMO-BBA-SHOP-debug.apk';
+          window.location.href = 'https://github.com/remitz98/SMOBBASHOP/releases/download/' + CURRENT_LATEST_VERSION + '/SMO-BBA-SHOP.apk';
         }
       });
     }
 
     function checkAppUpdateNotification() {
       const isAndroidNative = (window.AndroidNative && typeof window.AndroidNative.isAndroidNativeApp === 'function');
-      const CURRENT_LATEST_VERSION = 'v2.3.0';
-      const CURRENT_LATEST_BUILD = 14;
+      const CURRENT_LATEST_VERSION = 'v2.3.1';
+      const CURRENT_LATEST_BUILD = 15;
       const DISMISS_KEY = 'bba_update_dismissed_' + CURRENT_LATEST_VERSION;
 
       if (isAndroidNative) {
@@ -3483,7 +3499,7 @@
           } catch (e) {}
         }
 
-        // If installedBuild is 0 or less than 14, this is an older APK version!
+        // If installedBuild is 0 or less than 15, this is an older APK version!
         if (installedBuild < CURRENT_LATEST_BUILD) {
           if (sessionStorage.getItem(DISMISS_KEY)) return;
 
@@ -3504,9 +3520,9 @@
                   <div class="pt-1 text-slate-700 leading-relaxed">
                     <b>รายการปรับปรุงในเวอร์ชัน ${CURRENT_LATEST_VERSION}:</b>
                     <ul class="list-disc list-inside mt-1 space-y-1 text-slate-600 text-xs">
-                      <li>เพิ่มเอฟเฟกต์ Ambient Glow และ Dot Pattern ด้านข้างสำหรับหน้าจอ PC สวยงาม มีมิติ ไม่โล่งตา</li>
-                      <li>เพิ่มเส้นขอบและป้ายประดับ Widescreen Framing สไตล์ Modern Desktop App</li>
-                      <li>ระบบ Auto-Update สไตล์ Discord ตรวจสอบและอัปเดตอัตโนมัติอย่างราบรื่น</li>
+                      <li>ปรับแต่ง Ambient Glow และ Dot Matrix ด้านข้างให้สีสันสว่างสดใส สวยงาม มีมิติชัดเจนบนหน้าจอคอมพิวเตอร์</li>
+                      <li>แก้ไขการติดตั้งบน Android ไม่ให้ขึ้นเตือนไม่ปลอดภัย (Signed Release Build ปลอดภัย 100%)</li>
+                      <li>ปรับขนาดไอคอนแอป Android ให้ได้สัดส่วนมาตรฐาน พอดีกับหน้าจอ ไม่ใหญ่เกินไป</li>
                     </ul>
                   </div>
                 </div>
@@ -3519,7 +3535,7 @@
               allowOutsideClick: true
             }).then(result => {
               if (result.isConfirmed) {
-                window.location.href = 'https://github.com/remitz98/SMOBBASHOP/releases/download/' + CURRENT_LATEST_VERSION + '/SMO-BBA-SHOP-debug.apk';
+                window.location.href = 'https://github.com/remitz98/SMOBBASHOP/releases/download/' + CURRENT_LATEST_VERSION + '/SMO-BBA-SHOP.apk';
               } else {
                 sessionStorage.setItem(DISMISS_KEY, 'true');
               }
@@ -3532,13 +3548,13 @@
     function handleMobileAccountClick() {
       const isAndroidNative = (window.AndroidNative && typeof window.AndroidNative.isAndroidNativeApp === 'function');
       let isOldVersion = false;
-      const curVer = 'v2.3.0';
+      const curVer = 'v2.3.1';
       if (isAndroidNative) {
         let build = 0;
         if (typeof window.AndroidNative.getAppVersionCode === 'function') {
           try { build = Number(window.AndroidNative.getAppVersionCode()) || 0; } catch (e) {}
         }
-        if (build < 14) isOldVersion = true;
+        if (build < 15) isOldVersion = true;
       }
 
       if (currentStudent) {
@@ -3653,7 +3669,7 @@
           console.log('[AutoUpdater] Check result:', update);
 
           if (update) {
-            const newVersion = update.version || 'v2.3.0';
+            const newVersion = update.version || 'v2.3.1';
             if (statusText) statusText.innerText = `พบเวอร์ชันใหม่ (${newVersion})!`;
             if (detailText) detailText.innerText = 'กำลังดาวน์โหลดและติดตั้งอัปเดตอัตโนมัติ...';
             if (progressBar) progressBar.style.width = '30%';
