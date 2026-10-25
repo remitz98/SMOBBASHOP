@@ -707,32 +707,14 @@
               </button>
             </div>
             
-            <!-- Clickable Category Pills -->
+            <!-- Clickable Category Pills (Dynamically populated from Category Manager) -->
             <div id="categoryClickablePills" class="flex flex-wrap gap-1.5 mb-2">
-              <button type="button" onclick="selectCategoryChip('เสื้อกิจกรรม')" class="cat-chip px-2.5 py-1 rounded-lg border border-slate-200 bg-white hover:bg-slate-50 text-[11px] font-semibold text-slate-700 transition" data-cat="เสื้อกิจกรรม">
-                เสื้อกิจกรรม
-              </button>
-              <button type="button" onclick="selectCategoryChip('เสื้อโปโล')" class="cat-chip px-2.5 py-1 rounded-lg border border-slate-200 bg-white hover:bg-slate-50 text-[11px] font-semibold text-slate-700 transition" data-cat="เสื้อโปโล">
-                เสื้อโปโล
-              </button>
-              <button type="button" onclick="selectCategoryChip('เสื้อยืด Oversize')" class="cat-chip px-2.5 py-1 rounded-lg border border-slate-200 bg-white hover:bg-slate-50 text-[11px] font-semibold text-slate-700 transition" data-cat="เสื้อยืด Oversize">
-                เสื้อยืด Oversize
-              </button>
-              <button type="button" onclick="selectCategoryChip('เสื้อกันหนาว/แจ็คเก็ต')" class="cat-chip px-2.5 py-1 rounded-lg border border-slate-200 bg-white hover:bg-slate-50 text-[11px] font-semibold text-slate-700 transition" data-cat="เสื้อกันหนาว/แจ็คเก็ต">
-                แจ็คเก็ต
-              </button>
-              <button type="button" onclick="selectCategoryChip('เสื้อทั่วไป')" class="cat-chip px-2.5 py-1 rounded-lg border border-slate-200 bg-white hover:bg-slate-50 text-[11px] font-semibold text-slate-700 transition" data-cat="เสื้อทั่วไป">
-                เสื้อทั่วไป
-              </button>
+              <!-- Rendered dynamically by renderAdminCategories() -->
             </div>
 
             <select id="prodFormCategory" onchange="handleCategorySelectChange(this)"
                     class="w-full px-3.5 py-2 rounded-xl border border-slate-200 bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500 text-xs font-semibold text-slate-800">
-              <option value="เสื้อกิจกรรม">เสื้อกิจกรรม</option>
-              <option value="เสื้อโปโล">เสื้อโปโล</option>
-              <option value="เสื้อยืด Oversize">เสื้อยืด Oversize</option>
-              <option value="เสื้อกันหนาว/แจ็คเก็ต">เสื้อกันหนาว/แจ็คเก็ต</option>
-              <option value="เสื้อทั่วไป">เสื้อทั่วไป</option>
+              <!-- Options rendered dynamically by renderAdminCategories() -->
               <option value="__custom__">+ เพิ่ม/พิมพ์ระบุหมวดหมู่อื่น...</option>
             </select>
             <input type="text" id="prodFormCategoryCustom" placeholder="พิมพ์ชื่อหมวดหมู่ที่ต้องการ..." 
@@ -918,6 +900,7 @@
       const badge = document.getElementById('adminCategoryCountBadge');
       if (badge) badge.textContent = adminCategoriesList.length;
 
+      // 1. Render Categories inside Category Manager Modal
       const container = document.getElementById('adminCategoryListContainer');
       if (container) {
         if (adminCategoriesList.length === 0) {
@@ -936,9 +919,54 @@
         }
       }
 
+      // 2. Synchronize Clickable Category Pills in Add/Edit Product Modal
+      const pillsContainer = document.getElementById('categoryClickablePills');
+      if (pillsContainer) {
+        if (adminCategoriesList.length === 0) {
+          pillsContainer.innerHTML = '<span class="text-xs text-slate-400 py-1">ยังไม่มีหมวดหมู่ (คลิก "จัดการหมวดหมู่" ด้านบนเพื่อเพิ่ม)</span>';
+        } else {
+          pillsContainer.innerHTML = adminCategoriesList.map(cat => {
+            const safe = escapeHtml(cat);
+            return '<button type="button" onclick="selectCategoryChip(\'' + safe + '\')" class="cat-chip px-2.5 py-1 rounded-lg border border-slate-200 bg-white hover:bg-slate-50 text-[11px] font-semibold text-slate-700 transition" data-cat="' + safe + '">' +
+              safe +
+            '</button>';
+          }).join('');
+        }
+      }
+
+      // 3. Synchronize Category Select Dropdown in Add/Edit Product Modal
+      const select = document.getElementById('prodFormCategory');
+      if (select) {
+        const currentVal = select.value;
+        let optionsHtml = '';
+        if (adminCategoriesList.length === 0) {
+          optionsHtml = '<option value="เสื้อทั่วไป">เสื้อทั่วไป</option>';
+        } else {
+          optionsHtml = adminCategoriesList.map(cat => {
+            const safe = escapeHtml(cat);
+            return '<option value="' + safe + '">' + safe + '</option>';
+          }).join('');
+        }
+        optionsHtml += '<option value="__custom__">+ เพิ่ม/พิมพ์ระบุหมวดหมู่อื่น...</option>';
+        select.innerHTML = optionsHtml;
+
+        // Restore selected value if still valid, or default to first category
+        if (currentVal && (adminCategoriesList.includes(currentVal) || currentVal === '__custom__')) {
+          select.value = currentVal;
+        } else if (adminCategoriesList.length > 0) {
+          select.value = adminCategoriesList[0];
+        }
+      }
+
+      // 4. Synchronize Autocomplete Suggestions
       const datalist = document.getElementById('categorySuggestions');
       if (datalist) {
         datalist.innerHTML = adminCategoriesList.map(cat => '<option value="' + escapeHtml(cat) + '">').join('');
+      }
+
+      // 5. Update visual highlight on active chip
+      if (select && select.value) {
+        setCategorySelection(select.value, false);
       }
     }
 
@@ -958,6 +986,7 @@
     function closeCategoryManageModal() {
       const modal = document.getElementById('categoryManageModal');
       if (modal) modal.style.display = 'none';
+      renderAdminCategories();
     }
 
     async function submitAddCategory() {
@@ -984,6 +1013,7 @@
         if (resData && resData.success) {
           adminCategoriesList = resData.categories || adminCategoriesList;
           renderAdminCategories();
+          setCategorySelection(val);
           if (input) input.value = '';
           Swal.fire({
             title: 'สำเร็จ',
@@ -2065,7 +2095,9 @@
       document.getElementById('adminProductModalTitle').textContent = 'เพิ่มสินค้าใหม่เข้าระบบ';
       document.getElementById('prodFormId').value = '';
       document.getElementById('prodFormId').readOnly = false;
-      setCategorySelection('เสื้อกิจกรรม');
+      renderAdminCategories();
+      const initialCat = (adminCategoriesList && adminCategoriesList.length > 0) ? adminCategoriesList[0] : 'เสื้อทั่วไป';
+      setCategorySelection(initialCat);
       const delBtn = document.getElementById('btnDeleteCurrentProd');
       if (delBtn) delBtn.classList.add('hidden');
       document.getElementById('prodFormName').value = '';
@@ -2097,7 +2129,9 @@
       document.getElementById('adminProductModalTitle').textContent = 'แก้ไขข้อมูลเสื้อ: ' + p.productId;
       document.getElementById('prodFormId').value = p.productId;
       document.getElementById('prodFormId').readOnly = true;
-      setCategorySelection(p.category || 'เสื้อกิจกรรม');
+      renderAdminCategories();
+      const prodCat = p.category || ((adminCategoriesList && adminCategoriesList[0]) || 'เสื้อทั่วไป');
+      setCategorySelection(prodCat);
       const delBtn = document.getElementById('btnDeleteCurrentProd');
       if (delBtn) delBtn.classList.remove('hidden');
       document.getElementById('prodFormName').value = p.name || '';
