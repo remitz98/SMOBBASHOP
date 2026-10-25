@@ -75,6 +75,20 @@ CREATE TABLE IF NOT EXISTS categories (
   created_at DATETIME DEFAULT CURRENT_TIMESTAMP
 );
 
+-- 7. Trigger ป้องกันสต็อกติดลบและการแย่งซื้อพร้อมกัน (Concurrency / Race Condition Guard)
+CREATE TRIGGER IF NOT EXISTS check_product_stock_non_negative
+BEFORE UPDATE ON products
+FOR EACH ROW
+WHEN (
+  NEW.stock < 0 OR
+  (NEW.size_stock IS NOT NULL AND NEW.size_stock != '' AND EXISTS (
+    SELECT 1 FROM json_each(NEW.size_stock) WHERE CAST(value AS NUMERIC) < 0
+  ))
+)
+BEGIN
+  SELECT RAISE(ABORT, 'INSUFFICIENT_STOCK');
+END;
+
 -- ==================== ข้อมูลเริ่มต้น (Seed Initial Data) ====================
 
 -- ข้อมูลการตั้งค่าระบบ

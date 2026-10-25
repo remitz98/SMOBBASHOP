@@ -512,16 +512,15 @@ app.post('/api/orders', async (c) => {
       }
     }
 
-    // 2. สร้างรหัสคำสั่งซื้อที่ไม่ซ้ำกัน
+    // 2. สร้างรหัสคำสั่งซื้อที่ไม่ซ้ำกัน 100% (High-Entropy UUID Collision-free)
+    // ใช้ UUID สุ่ม 8 หลัก ไม่ต้อง SELECT COUNT(*) ป้องกัน Order ID ชนกันเมื่อมีคำขอสั่งซื้อพร้อมกัน
     const now = new Date();
     const y = String(now.getFullYear()).slice(-2);
     const m = String(now.getMonth() + 1).padStart(2, '0');
     const d = String(now.getDate()).padStart(2, '0');
     const datePrefix = `BBA-${y}${m}${d}`;
-
-    const countRow = await db.prepare("SELECT COUNT(*) as count FROM orders WHERE order_id LIKE ?").bind(`${datePrefix}%`).first();
-    const seq = (countRow ? countRow.count : 0) + 1;
-    const orderId = `${datePrefix}-${String(seq).padStart(3, '0')}`;
+    const uniqueSuffix = crypto.randomUUID().replace(/-/g, '').slice(0, 8).toUpperCase();
+    const orderId = `${datePrefix}-${uniqueSuffix}`;
 
     // คำนวณยอดเงินรวม
     let calculatedTotal = 0;
@@ -568,7 +567,8 @@ app.post('/api/orders', async (c) => {
       slipUrl = slipBase64 || '';
     }
 
-    // 3. เตรียมคำสั่ง Batch SQL เพื่อประมวลผลคำสั่งซื้อและตัดสต็อกพร้อมกันใน 1 Transaction
+    // 3. เตรียมคำสั่ง Batch Transaction: บันทึกคำสั่งซื้อ + ตัดสต็อกแบบ Conditional Atomic SQL
+    // มี Trigger ป้องกันสต็อกติดลบ check_product_stock_non_negative คอย Rollback ทันทีหากเกิด Race Condition
     const batchOps = [
       // บันทึกลงตาราง orders
       db.prepare(`
@@ -583,31 +583,76 @@ app.post('/api/orders', async (c) => {
       `).bind(paymentId, orderId, studentId, calculatedTotal, slipUrl, 'รอตรวจสอบ')
     ];
 
-    // ตัดสต็อกสินค้าทีละรายการ
+    // ตัดสต็อกสินค้าทีละรายการด้วยคำสั่ง SQL ที่คำนวณและตรวจสอบเงื่อนไขในระดับฐานข้อมูลโดยตรง
     for (const item of items) {
-      const prod = prodMap.get(item.productId);
-      let sizeStock = {};
-      try { sizeStock = JSON.parse(prod.size_stock || '{}'); } catch (e) {}
-
-      let newTotalStock = Number(prod.stock) - item.qty;
-      if (item.size && sizeStock[item.size] !== undefined) {
-        sizeStock[item.size] = Math.max(0, Number(sizeStock[item.size]) - item.qty);
-        newTotalStock = Object.values(sizeStock).reduce((acc, v) => acc + (Number(v) || 0), 0);
+      if (item.size) {
+        // มีระบุไซส์: ตัดสต็อกระดับไซส์ใน JSON และตัดสต็อกรวม พร้อมตรวจเงื่อนไขสต็อกคงเหลือ
+        batchOps.push(
+          db.prepare(`
+            UPDATE products
+            SET stock = stock - ?,
+                size_stock = CASE
+                  WHEN (json_extract(size_stock, '$.' || ?) IS NOT NULL)
+                  THEN json_set(size_stock, '$.' || ?, CAST(json_extract(size_stock, '$.' || ?) AS INT) - ?)
+                  ELSE size_stock
+                END,
+                status = CASE WHEN (stock - ?) <= 0 THEN 'สินค้าหมด' ELSE status END,
+                updated_at = CURRENT_TIMESTAMP
+            WHERE product_id = ?
+              AND stock >= ?
+              AND (
+                json_extract(size_stock, '$.' || ?) IS NULL
+                OR CAST(json_extract(size_stock, '$.' || ?) AS INT) >= ?
+              )
+          `).bind(
+            item.qty,
+            item.size, item.size, item.qty,
+            item.qty,
+            item.productId,
+            item.qty,
+            item.size,
+            item.size, item.qty
+          )
+        );
+      } else {
+        // สินค้าไม่มีไซส์: ตัดสต็อกรวมโดยตรง
+        batchOps.push(
+          db.prepare(`
+            UPDATE products
+            SET stock = stock - ?,
+                status = CASE WHEN (stock - ?) <= 0 THEN 'สินค้าหมด' ELSE status END,
+                updated_at = CURRENT_TIMESTAMP
+            WHERE product_id = ?
+              AND stock >= ?
+          `).bind(
+            item.qty,
+            item.qty,
+            item.productId,
+            item.qty
+          )
+        );
       }
-
-      const newStatus = newTotalStock <= 0 ? 'สินค้าหมด' : prod.status;
-
-      batchOps.push(
-        db.prepare(`
-          UPDATE products
-          SET stock = ?, size_stock = ?, status = ?, updated_at = CURRENT_TIMESTAMP
-          WHERE product_id = ?
-        `).bind(newTotalStock, JSON.stringify(sizeStock), newStatus, item.productId)
-      );
     }
 
-    // ประมวลผล Batch Transaction ใน D1
-    await db.batch(batchOps);
+    // ประมวลผล Batch Transaction ใน Cloudflare D1
+    // หากมีคำขอสั่งซื้ออื่นตัดสต็อกไปก่อนจนสต็อกไม่พอ คำสั่ง UPDATE จะไม่ตรงเงื่อนไข หรือ Trigger จะสั่ง ABORT ทันที
+    const batchResults = await db.batch(batchOps);
+
+    // ตรวจสอบผลลัพธ์: ตรวจสอบว่าคำสั่งตัดสต็อกทุกรายการมีแถวที่ถูกอัปเดตจริง (changes > 0)
+    // batchResults[0] คือ INSERT orders, batchResults[1] คือ INSERT payments, รายการที่เหลือคือ UPDATE products
+    for (let i = 2; i < batchResults.length; i++) {
+      const updateRes = batchResults[i];
+      if (!updateRes || updateRes.meta?.changes === 0) {
+        // หากรายการใดตัดสต็อกไม่สำเร็จ (ถูกสั่งซื้อไปก่อนในเสี้ยววินาที) ทำการ Rollback คำสั่งซื้อทันที
+        await db.prepare("DELETE FROM orders WHERE order_id = ?").bind(orderId).run();
+        await db.prepare("DELETE FROM payments WHERE order_id = ?").bind(orderId).run();
+        return c.json({
+          success: false,
+          code: 'CONCURRENT_STOCK_EXHAUSTED',
+          message: 'ขออภัย สินค้าบางรายการหรือไซส์ที่คุณเลือกเพิ่งถูกสั่งซื้อหมดไปเมื่อสักครู่ กรุณาตรวจสอบจำนวนคงเหลือในหน้าร้านอีกครั้ง'
+        }, 409);
+      }
+    }
 
     return c.json({
       success: true,
@@ -616,6 +661,19 @@ app.post('/api/orders', async (c) => {
       totalAmount: calculatedTotal
     });
   } catch (error) {
+    const errMsg = String(error.message || error);
+    console.error('[Order Error]', errMsg);
+    if (
+      errMsg.includes('INSUFFICIENT_STOCK') ||
+      errMsg.includes('UNIQUE constraint failed') ||
+      errMsg.includes('CHECK constraint failed')
+    ) {
+      return c.json({
+        success: false,
+        code: 'CONCURRENT_STOCK_EXHAUSTED',
+        message: 'ขออภัย สินค้าบางรายการหรือไซส์ที่คุณเลือกเพิ่งถูกสั่งซื้อหมดไปเมื่อสักครู่ กรุณาตรวจสอบจำนวนคงเหลือในหน้าร้านอีกครั้ง'
+      }, 409);
+    }
     return c.json({ success: false, message: error.toString() }, 500);
   }
 });

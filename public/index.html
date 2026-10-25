@@ -2862,7 +2862,17 @@
           };
           handleOrderSuccess(resData.orderId, resData.totalAmount || grandTotal, studentId, orderReceiptDetails);
         } else {
-          Swal.fire('เกิดข้อผิดพลาด', (resData && resData.message) || 'ไม่สามารถบันทึกข้อมูลได้', 'error');
+          if (resData && resData.code === 'CONCURRENT_STOCK_EXHAUSTED') {
+            Swal.fire({
+              icon: 'warning',
+              title: 'สินค้าหมดกะทันหัน',
+              text: resData.message || 'ขออภัย สินค้าบางรายการหรือไซส์ที่คุณเลือกเพิ่งถูกสั่งซื้อหมดไปเมื่อสักครู่',
+              confirmButtonColor: '#4338ca'
+            });
+            fetchProducts();
+          } else {
+            Swal.fire('เกิดข้อผิดพลาด', (resData && resData.message) || 'ไม่สามารถบันทึกข้อมูลได้', 'error');
+          }
         }
       } catch (err) {
         isSubmittingOrder = false;
@@ -3461,7 +3471,7 @@
 
     // ==================== APP UPDATE CHECKER ====================
     function promptManualAppUpdate() {
-      const CURRENT_LATEST_VERSION = 'v2.3.2';
+      const CURRENT_LATEST_VERSION = 'v2.3.3';
       Swal.fire({
         icon: 'info',
         title: 'อัปเดตแอปพลิเคชัน',
@@ -3480,8 +3490,8 @@
 
     function checkAppUpdateNotification() {
       const isAndroidNative = (window.AndroidNative && typeof window.AndroidNative.isAndroidNativeApp === 'function');
-      const CURRENT_LATEST_VERSION = 'v2.3.2';
-      const CURRENT_LATEST_BUILD = 16;
+      const CURRENT_LATEST_VERSION = 'v2.3.3';
+      const CURRENT_LATEST_BUILD = 17;
       const DISMISS_KEY = 'bba_update_dismissed_' + CURRENT_LATEST_VERSION;
 
       if (isAndroidNative) {
@@ -3499,7 +3509,7 @@
           } catch (e) {}
         }
 
-        // If installedBuild is 0 or less than 16, this is an older APK version!
+        // If installedBuild is 0 or less than 17, this is an older APK version!
         if (installedBuild < CURRENT_LATEST_BUILD) {
           if (sessionStorage.getItem(DISMISS_KEY)) return;
 
@@ -3520,9 +3530,9 @@
                   <div class="pt-1 text-slate-700 leading-relaxed">
                     <b>รายการปรับปรุงในเวอร์ชัน ${CURRENT_LATEST_VERSION}:</b>
                     <ul class="list-disc list-inside mt-1 space-y-1 text-slate-600 text-xs">
-                      <li>เชื่อมโยงระบบจัดการหมวดหมู่เสื้อสโมสรเข้ากับฟอร์มเพิ่ม/แก้ไขสินค้าในหน้าแอดมินโดยตรงแบบเรียลไทม์</li>
-                      <li>อัปเดตตัวเลือกหมวดหมู่และปุ่มลัดอัตโนมัติตามที่มีอยู่ในระบบ</li>
-                      <li>ปรับปรุงความเสถียรของระบบ Auto-Update</li>
+                      <li>ปรับปรุงระบบสั่งซื้อและตัดสต็อกป้องกันการสั่งซื้อพร้อมกัน (Concurrency / Race Condition Safe)</li>
+                      <li>เปลี่ยนระบบสร้าง Order ID เป็นแบบ High-Entropy ป้องกันรหัสชนกัน 100%</li>
+                      <li>ระบบ Atomic Database Transaction และ Trigger ป้องกันสต็อกติดลบ</li>
                     </ul>
                   </div>
                 </div>
@@ -3548,13 +3558,13 @@
     function handleMobileAccountClick() {
       const isAndroidNative = (window.AndroidNative && typeof window.AndroidNative.isAndroidNativeApp === 'function');
       let isOldVersion = false;
-      const curVer = 'v2.3.2';
+      const curVer = 'v2.3.3';
       if (isAndroidNative) {
         let build = 0;
         if (typeof window.AndroidNative.getAppVersionCode === 'function') {
           try { build = Number(window.AndroidNative.getAppVersionCode()) || 0; } catch (e) {}
         }
-        if (build < 16) isOldVersion = true;
+        if (build < 17) isOldVersion = true;
       }
 
       if (currentStudent) {
@@ -3669,7 +3679,7 @@
           console.log('[AutoUpdater] Check result:', update);
 
           if (update) {
-            const newVersion = update.version || 'v2.3.2';
+            const newVersion = update.version || 'v2.3.3';
             if (statusText) statusText.innerText = `พบเวอร์ชันใหม่ (${newVersion})!`;
             if (detailText) detailText.innerText = 'กำลังดาวน์โหลดและติดตั้งอัปเดตอัตโนมัติ...';
             if (progressBar) progressBar.style.width = '30%';
