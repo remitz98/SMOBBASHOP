@@ -57,13 +57,13 @@ kotlin {
 
 android {
     namespace = "org.smobba.store"
-    compileSdk = 34
+    compileSdk = 35
 
     defaultConfig {
         applicationId = "org.smobba.store"
         minSdk = 24
-        targetSdk = 34
-        versionCode = 7
+        targetSdk = 35
+        versionCode = 8
         versionName = "1.0.8"
     }
 

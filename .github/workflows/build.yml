@@ -108,7 +108,7 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          TAG="v2.2.3"
+          TAG="v2.2.4"
           shopt -s globstar nullglob
           FILES=(all-dist/**/*.apk all-dist/**/*.msi all-dist/**/*.exe all-dist/**/*.dmg)
           echo "Release files found:"
@@ -119,7 +119,7 @@ jobs:
           else
             echo "Creating release $TAG..."
             gh release create "$TAG" \
-              --title "SMO BBA SHOP v2.2.3 (Official Native Release)" \
-              --notes "เวอร์ชัน v2.2.3 แก้ไขปัญหาแถบด้านล่างบังปุ่มสั่งจองเสื้อ: 1. ซ่อนแถบล่างอัตโนมัติเมื่อเปิดหน้าต่างดูรายละเอียดเสื้อ/ตะกร้า/สั่งซื้อ 2. ปรับ z-index ให้หน้าต่างป็อปอัปอยู่ด้านบนเสมอ 3. เพิ่มระยะขอบด้านล่างของหน้าต่างเลือกไซส์เสื้อ" \
+              --title "SMO BBA SHOP v2.2.4 (Official Native Release - Android 17 Support & Update Alerts)" \
+              --notes "เวอร์ชัน v2.2.4: 1. เพิ่มระบบแจ้งเตือนอัปเดตเวอร์ชันใหม่อัตโนมัติสำหรับผู้ใช้แอปเวอร์ชันเดิม 2. เพิ่มการรองรับระบบปฏิบัติการ Android รุ่นใหม่ล่าสุดครอบคลุมถึง Android 17 (API 35+ / MediaStore / Scoped Storage) 3. ปรับปรุงประสิทธิภาพและความเสถียร" \
               "${FILES[@]}"
           fi

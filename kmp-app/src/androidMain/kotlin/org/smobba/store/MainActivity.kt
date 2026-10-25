@@ -170,6 +170,21 @@ class MainActivity : ComponentActivity() {
         }
 
         @JavascriptInterface
+        fun getAppVersionCode(): Int {
+            return 8
+        }
+
+        @JavascriptInterface
+        fun getAppVersionName(): String {
+            return "1.0.8"
+        }
+
+        @JavascriptInterface
+        fun getAndroidVersion(): Int {
+            return Build.VERSION.SDK_INT
+        }
+
+        @JavascriptInterface
         fun saveBase64Image(base64Data: String, fileName: String) {
             activity.runOnUiThread {
                 try {
