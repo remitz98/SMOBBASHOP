@@ -3311,7 +3311,7 @@
 
     // ==================== APP UPDATE CHECKER ====================
     function promptManualAppUpdate() {
-      const CURRENT_LATEST_VERSION = 'v2.2.8';
+      const CURRENT_LATEST_VERSION = 'v2.2.9';
       Swal.fire({
         icon: 'info',
         title: 'อัปเดตแอปพลิเคชัน',
@@ -3330,8 +3330,8 @@
 
     function checkAppUpdateNotification() {
       const isAndroidNative = (window.AndroidNative && typeof window.AndroidNative.isAndroidNativeApp === 'function');
-      const CURRENT_LATEST_VERSION = 'v2.2.8';
-      const CURRENT_LATEST_BUILD = 12;
+      const CURRENT_LATEST_VERSION = 'v2.2.9';
+      const CURRENT_LATEST_BUILD = 13;
       const DISMISS_KEY = 'bba_update_dismissed_' + CURRENT_LATEST_VERSION;
 
       if (isAndroidNative) {
@@ -3349,7 +3349,7 @@
           } catch (e) {}
         }
 
-        // If installedBuild is 0 or less than 12, this is an older APK version!
+        // If installedBuild is 0 or less than 13, this is an older APK version!
         if (installedBuild < CURRENT_LATEST_BUILD) {
           if (sessionStorage.getItem(DISMISS_KEY)) return;
 
@@ -3370,9 +3370,9 @@
                   <div class="pt-1 text-slate-700 leading-relaxed">
                     <b>รายการปรับปรุงในเวอร์ชัน ${CURRENT_LATEST_VERSION}:</b>
                     <ul class="list-disc list-inside mt-1 space-y-1 text-slate-600 text-xs">
-                      <li>แก้ไขการแสดงผลสลิปหลักฐานการโอนเงินในหน้าประวัติการสั่งซื้อบนคอมพิวเตอร์</li>
-                      <li>ปรับระบบ Auto-Update สไตล์ Discord ให้ตรวจสอบเฉพาะตอนเปิดโปรแกรมครั้งแรก</li>
-                      <li>เพิ่มความเสถียรและความรวดเร็วในการเปิดหน้าร้านค้า</li>
+                      <li>แก้ไขการดาวน์โหลดและติดตั้งอัปเดตอัตโนมัติบนคอมพิวเตอร์ (Windows & macOS)</li>
+                      <li>แก้ไขการแสดงผลสลิปหลักฐานการโอนเงินในหน้าประวัติการสั่งซื้อ</li>
+                      <li>ปรับปรุงความเสถียรในการทำงาน</li>
                     </ul>
                   </div>
                 </div>
@@ -3398,13 +3398,13 @@
     function handleMobileAccountClick() {
       const isAndroidNative = (window.AndroidNative && typeof window.AndroidNative.isAndroidNativeApp === 'function');
       let isOldVersion = false;
-      const curVer = 'v2.2.8';
+      const curVer = 'v2.2.9';
       if (isAndroidNative) {
         let build = 0;
         if (typeof window.AndroidNative.getAppVersionCode === 'function') {
           try { build = Number(window.AndroidNative.getAppVersionCode()) || 0; } catch (e) {}
         }
-        if (build < 12) isOldVersion = true;
+        if (build < 13) isOldVersion = true;
       }
 
       if (currentStudent) {
@@ -3514,50 +3514,62 @@
         const process = window.__TAURI__?.process;
 
         if (updater && typeof updater.check === 'function') {
+          console.log('[AutoUpdater] Checking for updates via Tauri plugin...');
           const update = await updater.check();
+          console.log('[AutoUpdater] Check result:', update);
 
-          if (update && (update.available || update.shouldUpdate)) {
-            if (statusText) statusText.innerText = `พบเวอร์ชันใหม่ (${update.version || 'v2.2.7'})!`;
+          if (update) {
+            const newVersion = update.version || 'v2.2.9';
+            if (statusText) statusText.innerText = `พบเวอร์ชันใหม่ (${newVersion})!`;
             if (detailText) detailText.innerText = 'กำลังดาวน์โหลดและติดตั้งอัปเดตอัตโนมัติ...';
-            if (progressBar) progressBar.style.width = '35%';
+            if (progressBar) progressBar.style.width = '30%';
 
             let downloaded = 0;
             let contentLength = 0;
 
-            await update.downloadAndInstall((event) => {
-              if (!event) return;
-              switch (event.event) {
-                case 'Started':
-                  contentLength = event.data?.contentLength || 0;
-                  if (statusText) statusText.innerText = `กำลังดาวน์โหลดอัปเดต (${update.version})...`;
-                  break;
-                case 'Progress':
-                  downloaded += (event.data?.chunkLength || 0);
-                  if (contentLength > 0) {
-                    const pct = Math.min(Math.round((downloaded / contentLength) * 100), 99);
-                    if (progressBar) progressBar.style.width = `${Math.max(pct, 20)}%`;
-                    if (detailText) detailText.innerText = `${formatBytes(downloaded)} / ${formatBytes(contentLength)} (${pct}%)`;
-                  } else {
-                    if (progressBar) progressBar.style.width = '65%';
-                    if (detailText) detailText.innerText = `ดาวน์โหลดแล้ว ${formatBytes(downloaded)}...`;
-                  }
-                  break;
-                case 'Finished':
-                  if (progressBar) progressBar.style.width = '100%';
-                  if (statusText) statusText.innerText = 'การติดตั้งเสร็จสมบูรณ์!';
-                  if (detailText) detailText.innerText = 'กำลังรีสตาร์ตเข้าสู่เวอร์ชันใหม่...';
-                  break;
-              }
-            });
+            try {
+              await update.downloadAndInstall((event) => {
+                if (!event) return;
+                switch (event.event) {
+                  case 'Started':
+                    contentLength = event.data?.contentLength || 0;
+                    if (statusText) statusText.innerText = `กำลังดาวน์โหลดอัปเดต (${newVersion})...`;
+                    break;
+                  case 'Progress':
+                    downloaded += (event.data?.chunkLength || 0);
+                    if (contentLength > 0) {
+                      const pct = Math.min(Math.round((downloaded / contentLength) * 100), 99);
+                      if (progressBar) progressBar.style.width = `${Math.max(pct, 15)}%`;
+                      if (detailText) detailText.innerText = `${formatBytes(downloaded)} / ${formatBytes(contentLength)} (${pct}%)`;
+                    } else {
+                      if (progressBar) progressBar.style.width = '60%';
+                      if (detailText) detailText.innerText = `ดาวน์โหลดแล้ว ${formatBytes(downloaded)}...`;
+                    }
+                    break;
+                  case 'Finished':
+                    if (progressBar) progressBar.style.width = '100%';
+                    if (statusText) statusText.innerText = 'ดาวน์โหลดเสร็จสิ้น กำลังติดตั้ง...';
+                    if (detailText) detailText.innerText = 'กำลังรีสตาร์ตเข้าสู่เวอร์ชันใหม่...';
+                    break;
+                }
+              });
 
-            // Relaunch the app to apply update
-            if (statusText) statusText.innerText = 'กำลังเริ่มโปรแกรมใหม่...';
-            await new Promise(r => setTimeout(r, 900));
-            if (process && typeof process.relaunch === 'function') {
-              await process.relaunch();
-              return;
-            } else {
-              window.location.reload();
+              // Relaunch the app to apply update
+              if (statusText) statusText.innerText = 'กำลังเริ่มโปรแกรมใหม่...';
+              await new Promise(r => setTimeout(r, 1000));
+              if (process && typeof process.relaunch === 'function') {
+                await process.relaunch();
+                return;
+              } else {
+                window.location.reload();
+                return;
+              }
+            } catch (installErr) {
+              console.error('[AutoUpdater] downloadAndInstall failed:', installErr);
+              if (statusText) statusText.innerText = 'ดาวน์โหลดอัปเดตไม่สำเร็จ';
+              if (detailText) detailText.innerText = 'กำลังเข้าสู่โปรแกรมตามปกติ...';
+              await new Promise(r => setTimeout(r, 1500));
+              forceDismissSplashScreen();
               return;
             }
           }

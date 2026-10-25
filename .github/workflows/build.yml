@@ -119,8 +119,8 @@ jobs:
           node -e "
             const fs = require('fs');
             const path = require('path');
-            const TAG = 'v2.2.8';
-            const VERSION = '1.0.12';
+            const TAG = 'v2.2.9';
+            const VERSION = '1.0.13';
             let merged = {
               version: VERSION,
               notes: 'SMO BBA SHOP ' + TAG + ' (Discord-style Auto-Update)',
@@ -159,9 +159,10 @@ jobs:
             const winTarget = allFiles.find(f => (f.endsWith('-setup.exe') || f.endsWith('.nsis.zip')) && !f.includes('macos') && !f.includes('darwin'));
             if (winTarget && winSig && !merged.platforms['windows-x86_64']) {
               const sig = fs.readFileSync(winSig, 'utf8').trim();
+              const sanitizedWin = path.basename(winTarget).replace(/\s+/g, '.');
               merged.platforms['windows-x86_64'] = {
                 signature: sig,
-                url: 'https://github.com/remitz98/SMOBBASHOP/releases/download/' + TAG + '/' + path.basename(winTarget)
+                url: 'https://github.com/remitz98/SMOBBASHOP/releases/download/' + TAG + '/' + sanitizedWin
               };
             }
 
@@ -170,13 +171,14 @@ jobs:
             const macSig = allFiles.find(f => f.endsWith('.tar.gz.sig') || f.endsWith('.app.tar.gz.sig'));
             if (macTar && macSig) {
               const sig = fs.readFileSync(macSig, 'utf8').trim();
+              const sanitizedMac = path.basename(macTar).replace(/\s+/g, '.');
               merged.platforms['darwin-aarch64'] = {
                 signature: sig,
-                url: 'https://github.com/remitz98/SMOBBASHOP/releases/download/' + TAG + '/' + path.basename(macTar)
+                url: 'https://github.com/remitz98/SMOBBASHOP/releases/download/' + TAG + '/' + sanitizedMac
               };
               merged.platforms['darwin-x86_64'] = {
                 signature: sig,
-                url: 'https://github.com/remitz98/SMOBBASHOP/releases/download/' + TAG + '/' + path.basename(macTar)
+                url: 'https://github.com/remitz98/SMOBBASHOP/releases/download/' + TAG + '/' + sanitizedMac
               };
             }
 
@@ -188,7 +190,7 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          TAG="v2.2.8"
+          TAG="v2.2.9"
           shopt -s globstar nullglob
           FILES=(all-dist/**/*.apk all-dist/**/*.msi all-dist/**/*.exe all-dist/**/*.dmg all-dist/**/*.zip all-dist/**/*.tar.gz all-dist/**/*.sig all-dist/**/latest.json)
           echo "Release files found:"
@@ -199,7 +201,7 @@ jobs:
           else
             echo "Creating release $TAG..."
             gh release create "$TAG" \
-              --title "SMO BBA SHOP v2.2.8 (Customer Slip Fix & One-Time Splash Auto-Updater)" \
-              --notes "เวอร์ชัน v2.2.8: 1. แก้ไขการแสดงผลรูปภาพสลิปหลักฐานการโอนเงินในหน้าประวัติการสั่งซื้อบนคอมพิวเตอร์ 2. ปรับระบบ Auto-Update สไตล์ Discord ให้ตรวจสอบเฉพาะตอนเปิดโปรแกรมครั้งแรก (ไม่เด้งเช็คซ้ำตอนกลับจากหน้าแอดมิน) 3. ปรับปรุงความเสถียร" \
+              --title "SMO BBA SHOP v2.2.9 (Auto-Updater Download Fix & URL Sanitization)" \
+              --notes "เวอร์ชัน v2.2.9: 1. แก้ไขให้ระบบ Auto-Update บนคอมพิวเตอร์ดาวน์โหลดและติดตั้งไฟล์อัปเดตอัตโนมัติอย่างสมบูรณ์ (URL sanitization & check object fix) 2. แก้ไขการแสดงผลสลิปในหน้าประวัติสั่งซื้อบนคอม 3. ระบบ Discord Splash Screen ทำงานเฉพาะตอนเปิดโปรแกรม" \
               "${FILES[@]}"
           fi
