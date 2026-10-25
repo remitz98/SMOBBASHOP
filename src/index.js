@@ -587,13 +587,15 @@ app.post('/api/orders', async (c) => {
     for (const item of items) {
       if (item.size) {
         // มีระบุไซส์: ตัดสต็อกระดับไซส์ใน JSON และตัดสต็อกรวม พร้อมตรวจเงื่อนไขสต็อกคงเหลือ
+        // รองรับชื่อไซส์ทุกรูปแบบ (เช่น M, 2XL, Free Size) ด้วย JSON path แบบ $."key"
+        const jsonPath = '$."' + String(item.size).replace(/"/g, '\\"') + '"';
         batchOps.push(
           db.prepare(`
             UPDATE products
             SET stock = stock - ?,
                 size_stock = CASE
-                  WHEN (json_extract(size_stock, '$.' || ?) IS NOT NULL)
-                  THEN json_set(size_stock, '$.' || ?, CAST(json_extract(size_stock, '$.' || ?) AS INT) - ?)
+                  WHEN json_extract(size_stock, ?) IS NOT NULL
+                  THEN json_set(size_stock, ?, CAST(json_extract(size_stock, ?) AS INT) - ?)
                   ELSE size_stock
                 END,
                 status = CASE WHEN (stock - ?) <= 0 THEN 'สินค้าหมด' ELSE status END,
@@ -601,17 +603,21 @@ app.post('/api/orders', async (c) => {
             WHERE product_id = ?
               AND stock >= ?
               AND (
-                json_extract(size_stock, '$.' || ?) IS NULL
-                OR CAST(json_extract(size_stock, '$.' || ?) AS INT) >= ?
+                json_extract(size_stock, ?) IS NULL
+                OR CAST(json_extract(size_stock, ?) AS INT) >= ?
               )
           `).bind(
             item.qty,
-            item.size, item.size, item.qty,
+            jsonPath,
+            jsonPath,
+            jsonPath,
+            item.qty,
             item.qty,
             item.productId,
             item.qty,
-            item.size,
-            item.size, item.qty
+            jsonPath,
+            jsonPath,
+            item.qty
           )
         );
       } else {
