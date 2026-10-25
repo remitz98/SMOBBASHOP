@@ -7,6 +7,20 @@
   <title>ระบบจัดการหลังบ้านสโมสรนักศึกษา | คณะบริหารธุรกิจและการจัดการ (BBA UBRU)</title>
   <link rel="icon" type="image/png" href="logo.png">
 
+  <!-- Immediate Theme Initializer (Prevents White Flash) -->
+  <script>
+    (function() {
+      try {
+        const savedTheme = localStorage.getItem('bba_theme');
+        if (savedTheme === 'dark' || (!savedTheme && window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
+          document.documentElement.classList.add('dark');
+        } else {
+          document.documentElement.classList.remove('dark');
+        }
+      } catch (e) {}
+    })();
+  </script>
+
   <!-- Google Fonts: Prompt -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com">
@@ -17,6 +31,7 @@
   <script>
     window.tailwind = window.tailwind || {};
     tailwind.config = {
+      darkMode: 'class',
       theme: {
         extend: {
           fontFamily: {
@@ -162,6 +177,146 @@
         overflow: visible !important;
       }
     }
+
+    /* ==================== DARK THEME GLOBAL STYLES ==================== */
+    html.dark {
+      color-scheme: dark;
+    }
+    html.dark body {
+      background-color: #0b0f19 !important;
+      color: #f1f5f9 !important;
+    }
+
+    /* Header in Dark Mode */
+    html.dark header.sticky,
+    html.dark header {
+      background-color: rgba(15, 23, 42, 0.94) !important;
+      border-color: #1e293b !important;
+      color: #f1f5f9 !important;
+    }
+
+    /* White & Light backgrounds */
+    html.dark .bg-white {
+      background-color: #1e293b !important;
+      color: #f1f5f9 !important;
+    }
+    html.dark .bg-slate-50,
+    html.dark .bg-slate-100 {
+      background-color: #0f172a !important;
+      color: #e2e8f0 !important;
+    }
+    html.dark .bg-slate-200 {
+      background-color: #334155 !important;
+    }
+
+    /* Text Adjustments */
+    html.dark .text-slate-900,
+    html.dark .text-slate-800 {
+      color: #f8fafc !important;
+    }
+    html.dark .text-slate-700 {
+      color: #e2e8f0 !important;
+    }
+    html.dark .text-slate-600,
+    html.dark .text-slate-500 {
+      color: #94a3b8 !important;
+    }
+    html.dark .text-slate-400 {
+      color: #64748b !important;
+    }
+
+    /* Borders */
+    html.dark .border-slate-100,
+    html.dark .border-slate-200 {
+      border-color: #334155 !important;
+    }
+    html.dark .border-slate-300 {
+      border-color: #475569 !important;
+    }
+
+    /* Form Inputs, Selects, Textareas */
+    html.dark input[type="text"],
+    html.dark input[type="number"],
+    html.dark input[type="tel"],
+    html.dark input[type="email"],
+    html.dark input[type="password"],
+    html.dark select,
+    html.dark textarea {
+      background-color: #0f172a !important;
+      border-color: #334155 !important;
+      color: #f8fafc !important;
+    }
+    html.dark input::placeholder,
+    html.dark textarea::placeholder {
+      color: #64748b !important;
+    }
+
+    /* Modals & Cards Content */
+    html.dark #adminLoginCard,
+    html.dark #adminProductModal .bg-white,
+    html.dark #adminSettingsModal .bg-white,
+    html.dark #adminSlipModal .bg-white,
+    html.dark .admin-card {
+      background-color: #1e293b !important;
+      border-color: #334155 !important;
+      color: #f8fafc !important;
+    }
+
+    /* Table styles */
+    html.dark table thead th {
+      background-color: #0f172a !important;
+      color: #94a3b8 !important;
+      border-color: #334155 !important;
+    }
+    html.dark table tbody tr {
+      border-color: #334155 !important;
+    }
+    html.dark table tbody tr:hover {
+      background-color: rgba(15, 23, 42, 0.6) !important;
+    }
+
+    /* Preserve Receipt Paper Clean Official Look */
+    html.dark #receiptPaper {
+      background-color: #ffffff !important;
+      color: #0f172a !important;
+    }
+    html.dark #receiptPaper * {
+      color: initial;
+    }
+    html.dark #receiptPaper .text-slate-800,
+    html.dark #receiptPaper .text-slate-900 {
+      color: #0f172a !important;
+    }
+    html.dark #receiptPaper .text-slate-500,
+    html.dark #receiptPaper .text-slate-600 {
+      color: #64748b !important;
+    }
+    html.dark #receiptPaper .border-slate-200 {
+      border-color: #e2e8f0 !important;
+    }
+
+    /* SweetAlert2 in Dark Mode */
+    html.dark .swal2-popup {
+      background-color: #1e293b !important;
+      color: #f8fafc !important;
+      border: 1px solid #334155 !important;
+    }
+    html.dark .swal2-title {
+      color: #f8fafc !important;
+    }
+    html.dark .swal2-html-container {
+      color: #cbd5e1 !important;
+    }
+    html.dark .swal2-input,
+    html.dark .swal2-textarea {
+      background-color: #0f172a !important;
+      color: #ffffff !important;
+      border-color: #334155 !important;
+    }
+    html.dark .swal2-validation-message {
+      background-color: #0f172a !important;
+      color: #f87171 !important;
+    }
   </style>
   <script>
     // 1. Detect Android for status bar safe area
@@ -207,6 +362,11 @@
 
       <!-- Action Buttons -->
       <nav class="flex items-center gap-1.5 sm:gap-2 shrink-0">
+        <!-- Theme Toggle Button -->
+        <button onclick="toggleTheme()" id="btnThemeToggle" title="เปลี่ยนธีม (มืด/สว่าง)" class="p-2 sm:px-2.5 sm:py-1.5 rounded-lg border border-slate-200 bg-white hover:bg-slate-100 transition flex items-center justify-center shadow-sm shrink-0 cursor-pointer">
+          <i id="themeIcon" class="fa-solid fa-moon text-slate-600 text-xs sm:text-sm"></i>
+        </button>
+
         <a href="javascript:void(0)" onclick="goToShop(event)" class="px-2.5 py-1.5 sm:px-3 sm:py-1.5 rounded-lg text-xs sm:text-sm font-medium text-slate-600 hover:text-indigo-700 hover:bg-indigo-50 border border-slate-200 bg-white transition flex items-center gap-1.5 shadow-sm cursor-pointer" title="กลับไปหน้าร้านค้า">
           <i class="fa-solid fa-store text-xs text-indigo-600"></i>
           <span class="hidden sm:inline">หน้าร้านค้า</span>
@@ -895,6 +1055,34 @@
     const WS_BASE = (window.location.origin && window.location.origin.includes('workers.dev'))
       ? (location.protocol === 'https:' ? 'wss://' + location.host : 'ws://' + location.host)
       : 'wss://bba-store.smobba.workers.dev';
+
+    // ==================== THEME (DARK / LIGHT MODE) ====================
+    function toggleTheme() {
+      const isDark = document.documentElement.classList.contains('dark');
+      if (isDark) {
+        document.documentElement.classList.remove('dark');
+        try { localStorage.setItem('bba_theme', 'light'); } catch (e) {}
+      } else {
+        document.documentElement.classList.add('dark');
+        try { localStorage.setItem('bba_theme', 'dark'); } catch (e) {}
+      }
+      updateThemeIcon();
+    }
+
+    function updateThemeIcon() {
+      const isDark = document.documentElement.classList.contains('dark');
+      const btn = document.getElementById('btnThemeToggle');
+      const icon = document.getElementById('themeIcon');
+      if (icon) {
+        if (isDark) {
+          icon.className = 'fa-solid fa-sun text-amber-400 text-xs sm:text-sm';
+          if (btn) btn.title = 'เปลี่ยนเป็นโหมดสว่าง (Light Mode)';
+        } else {
+          icon.className = 'fa-solid fa-moon text-slate-600 text-xs sm:text-sm';
+          if (btn) btn.title = 'เปลี่ยนเป็นโหมดมืด (Dark Mode)';
+        }
+      }
+    }
 
     // State Variables
     let adminTokenPin = '';
@@ -2864,6 +3052,7 @@
 
     // Initial load: เช็ก PIN จาก localStorage หรือ sessionStorage เพื่อเข้าหน้าแอดมินอัตโนมัติ
     document.addEventListener('DOMContentLoaded', () => {
+      updateThemeIcon();
       let cachedPin = '';
       try {
         cachedPin = localStorage.getItem('bba_admin_pin') || sessionStorage.getItem('bba_admin_pin') || '';
