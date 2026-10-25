@@ -274,6 +274,219 @@ async function sendNotificationEmail(env, { to, subject, htmlBody }) {
   };
 }
 
+// ==================== 1.8 FIREBASE CLOUD MESSAGING (FCM HTTP v1) ====================
+let cachedFcmAuth = { token: null, exp: 0, projectId: 'smobbashop' };
+
+function base64UrlEncode(str) {
+  const bytes = typeof str === 'string' ? new TextEncoder().encode(str) : new Uint8Array(str);
+  let binary = '';
+  for (let i = 0; i < bytes.byteLength; i++) {
+    binary += String.fromCharCode(bytes[i]);
+  }
+  return btoa(binary).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+}
+
+function pemToArrayBuffer(pem) {
+  const b64 = pem
+    .replace(/-----BEGIN[ A-Z_-]+-----/g, '')
+    .replace(/-----END[ A-Z_-]+-----/g, '')
+    .replace(/\s+/g, '');
+  const raw = atob(b64);
+  const buf = new Uint8Array(raw.length);
+  for (let i = 0; i < raw.length; i++) {
+    buf[i] = raw.charCodeAt(i);
+  }
+  return buf.buffer;
+}
+
+async function getFcmAccessToken(env) {
+  const now = Math.floor(Date.now() / 1000);
+  if (cachedFcmAuth.token && cachedFcmAuth.exp > (now + 60)) {
+    return cachedFcmAuth.token;
+  }
+
+  const row = await env.DB.prepare("SELECT value FROM settings WHERE key = 'FirebaseServiceAccount'").first();
+  if (!row || !row.value) {
+    console.warn('[FCM] FirebaseServiceAccount is not configured in settings table.');
+    return null;
+  }
+
+  let sa;
+  try {
+    sa = JSON.parse(row.value);
+  } catch (err) {
+    console.error('[FCM] Failed to parse FirebaseServiceAccount JSON:', err);
+    return null;
+  }
+
+  const header = { alg: 'RS256', typ: 'JWT' };
+  const payload = {
+    iss: sa.client_email,
+    scope: 'https://www.googleapis.com/auth/firebase.messaging',
+    aud: 'https://oauth2.googleapis.com/token',
+    iat: now,
+    exp: now + 3600
+  };
+
+  const encodedHeader = base64UrlEncode(JSON.stringify(header));
+  const encodedPayload = base64UrlEncode(JSON.stringify(payload));
+  const dataToSign = new TextEncoder().encode(`${encodedHeader}.${encodedPayload}`);
+
+  const binaryKey = pemToArrayBuffer(sa.private_key);
+  const cryptoKey = await crypto.subtle.importKey(
+    'pkcs8',
+    binaryKey,
+    { name: 'RSASSA-PKCS1-v1_5', hash: 'SHA-256' },
+    false,
+    ['sign']
+  );
+
+  const signature = await crypto.subtle.sign('RSASSA-PKCS1-v1_5', cryptoKey, dataToSign);
+  const jwt = `${encodedHeader}.${encodedPayload}.${base64UrlEncode(signature)}`;
+
+  const res = await fetch('https://oauth2.googleapis.com/token', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+    body: `grant_type=urn:ietf:params:oauth:grant-type:jwt-bearer&assertion=${jwt}`
+  });
+
+  if (!res.ok) {
+    const errText = await res.text();
+    console.error('[FCM] OAuth2 token exchange failed:', errText);
+    return null;
+  }
+
+  const tokenData = await res.json();
+  cachedFcmAuth = {
+    token: tokenData.access_token,
+    exp: now + (tokenData.expires_in || 3600),
+    projectId: sa.project_id || 'smobbashop'
+  };
+  return cachedFcmAuth.token;
+}
+
+async function sendFcmMessage(env, { tokens, title, body, data }) {
+  if (!tokens || tokens.length === 0) return { sent: 0, failed: 0 };
+  const accessToken = await getFcmAccessToken(env);
+  if (!accessToken) {
+    console.warn('[FCM] Skipping push notification: no valid access token');
+    return { sent: 0, failed: tokens.length, error: 'No access token' };
+  }
+
+  const projectId = cachedFcmAuth.projectId || 'smobbashop';
+  const url = `https://fcm.googleapis.com/v1/projects/${projectId}/messages:send`;
+
+  let sent = 0;
+  let failed = 0;
+  const staleTokens = [];
+
+  const promises = tokens.map(async (token) => {
+    try {
+      const messagePayload = {
+        message: {
+          token: token,
+          notification: {
+            title: title,
+            body: body
+          },
+          data: Object.fromEntries(
+            Object.entries(data || {}).map(([k, v]) => [k, String(v ?? '')])
+          ),
+          android: {
+            priority: 'high',
+            notification: {
+              channel_id: 'bba_orders_channel',
+              sound: 'default',
+              default_sound: true,
+              default_vibrate_timings: true
+            }
+          }
+        }
+      };
+
+      const res = await fetch(url, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${accessToken}`,
+          'Content-Type': 'application/json; UTF-8'
+        },
+        body: JSON.stringify(messagePayload)
+      });
+
+      if (res.ok) {
+        sent++;
+      } else {
+        failed++;
+        const respJson = await res.json().catch(() => ({}));
+        const status = respJson?.error?.status || '';
+        if (res.status === 404 || status === 'UNREGISTERED' || status === 'NOT_FOUND' || status === 'INVALID_ARGUMENT') {
+          staleTokens.push(token);
+        }
+      }
+    } catch (e) {
+      failed++;
+    }
+  });
+
+  await Promise.all(promises);
+
+  if (staleTokens.length > 0) {
+    try {
+      const placeholders = staleTokens.map(() => '?').join(',');
+      await env.DB.prepare(`DELETE FROM fcm_tokens WHERE token IN (${placeholders})`).bind(...staleTokens).run();
+    } catch (e) {
+      console.error('[FCM] Failed to clean up stale tokens:', e);
+    }
+  }
+
+  return { sent, failed };
+}
+
+async function sendAdminFcmNotification(env, { title, body, orderId, type }) {
+  try {
+    const { results } = await env.DB.prepare("SELECT token FROM fcm_tokens WHERE role = 'admin'").all();
+    const tokens = (results || []).map(r => r.token).filter(Boolean);
+    if (tokens.length > 0) {
+      return await sendFcmMessage(env, {
+        tokens,
+        title,
+        body,
+        data: {
+          type: type || 'NEW_ORDER',
+          orderId: orderId || '',
+          title,
+          body
+        }
+      });
+    }
+  } catch (err) {
+    console.error('[FCM] sendAdminFcmNotification error:', err);
+  }
+}
+
+async function sendStudentFcmNotification(env, { studentId, title, body, orderId, type }) {
+  try {
+    if (!studentId) return;
+    const { results } = await env.DB.prepare("SELECT token FROM fcm_tokens WHERE student_id = ?").bind(String(studentId)).all();
+    const tokens = (results || []).map(r => r.token).filter(Boolean);
+    if (tokens.length > 0) {
+      return await sendFcmMessage(env, {
+        tokens,
+        title,
+        body,
+        data: {
+          type: type || 'ORDER_UPDATED',
+          orderId: orderId || '',
+          title,
+          body
+        }
+      });
+    }
+  } catch (err) {
+    console.error('[FCM] sendStudentFcmNotification error:', err);
+  }
+}
+
 function parseDataUrl(dataUrl) {
   if (!dataUrl || typeof dataUrl !== 'string') return null;
   const match = dataUrl.match(/^data:([^;]+);base64,(.+)$/);
@@ -683,6 +896,23 @@ app.post('/api/orders', async (c) => {
       console.error('Failed to broadcast new order:', wsErr);
     }
 
+    // ส่ง Push Notification ผ่าน Firebase Cloud Messaging (FCM) ไปยังอุปกรณ์แอดมินทุกคน
+    try {
+      const fcmPromise = sendAdminFcmNotification(c.env, {
+        title: '🛒 คำสั่งซื้อใหม่เข้ามา!',
+        body: `${customerName} สั่งซื้อ ${itemsSummary} ยอด ฿${calculatedTotal.toLocaleString()} (รหัส ${orderId})`,
+        orderId: orderId,
+        type: 'NEW_ORDER'
+      });
+      if (c.executionCtx && typeof c.executionCtx.waitUntil === 'function') {
+        c.executionCtx.waitUntil(fcmPromise);
+      } else {
+        await fcmPromise;
+      }
+    } catch (fcmErr) {
+      console.error('Failed to trigger Admin FCM notification:', fcmErr);
+    }
+
     return c.json({
       success: true,
       message: 'บันทึกคำสั่งซื้อสำเร็จ',
@@ -948,6 +1178,43 @@ app.post('/api/admin/orders/status', async (c) => {
       }
     } catch (e) {
       console.error('DO broadcast status error:', e);
+    }
+
+    // ส่ง Push Notification ผ่าน Firebase Cloud Messaging (FCM) ไปยังนักศึกษาเจ้าของคำสั่งซื้อ
+    try {
+      let pushTitle = '🔔 อัปเดตสถานะคำสั่งซื้อ!';
+      let pushBody = `คำสั่งซื้อ ${order.order_id} เปลี่ยนสถานะเป็น "${newStatus}"`;
+
+      if (newStatus === 'พร้อมรับเสื้อที่ห้องสโมสร') {
+        pushTitle = '🎉 เสื้อสโมสรของคุณพร้อมให้มารับแล้ว!';
+        pushBody = `คำสั่งซื้อ ${order.order_id} พร้อมให้มารับที่ห้องสโมสรนักศึกษาแล้ว`;
+      } else if (newStatus === 'ชำระเงินเรียบร้อย') {
+        pushTitle = '✅ ยืนยันการชำระเงินเรียบร้อยแล้ว!';
+        pushBody = `คำสั่งซื้อ ${order.order_id} ได้รับการตรวจสอบยอดชำระเงินเรียบร้อย`;
+      } else if (newStatus === 'ยกเลิกคำสั่งซื้อ') {
+        pushTitle = '❌ คำสั่งซื้อถูกยกเลิก';
+        pushBody = `คำสั่งซื้อ ${order.order_id} ถูกยกเลิกโดยแอดมิน`;
+      }
+
+      if (finalAdminNotes) {
+        pushBody += ` (${finalAdminNotes})`;
+      }
+
+      const studentFcmPromise = sendStudentFcmNotification(c.env, {
+        studentId: order.student_id,
+        title: pushTitle,
+        body: pushBody,
+        orderId: order.order_id,
+        type: 'ORDER_UPDATED'
+      });
+
+      if (c.executionCtx && typeof c.executionCtx.waitUntil === 'function') {
+        c.executionCtx.waitUntil(studentFcmPromise);
+      } else {
+        await studentFcmPromise;
+      }
+    } catch (fcmErr) {
+      console.error('Failed to trigger Student FCM notification:', fcmErr);
     }
 
     return c.json({ success: true, message: `อัปเดตสถานะเป็น "${newStatus}" สำเร็จเรียบร้อย${emailNotice}` });
@@ -1356,6 +1623,72 @@ app.get('/api/student/ws', async (c) => {
   const stub = c.env.ORDER_NOTIFIER.get(id);
   const doUrl = new URL(`http://order-notifier/ws?role=student&studentId=${encodeURIComponent(studentId)}`);
   return stub.fetch(new Request(doUrl.toString(), c.req.raw));
+});
+
+// ==================== 2.9 FCM PUSH NOTIFICATIONS REGISTRATION ====================
+
+// Endpoint บันทึก/อัปเดต FCM Registration Token จากอุปกรณ์ Android Native App
+app.post('/api/notifications/register-token', async (c) => {
+  try {
+    const body = await c.req.json();
+    const token = String(body.token || '').trim();
+    let role = String(body.role || 'visitor').trim().toLowerCase();
+    const studentId = body.studentId ? normalizeStudentId(body.studentId) : null;
+    const pin = body.pin ? String(body.pin).trim() : null;
+
+    if (!token) {
+      return c.json({ success: false, message: 'Missing token' }, 400);
+    }
+
+    // Security check: เฉพาะผู้มี PIN แอดมินถูกต้องเท่านั้นถึงจะลงทะเบียนบทบาท 'admin' ได้
+    if (role === 'admin') {
+      const isValid = await verifyAdminPin(c.env.DB, pin);
+      if (!isValid) {
+        role = 'visitor'; // ปรับลดเป็น visitor หาก PIN ไม่ถูกต้อง
+      }
+    }
+
+    await c.env.DB.prepare(`
+      INSERT INTO fcm_tokens (token, role, student_id, updated_at)
+      VALUES (?, ?, ?, CURRENT_TIMESTAMP)
+      ON CONFLICT(token) DO UPDATE SET
+        role = excluded.role,
+        student_id = excluded.student_id,
+        updated_at = CURRENT_TIMESTAMP
+    `).bind(token, role, studentId).run();
+
+    return c.json({ success: true, role, studentId });
+  } catch (err) {
+    console.error('[FCM] Register token error:', err);
+    return c.json({ success: false, message: err.message }, 500);
+  }
+});
+
+// Endpoint สำหรับทดสอบส่งการแจ้งเตือน FCM ไปยังแอดมินทุกคน
+app.post('/api/admin/notifications/test-fcm', async (c) => {
+  try {
+    const body = await c.req.json();
+    const isValid = await verifyAdminPin(c.env.DB, body.pin);
+    if (!isValid) return c.json({ success: false, message: 'รหัส PIN ไม่ถูกต้อง' }, 401);
+
+    const { results } = await c.env.DB.prepare("SELECT token, role, student_id FROM fcm_tokens").all();
+    const res = await sendAdminFcmNotification(c.env, {
+      title: '🔔 ทดสอบการแจ้งเตือน SMO BBA SHOP',
+      body: 'ระบบ Firebase Push Notification ทำงานได้สมบูรณ์แม้ปิดแอป!',
+      orderId: 'TEST-001',
+      type: 'TEST'
+    });
+
+    return c.json({
+      success: true,
+      message: 'ส่งการแจ้งเตือนทดสอบเรียบร้อยแล้ว',
+      totalTokens: (results || []).length,
+      sendResult: res,
+      tokens: results
+    });
+  } catch (err) {
+    return c.json({ success: false, message: err.message }, 500);
+  }
 });
 
 // ==================== 3. FRONTEND STATIC ASSET ROUTING ====================

@@ -1173,6 +1173,9 @@
         localStorage.removeItem('bba_admin_pin');
         sessionStorage.removeItem('bba_admin_pin');
       } catch (e) {}
+      if (window.AndroidNative && typeof window.AndroidNative.syncFcmRole === 'function') {
+        try { window.AndroidNative.syncFcmRole('visitor', null, null); } catch (e) {}
+      }
       closeAdminWebSocket();
       switchView('login');
       const input = document.getElementById('inputLoginPin');
@@ -1201,6 +1204,9 @@
             localStorage.setItem('bba_admin_pin', adminTokenPin);
             sessionStorage.setItem('bba_admin_pin', adminTokenPin);
           } catch (e) {}
+          if (window.AndroidNative && typeof window.AndroidNative.syncFcmRole === 'function') {
+            try { window.AndroidNative.syncFcmRole('admin', null, adminTokenPin); } catch (e) {}
+          }
           switchView('admin');
           initAdminWebSocket();
           document.getElementById('statSales').textContent = '฿' + Number(resData.stats.totalSales || 0).toLocaleString();

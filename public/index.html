@@ -1747,6 +1747,21 @@
       } else {
         disconnectStudentWs();
       }
+
+      // 3. ซิงค์บทบาทกับ Firebase Cloud Messaging (FCM) บน Android Native App
+      if (window.AndroidNative && typeof window.AndroidNative.syncFcmRole === 'function') {
+        try {
+          if (adminPin) {
+            window.AndroidNative.syncFcmRole('admin', currentStudent?.studentId || null, adminPin);
+          } else if (currentStudent && currentStudent.studentId) {
+            window.AndroidNative.syncFcmRole('student', currentStudent.studentId, null);
+          } else {
+            window.AndroidNative.syncFcmRole('visitor', null, null);
+          }
+        } catch (e) {
+          console.warn('FCM Native sync error:', e);
+        }
+      }
     }
 
     function connectAdminBgWs(pin) {
@@ -3822,8 +3837,8 @@
 
     function checkAppUpdateNotification() {
       const isAndroidNative = (window.AndroidNative && typeof window.AndroidNative.isAndroidNativeApp === 'function');
-      const CURRENT_LATEST_VERSION = 'v2.3.7';
-      const CURRENT_LATEST_BUILD = 21;
+      const CURRENT_LATEST_VERSION = 'v2.3.8';
+      const CURRENT_LATEST_BUILD = 22;
       const DISMISS_KEY = 'bba_update_dismissed_' + CURRENT_LATEST_VERSION;
 
       if (isAndroidNative) {
@@ -3862,10 +3877,10 @@
                   <div class="pt-1 text-slate-700 leading-relaxed">
                     <b>รายการปรับปรุงในเวอร์ชัน ${CURRENT_LATEST_VERSION}:</b>
                     <ul class="list-disc list-inside mt-1 space-y-1 text-slate-600 text-xs">
-                      <li>แก้ไขปัญหา Realtime บน PC เชื่อมต่อไปยัง Cloudflare Durable Objects ได้ 100%</li>
-                      <li>ระบบ Heartbeat ป้องกันการหลุดของ WebSocket ทำให้แจ้งเตือนสถานะและคำสั่งซื้อได้แม่นยำตลอดเวลา</li>
-                      <li>แก้ไข Version Code ของ Android ให้อ่านจากระบบอัตโนมัติ ไม่แสดงการแจ้งเตือนอัปเดตซ้ำซ้อน</li>
-                      <li>เพิ่มปุ่มสลับโหมดแอดมินในเมนูบัญชีและหน้าล็อกอินบนมือถือ</li>
+                      <li>ระบบแจ้งเตือน Firebase Cloud Messaging (FCM) แบบ Push Notification แม้เคลียร์แอป/ปิดแอป หรือรีสตาร์ทเครื่อง</li>
+                      <li>แยกการแจ้งเตือนชัดเจน: คำสั่งซื้อใหม่แจ้งเตือนเฉพาะแอดมิน, อัปเดตสถานะแจ้งเตือนเฉพาะนักศึกษาเจ้าของคำสั่งซื้อ</li>
+                      <li>ระบบเสียงและการสั่นแจ้งเตือนแบบ High Priority สำหรับอุปกรณ์ Android</li>
+                      <li>เชื่อมต่อ WebSocket Realtime ควบคู่เพื่อการอัปเดตหน้าจอแบบทันทีเมื่อเปิดแอป</li>
                     </ul>
                   </div>
                 </div>
@@ -3891,13 +3906,13 @@
     function handleMobileAccountClick() {
       const isAndroidNative = (window.AndroidNative && typeof window.AndroidNative.isAndroidNativeApp === 'function');
       let isOldVersion = false;
-      const curVer = 'v2.3.7';
+      const curVer = 'v2.3.8';
       if (isAndroidNative) {
         let build = 0;
         if (typeof window.AndroidNative.getAppVersionCode === 'function') {
           try { build = Number(window.AndroidNative.getAppVersionCode()) || 0; } catch (e) {}
         }
-        if (build < 21) isOldVersion = true;
+        if (build < 22) isOldVersion = true;
       }
 
       const hasAdminPin = Boolean(localStorage.getItem('bba_admin_pin') || sessionStorage.getItem('bba_admin_pin'));

@@ -40,6 +40,7 @@ class MainActivity : ComponentActivity() {
 
         createNotificationChannel()
         checkNotificationPermission()
+        initFcm()
 
         webView = WebView(this).apply {
             layoutParams = FrameLayout.LayoutParams(
@@ -162,6 +163,25 @@ class MainActivity : ComponentActivity() {
         }
     }
 
+    private fun initFcm() {
+        MyFirebaseMessagingService.ensureNotificationChannel(this)
+        try {
+            com.google.firebase.messaging.FirebaseMessaging.getInstance().token.addOnCompleteListener { task ->
+                if (task.isSuccessful) {
+                    val token = task.result
+                    val prefs = getSharedPreferences(MyFirebaseMessagingService.PREFS_NAME, Context.MODE_PRIVATE)
+                    prefs.edit().putString(MyFirebaseMessagingService.KEY_FCM_TOKEN, token).apply()
+                    val role = prefs.getString(MyFirebaseMessagingService.KEY_ROLE, "visitor") ?: "visitor"
+                    val studentId = prefs.getString(MyFirebaseMessagingService.KEY_STUDENT_ID, null)
+                    val adminPin = prefs.getString(MyFirebaseMessagingService.KEY_ADMIN_PIN, null)
+                    MyFirebaseMessagingService.sendTokenToServer(token, role, studentId, adminPin)
+                }
+            }
+        } catch (e: Exception) {
+            e.printStackTrace()
+        }
+    }
+
     override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
         super.onActivityResult(requestCode, resultCode, data)
         if (requestCode == FILE_CHOOSER_REQUEST_CODE) {
@@ -212,7 +232,7 @@ class MainActivity : ComponentActivity() {
                     pInfo.versionCode
                 }
             } catch (e: Exception) {
-                21
+                22
             }
         }
 
@@ -220,9 +240,9 @@ class MainActivity : ComponentActivity() {
         fun getAppVersionName(): String {
             return try {
                 val pInfo = activity.packageManager.getPackageInfo(activity.packageName, 0)
-                pInfo.versionName ?: "1.0.21"
+                pInfo.versionName ?: "1.0.22"
             } catch (e: Exception) {
-                "1.0.21"
+                "1.0.22"
             }
         }
 
@@ -234,6 +254,33 @@ class MainActivity : ComponentActivity() {
         @JavascriptInterface
         fun finishRefresh() {
             // No-op for compatibility
+        }
+
+        @JavascriptInterface
+        fun syncFcmRole(role: String, studentId: String?, pin: String?) {
+            try {
+                val prefs = activity.getSharedPreferences(MyFirebaseMessagingService.PREFS_NAME, Context.MODE_PRIVATE)
+                prefs.edit()
+                    .putString(MyFirebaseMessagingService.KEY_ROLE, role)
+                    .putString(MyFirebaseMessagingService.KEY_STUDENT_ID, studentId)
+                    .putString(MyFirebaseMessagingService.KEY_ADMIN_PIN, pin)
+                    .apply()
+
+                val token = prefs.getString(MyFirebaseMessagingService.KEY_FCM_TOKEN, null)
+                if (!token.isNullOrBlank()) {
+                    MyFirebaseMessagingService.sendTokenToServer(token, role, studentId, pin)
+                } else {
+                    com.google.firebase.messaging.FirebaseMessaging.getInstance().token.addOnCompleteListener { task ->
+                        if (task.isSuccessful) {
+                            val newToken = task.result
+                            prefs.edit().putString(MyFirebaseMessagingService.KEY_FCM_TOKEN, newToken).apply()
+                            MyFirebaseMessagingService.sendTokenToServer(newToken, role, studentId, pin)
+                        }
+                    }
+                }
+            } catch (e: Exception) {
+                e.printStackTrace()
+            }
         }
 
         @JavascriptInterface
