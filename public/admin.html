@@ -148,7 +148,7 @@
       body * {
         visibility: hidden !important;
       }
-      #receiptModal, #receiptPaper, #receiptPaper * {
+      #receiptModal, #receiptPaper, #receiptPaper *, [id^="receiptPaper"], [id^="receiptPaper"] * {
         visibility: visible !important;
       }
       #receiptModal {
@@ -164,7 +164,9 @@
       .no-print {
         display: none !important;
       }
-      #receiptPaper {
+      #receiptPaper, [id^="receiptPaper"] {
+        background-color: #ffffff !important;
+        color: #0f172a !important;
         border: none !important;
         box-shadow: none !important;
         padding: 20px !important;
@@ -349,26 +351,6 @@
       border-color: rgba(99, 102, 241, 0.4) !important;
     }
 
-    /* Preserve Receipt Paper Clean Official Look */
-    html.dark #receiptPaper {
-      background-color: #ffffff !important;
-      color: #0f172a !important;
-    }
-    html.dark #receiptPaper * {
-      color: initial;
-    }
-    html.dark #receiptPaper .text-slate-800,
-    html.dark #receiptPaper .text-slate-900 {
-      color: #0f172a !important;
-    }
-    html.dark #receiptPaper .text-slate-500,
-    html.dark #receiptPaper .text-slate-600 {
-      color: #64748b !important;
-    }
-    html.dark #receiptPaper .border-slate-200 {
-      border-color: #e2e8f0 !important;
-    }
-
     /* Modal Close Buttons in Dark Mode */
     html.dark button[onclick*="close"],
     html.dark .rounded-full[class*="bg-slate-200"] {
@@ -388,22 +370,242 @@
 
     /* Golden Rule: Any forced light card/container MUST strictly use dark font */
     html.dark .light-box,
-    html.dark .light-box *,
-    html.dark #receiptPaper,
-    html.dark #receiptPaper * {
+    html.dark .light-box * {
       color: #0f172a !important;
     }
-    html.dark #receiptPaper {
+
+    /* ==========================================================================
+       STRICT RECEIPT PAPER THEME IMMUNITY (AUTHENTIC WHITE PAPER LOOK)
+       ใบเสร็จจะไม่เปลี่ยนสีตามธีมมืดเด็ดขาด: ให้คงหน้าตากระดาษขาว คมชัด ทางการเสมอ
+       ========================================================================== */
+    #receiptPaper,
+    [id^="receiptPaper"] {
       background-color: #ffffff !important;
+      color: #1e293b !important;
+      border: 1px solid #e2e8f0 !important;
+      box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.08), 0 1px 2px -1px rgba(0, 0, 0, 0.08) !important;
     }
-    html.dark #receiptPaper .text-slate-500,
+
+    html.dark #receiptPaper,
+    html.dark [id^="receiptPaper"] {
+      background-color: #ffffff !important;
+      color: #1e293b !important;
+      border: 1px solid #e2e8f0 !important;
+      box-shadow: 0 8px 24px -4px rgba(0, 0, 0, 0.45) !important;
+    }
+
+    /* Modal Backdrop / Viewport in Dark Mode */
+    html.dark #receiptModal > div.bg-white {
+      background-color: #0f172a !important;
+      border: 1px solid #334155 !important;
+    }
+    html.dark #receiptModal .bg-slate-100 {
+      background-color: #090d16 !important;
+    }
+    html.dark #receiptModal .no-print.bg-white {
+      background-color: #0f172a !important;
+      border-color: #1e293b !important;
+    }
+    html.dark #receiptModal .no-print .text-slate-500 {
+      color: #94a3b8 !important;
+    }
+
+    /* Force light color-scheme on receipt paper elements in Dark Mode */
+    html.dark #receiptPaper *,
+    html.dark [id^="receiptPaper"] * {
+      color-scheme: light !important;
+    }
+
+    /* Typography inside receipt paper */
+    html.dark #receiptPaper h4,
+    html.dark #receiptPaper h5,
+    html.dark #receiptPaper strong,
+    html.dark #receiptPaper b,
+    html.dark #receiptPaper .text-slate-900,
+    html.dark #receiptPaper .text-slate-800,
+    html.dark [id^="receiptPaper"] h4,
+    html.dark [id^="receiptPaper"] h5,
+    html.dark [id^="receiptPaper"] strong,
+    html.dark [id^="receiptPaper"] b,
+    html.dark [id^="receiptPaper"] .text-slate-900,
+    html.dark [id^="receiptPaper"] .text-slate-800 {
+      color: #0f172a !important;
+    }
+
+    html.dark #receiptPaper .text-slate-700,
+    html.dark [id^="receiptPaper"] .text-slate-700 {
+      color: #334155 !important;
+    }
+
     html.dark #receiptPaper .text-slate-600,
-    html.dark #receiptPaper .text-slate-400 {
+    html.dark [id^="receiptPaper"] .text-slate-600 {
       color: #475569 !important;
     }
+
+    html.dark #receiptPaper .text-slate-500,
+    html.dark [id^="receiptPaper"] .text-slate-500 {
+      color: #64748b !important;
+    }
+
+    html.dark #receiptPaper .text-slate-400,
+    html.dark [id^="receiptPaper"] .text-slate-400 {
+      color: #94a3b8 !important;
+    }
+
+    html.dark #receiptPaper .text-indigo-950,
+    html.dark [id^="receiptPaper"] .text-indigo-950 {
+      color: #1e1b4b !important;
+    }
+
+    html.dark #receiptPaper .text-indigo-900,
+    html.dark [id^="receiptPaper"] .text-indigo-900 {
+      color: #312e81 !important;
+    }
+
+    html.dark #receiptPaper .text-indigo-700,
+    html.dark #receiptPaper i.text-indigo-700,
+    html.dark [id^="receiptPaper"] .text-indigo-700,
+    html.dark [id^="receiptPaper"] i.text-indigo-700 {
+      color: #4338ca !important;
+    }
+
+    html.dark #receiptPaper .text-amber-700,
+    html.dark [id^="receiptPaper"] .text-amber-700 {
+      color: #b45309 !important;
+    }
+
+    /* Borders inside receipt paper */
     html.dark #receiptPaper .border-slate-200,
-    html.dark #receiptPaper .border-slate-100 {
-      border-color: #cbd5e1 !important;
+    html.dark #receiptPaper .border-slate-100,
+    html.dark [id^="receiptPaper"] .border-slate-200,
+    html.dark [id^="receiptPaper"] .border-slate-100 {
+      border-color: #e2e8f0 !important;
+    }
+
+    /* Receipt Table Isolation */
+    html.dark #receiptPaper #receiptTableContainer,
+    html.dark [id^="receiptPaper"] #receiptTableContainer {
+      background-color: #ffffff !important;
+      border: 1px solid #e2e8f0 !important;
+    }
+
+    html.dark #receiptPaper table,
+    html.dark [id^="receiptPaper"] table {
+      background-color: #ffffff !important;
+      color: #1e293b !important;
+    }
+
+    html.dark #receiptPaper table thead,
+    html.dark #receiptPaper table thead tr,
+    html.dark #receiptPaper table thead th,
+    html.dark #receiptPaper table thead th.bg-slate-50,
+    html.dark [id^="receiptPaper"] table thead,
+    html.dark [id^="receiptPaper"] table thead tr,
+    html.dark [id^="receiptPaper"] table thead th,
+    html.dark [id^="receiptPaper"] table thead th.bg-slate-50 {
+      background-color: #f8fafc !important;
+      color: #475569 !important;
+      border-color: #e2e8f0 !important;
+    }
+
+    html.dark #receiptPaper table tbody,
+    html.dark #receiptPaper table tbody tr,
+    html.dark #receiptPaper table tbody td,
+    html.dark [id^="receiptPaper"] table tbody,
+    html.dark [id^="receiptPaper"] table tbody tr,
+    html.dark [id^="receiptPaper"] table tbody td {
+      background-color: #ffffff !important;
+      color: #1e293b !important;
+      border-color: #f1f5f9 !important;
+    }
+
+    html.dark #receiptPaper table tbody tr:hover,
+    html.dark #receiptPaper table tbody tr:hover td,
+    html.dark [id^="receiptPaper"] table tbody tr:hover,
+    html.dark [id^="receiptPaper"] table tbody tr:hover td {
+      background-color: #f8fafc !important;
+    }
+
+    html.dark #receiptPaper table tfoot,
+    html.dark #receiptPaper table tfoot tr,
+    html.dark #receiptPaper table tfoot td,
+    html.dark #receiptPaper table tfoot td.bg-slate-50\/95,
+    html.dark #receiptPaper table tfoot [class*="bg-slate-50"],
+    html.dark [id^="receiptPaper"] table tfoot,
+    html.dark [id^="receiptPaper"] table tfoot tr,
+    html.dark [id^="receiptPaper"] table tfoot td,
+    html.dark [id^="receiptPaper"] table tfoot td.bg-slate-50\/95,
+    html.dark [id^="receiptPaper"] table tfoot [class*="bg-slate-50"] {
+      background-color: #f8fafc !important;
+      border-color: #e2e8f0 !important;
+    }
+
+    html.dark #receiptPaper table tfoot td.text-slate-600,
+    html.dark [id^="receiptPaper"] table tfoot td.text-slate-600 {
+      color: #475569 !important;
+    }
+
+    html.dark #receiptPaper table tfoot #receiptTotalQty,
+    html.dark [id^="receiptPaper"] table tfoot #receiptTotalQty {
+      color: #0f172a !important;
+    }
+
+    html.dark #receiptPaper table tfoot #receiptGrandTotal,
+    html.dark [id^="receiptPaper"] table tfoot #receiptGrandTotal {
+      color: #4338ca !important;
+    }
+
+    /* Pickup Information Box Isolation */
+    html.dark #receiptPaper [class*="bg-indigo-50"],
+    html.dark #receiptPaper .bg-indigo-50,
+    html.dark [id^="receiptPaper"] [class*="bg-indigo-50"],
+    html.dark [id^="receiptPaper"] .bg-indigo-50 {
+      background-color: #eef2ff !important;
+      border-color: #c7d2fe !important;
+    }
+
+    html.dark #receiptPaper [class*="bg-indigo-50"] *,
+    html.dark [id^="receiptPaper"] [class*="bg-indigo-50"] * {
+      color-scheme: light !important;
+    }
+
+    html.dark #receiptPaper [class*="bg-indigo-50"] .text-indigo-950,
+    html.dark [id^="receiptPaper"] [class*="bg-indigo-50"] .text-indigo-950 {
+      color: #1e1b4b !important;
+    }
+
+    html.dark #receiptPaper [class*="bg-indigo-50"] .text-indigo-900,
+    html.dark #receiptPaper #receiptPickupLoc,
+    html.dark [id^="receiptPaper"] [class*="bg-indigo-50"] .text-indigo-900,
+    html.dark [id^="receiptPaper"] #receiptPickupLoc {
+      color: #312e81 !important;
+    }
+
+    html.dark #receiptPaper [class*="bg-indigo-50"] .text-indigo-700,
+    html.dark #receiptPaper #receiptPickupSchedule,
+    html.dark #receiptPaper [class*="bg-indigo-50"] i,
+    html.dark [id^="receiptPaper"] [class*="bg-indigo-50"] .text-indigo-700,
+    html.dark [id^="receiptPaper"] #receiptPickupSchedule,
+    html.dark [id^="receiptPaper"] [class*="bg-indigo-50"] i {
+      color: #4338ca !important;
+    }
+
+    html.dark #receiptPaper [class*="bg-indigo-50"] .text-amber-700,
+    html.dark [id^="receiptPaper"] [class*="bg-indigo-50"] .text-amber-700 {
+      color: #b45309 !important;
+    }
+
+    html.dark #receiptPaper [class*="bg-indigo-50"] .border-indigo-100,
+    html.dark [id^="receiptPaper"] [class*="bg-indigo-50"] .border-indigo-100 {
+      border-color: #e0e7ff !important;
+    }
+
+    /* Official Receipt Stamp Badge */
+    html.dark #receiptPaper .bg-slate-50,
+    html.dark [id^="receiptPaper"] .bg-slate-50 {
+      background-color: #f8fafc !important;
+      border-color: #e2e8f0 !important;
+      color: #4338ca !important;
     }
 
     /* SweetAlert2 in Dark Mode */
