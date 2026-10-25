@@ -154,14 +154,14 @@ jobs:
               }
             }
 
-            // Look for Windows updater zip and signature
-            const winZip = allFiles.find(f => f.endsWith('.nsis.zip') || (f.endsWith('.zip') && !f.includes('macos')));
-            const winSig = allFiles.find(f => f.endsWith('.nsis.zip.sig') || (f.endsWith('.sig') && !f.includes('macos') && !f.includes('darwin')));
-            if (winZip && winSig && !merged.platforms['windows-x86_64']) {
+            // Look for Windows updater (exe or nsis.zip) and signature
+            const winSig = allFiles.find(f => (f.endsWith('-setup.exe.sig') || f.endsWith('.exe.sig') || f.endsWith('.nsis.zip.sig')) && !f.includes('macos') && !f.includes('darwin'));
+            const winTarget = allFiles.find(f => (f.endsWith('-setup.exe') || f.endsWith('.nsis.zip')) && !f.includes('macos') && !f.includes('darwin'));
+            if (winTarget && winSig && !merged.platforms['windows-x86_64']) {
               const sig = fs.readFileSync(winSig, 'utf8').trim();
               merged.platforms['windows-x86_64'] = {
                 signature: sig,
-                url: 'https://github.com/remitz98/SMOBBASHOP/releases/download/' + TAG + '/' + path.basename(winZip)
+                url: 'https://github.com/remitz98/SMOBBASHOP/releases/download/' + TAG + '/' + path.basename(winTarget)
               };
             }
 
