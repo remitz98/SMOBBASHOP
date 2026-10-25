@@ -39,14 +39,21 @@ class MainActivity : ComponentActivity() {
                 FrameLayout.LayoutParams.MATCH_PARENT
             )
 
+            isHorizontalScrollBarEnabled = false
+            isVerticalScrollBarEnabled = true
+            overScrollMode = View.OVER_SCROLL_NEVER
+
             settings.apply {
                 javaScriptEnabled = true
                 domStorageEnabled = true
                 databaseEnabled = true
                 allowFileAccess = true
                 allowContentAccess = true
-                useWideViewPort = true
-                loadWithOverviewMode = true
+                useWideViewPort = false
+                loadWithOverviewMode = false
+                setSupportZoom(false)
+                builtInZoomControls = false
+                displayZoomControls = false
                 cacheMode = WebSettings.LOAD_DEFAULT
                 mixedContentMode = WebSettings.MIXED_CONTENT_ALWAYS_ALLOW
                 userAgentString = "$userAgentString BBAStoreAndroidNativeApp/1.0"
