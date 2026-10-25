@@ -128,6 +128,22 @@
       .desktop-hide { display: none !important; }
     }
 
+    /* Modals & Drawers: ensure they sit on top of bottom nav */
+    #productModal, #cartDrawer, #checkoutModal, #receiptModal, #fullImageModal, #studentLoginModal, #studentRegisterModal {
+      z-index: 1000 !important;
+    }
+
+    /* Auto-hide mobile bottom nav when any modal or drawer is open */
+    #productModal:not([style*="display: none"]) ~ #mobileBottomNav,
+    #cartDrawer:not([style*="display: none"]) ~ #mobileBottomNav,
+    #checkoutModal:not([style*="display: none"]) ~ #mobileBottomNav,
+    #receiptModal:not([style*="display: none"]) ~ #mobileBottomNav,
+    #fullImageModal:not([style*="display: none"]) ~ #mobileBottomNav,
+    #studentLoginModal:not([style*="display: none"]) ~ #mobileBottomNav,
+    #studentRegisterModal:not([style*="display: none"]) ~ #mobileBottomNav {
+      display: none !important;
+    }
+
     .hidden { display: none !important; }
     .swal2-container { z-index: 10000 !important; }
     body {
@@ -551,8 +567,8 @@
   </div>
 
   <!-- Modal 2: ดูรายละเอียดเสื้อ & เลือกไซส์/สี (Product Detail Modal) -->
-  <div id="productModal" class="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-sm items-center justify-center p-3 sm:p-4 overflow-y-auto" style="display: none;">
-    <div class="bg-white rounded-2xl sm:rounded-3xl max-w-4xl w-full my-auto overflow-hidden shadow-2xl animate-fade-in relative">
+  <div id="productModal" class="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-sm items-center justify-center p-3 sm:p-4 pb-16 sm:pb-4 overflow-y-auto" style="display: none;">
+    <div class="bg-white rounded-2xl sm:rounded-3xl max-w-4xl w-full my-auto overflow-hidden shadow-2xl animate-fade-in relative mb-16 sm:mb-0">
       
       <!-- Close Button -->
       <button onclick="closeProductModal()" class="absolute top-3.5 right-3.5 z-20 w-8 h-8 rounded-full bg-slate-100 hover:bg-slate-200 text-slate-500 hover:text-slate-800 flex items-center justify-center transition">
@@ -560,7 +576,7 @@
       </button>
 
       <!-- 2-Column Content Area -->
-      <div class="p-5 sm:p-7">
+      <div class="p-5 sm:p-7 pb-8 sm:pb-7">
         <div class="grid grid-cols-1 md:grid-cols-2 gap-6 lg:gap-8 items-start">
           
           <!-- ฝั่งซ้าย: รูปภาพสินค้ามองเห็นเต็มตัว -->
@@ -1069,7 +1085,7 @@
   </footer>
 
   <!-- ==================== MOBILE BOTTOM NAVIGATION (Lazada Style) ==================== -->
-  <nav id="mobileBottomNav" class="desktop-hide fixed bottom-0 left-0 right-0 z-50 bg-white/95 backdrop-blur-md border-t border-slate-200 shadow-[0_-4px_16px_rgba(0,0,0,0.08)] px-2 py-1 flex items-center justify-around no-print" style="position: fixed !important; bottom: 0 !important; left: 0 !important; right: 0 !important; width: 100% !important; z-index: 9999 !important; padding-bottom: max(env(safe-area-inset-bottom, 0px), 8px) !important;">
+  <nav id="mobileBottomNav" class="desktop-hide fixed bottom-0 left-0 right-0 z-40 bg-white/95 backdrop-blur-md border-t border-slate-200 shadow-[0_-4px_16px_rgba(0,0,0,0.08)] px-2 py-1 flex items-center justify-around no-print" style="position: fixed !important; bottom: 0 !important; left: 0 !important; right: 0 !important; width: 100% !important; z-index: 40 !important; padding-bottom: max(env(safe-area-inset-bottom, 0px), 8px) !important;">
     <!-- 1. เสื้อสโมสร (Home / Shop) -->
     <button onclick="switchView('shop')" id="btnBottomNavShop" class="flex-1 flex flex-col items-center justify-center py-1 text-indigo-700 transition active:scale-95">
       <div class="relative">
@@ -1424,6 +1440,16 @@
       handleTrackSearch();
     }
 
+    function setMobileBottomNavVisible(visible) {
+      const nav = document.getElementById('mobileBottomNav');
+      if (!nav) return;
+      if (visible) {
+        nav.style.removeProperty('display');
+      } else {
+        nav.style.setProperty('display', 'none', 'important');
+      }
+    }
+
     function openLoginModal() {
       const modal = document.getElementById('studentLoginModal');
       if (!modal) return;
@@ -1433,11 +1459,13 @@
       if (idInp && currentStudent) idInp.value = currentStudent.studentId || '';
       if (pinInp) pinInp.value = '';
       modal.style.display = 'flex';
+      setMobileBottomNavVisible(false);
     }
 
     function closeLoginModal() {
       const modal = document.getElementById('studentLoginModal');
       if (modal) modal.style.display = 'none';
+      setMobileBottomNavVisible(true);
     }
 
     function openRegisterModal() {
@@ -1454,11 +1482,13 @@
       if (pinInp) pinInp.value = '';
       syncStudentRegEmail();
       modal.style.display = 'flex';
+      setMobileBottomNavVisible(false);
     }
 
     function closeRegisterModal() {
       const modal = document.getElementById('studentRegisterModal');
       if (modal) modal.style.display = 'none';
+      setMobileBottomNavVisible(true);
     }
 
     function switchToRegisterModal() {
@@ -1847,11 +1877,13 @@
       updateModalStockDisplay();
 
       document.getElementById('productModal').style.display = 'flex';
+      setMobileBottomNavVisible(false);
     }
 
     function closeProductModal() {
       const modal = document.getElementById('productModal');
       if (modal) modal.style.display = 'none';
+      setMobileBottomNavVisible(true);
     }
 
     function renderThumbnailsStrip() {
@@ -2101,6 +2133,7 @@
       resetLightboxZoom();
 
       modal.style.display = 'flex';
+      setMobileBottomNavVisible(false);
       window.addEventListener('keydown', handleLightboxKeydown);
     }
 
@@ -2108,6 +2141,10 @@
       const modal = document.getElementById('fullImageModal');
       if (modal) modal.style.display = 'none';
       window.removeEventListener('keydown', handleLightboxKeydown);
+      const prodModal = document.getElementById('productModal');
+      if (!prodModal || prodModal.style.display === 'none') {
+        setMobileBottomNavVisible(true);
+      }
     }
 
     function renderLightboxThumbnails() {
@@ -2252,10 +2289,12 @@
     function openCartDrawer() {
       renderCartDrawerItems();
       document.getElementById('cartDrawer').style.display = 'block';
+      setMobileBottomNavVisible(false);
     }
 
     function closeCartDrawer() {
       document.getElementById('cartDrawer').style.display = 'none';
+      setMobileBottomNavVisible(true);
     }
 
     function renderCartDrawerItems() {
@@ -2414,10 +2453,12 @@
       const modal = document.getElementById('checkoutModal');
       modal.style.display = 'flex';
       modal.scrollTop = 0;
+      setMobileBottomNavVisible(false);
     }
 
     function closeCheckoutModal() {
       document.getElementById('checkoutModal').style.display = 'none';
+      setMobileBottomNavVisible(true);
     }
 
     function copyPromptPay() {
@@ -2714,12 +2755,14 @@
       if (modal) {
         modal.style.display = 'flex';
         modal.scrollTop = 0;
+        setMobileBottomNavVisible(false);
       }
     }
 
     function closeReceiptModal() {
       const modal = document.getElementById('receiptModal');
       if (modal) modal.style.display = 'none';
+      setMobileBottomNavVisible(true);
     }
 
     function closeReceiptModalAndGoTrack() {
