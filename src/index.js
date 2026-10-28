@@ -889,8 +889,8 @@ app.post('/api/orders', async (c) => {
       const updateRes = batchResults[i];
       if (!updateRes || updateRes.meta?.changes === 0) {
         // หากรายการใดตัดสต็อกไม่สำเร็จ (ถูกสั่งซื้อไปก่อนในเสี้ยววินาที) ทำการ Rollback คำสั่งซื้อทันที
-        await db.prepare("DELETE FROM orders WHERE order_id = ?").bind(orderId).run();
         await db.prepare("DELETE FROM payments WHERE order_id = ?").bind(orderId).run();
+        await db.prepare("DELETE FROM orders WHERE order_id = ?").bind(orderId).run();
         return c.json({
           success: false,
           code: 'CONCURRENT_STOCK_EXHAUSTED',
@@ -1296,9 +1296,11 @@ app.post('/api/admin/orders/delete', async (c) => {
       }
     }
 
-    // ลบรายการออกจากตาราง orders และ payments
+    // 1. ลบรายการประวัติการชำระเงินใน payments ที่อ้างอิงคำสั่งซื้อนี้ออกก่อนเสมอ (ป้องกัน Foreign Key Constraint)
+    await db.prepare("DELETE FROM payments WHERE order_id = ?").bind(orderId).run();
+
+    // 2. ดำเนินการคืนสต็อกสินค้า (ถ้ามี) และลบรายการออกจากตาราง orders
     batchOps.push(db.prepare("DELETE FROM orders WHERE order_id = ?").bind(orderId));
-    batchOps.push(db.prepare("DELETE FROM payments WHERE order_id = ?").bind(orderId));
 
     if (batchOps.length > 0) {
       await db.batch(batchOps);
