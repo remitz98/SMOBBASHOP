@@ -15,10 +15,9 @@
   <link rel="apple-touch-icon" href="logo.png">
   <meta name="theme-color" content="#4338ca">
 
-  <!-- ZXing Official Library for Barcode/QR Scanning -->
-  <script src="https://unpkg.com/@zxing/library@0.21.3/umd/index.min.js"></script>
-  <!-- jsQR High-Performance QR Decoding Library (Dual-Engine Fallback) -->
-  <script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.min.js"></script>
+  <!-- Local Vendor Libraries (Immune to AdBlock, Brave Shields, and CDN Outages) -->
+  <script src="/vendor/zxing.min.js"></script>
+  <script src="/vendor/jsqr.min.js"></script>
 
   <!-- QRCode Library for Official E-Receipt -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
@@ -3513,11 +3512,10 @@
       } catch (e) {}
     }
 
-    let zxingReader = null;
-    let cameraMediaStream = null;
+    let codeReader = null;
+    let selectedCameraId = null;
     let scannerFrameLoopId = null;
     let availableCameras = [];
-    let selectedCameraId = null;
 
     async function openQrScannerModal() {
       const modal = document.getElementById('qrScannerModal');
@@ -3535,39 +3533,90 @@
         `;
       }
 
+      if (!codeReader && typeof ZXing !== 'undefined') {
+        try {
+          codeReader = new ZXing.BrowserMultiFormatReader();
+        } catch (e) {
+          console.warn('Could not initialize ZXing BrowserMultiFormatReader:', e);
+        }
+      }
+
+      // Populate camera list using codeReader.listVideoInputDevices()
       try {
-        if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
-          throw new Error('เบราว์เซอร์ไม่รองรับการใช้งานกล้อง');
-        }
+        if (codeReader && typeof codeReader.listVideoInputDevices === 'function') {
+          const videoInputDevices = await codeReader.listVideoInputDevices();
+          availableCameras = videoInputDevices || [];
+          const selectContainer = document.getElementById('qrCameraSelectContainer');
+          const select = document.getElementById('qrCameraSelect');
 
-        // List video input devices
-        const devices = await navigator.mediaDevices.enumerateDevices();
-        availableCameras = devices.filter(d => d.kind === 'videoinput');
-        const cameraSelectContainer = document.getElementById('qrCameraSelectContainer');
-        const cameraSelect = document.getElementById('qrCameraSelect');
+          if (availableCameras.length > 0) {
+            if (select) {
+              select.innerHTML = availableCameras.map((device, idx) => 
+                `<option value="${device.deviceId}">${device.label || ('กล้องที่ ' + (idx + 1))}</option>`
+              ).join('');
+            }
 
-        if (availableCameras.length > 0) {
-          if (cameraSelect) {
-            cameraSelect.innerHTML = availableCameras.map((cam, idx) => 
-              `<option value="${cam.deviceId}">${cam.label || ('กล้องที่ ' + (idx + 1))}</option>`
-            ).join('');
-          }
-          // Select rear/back camera by label if available, or last
-          let preferred = availableCameras.find(c => /back|rear|environment|หลัง/i.test(c.label));
-          if (!preferred) preferred = availableCameras[availableCameras.length - 1];
-          selectedCameraId = preferred.deviceId;
-          if (cameraSelect) cameraSelect.value = selectedCameraId;
+            let preferred = availableCameras.find(d => /back|rear|environment|หลัง/i.test(d.label));
+            if (!preferred) preferred = availableCameras[availableCameras.length - 1];
+            selectedCameraId = preferred.deviceId;
+            if (select) select.value = selectedCameraId;
 
-          if (cameraSelectContainer && availableCameras.length > 1) {
-            cameraSelectContainer.classList.remove('hidden');
-          } else if (cameraSelectContainer) {
-            cameraSelectContainer.classList.add('hidden');
+            if (selectContainer && availableCameras.length > 1) {
+              selectContainer.classList.remove('hidden');
+            } else if (selectContainer) {
+              selectContainer.classList.add('hidden');
+            }
           }
         }
+      } catch (e) {
+        console.warn('Could not list video input devices:', e);
+      }
 
-        await startCameraStream(selectedCameraId);
+      await startCamera(selectedCameraId);
+    }
+
+    async function onQrCameraChanged(deviceId) {
+      if (!deviceId || deviceId === selectedCameraId) return;
+      selectedCameraId = deviceId;
+      await startCamera(deviceId);
+    }
+
+    async function startCamera(deviceId) {
+      stopCamera();
+
+      const placeholder = document.getElementById('qrCameraPlaceholder');
+      if (placeholder) placeholder.style.display = 'flex';
+
+      if (!codeReader && typeof ZXing !== 'undefined') {
+        try {
+          codeReader = new ZXing.BrowserMultiFormatReader();
+        } catch (e) {}
+      }
+
+      try {
+        if (codeReader && typeof codeReader.decodeFromVideoDevice === 'function') {
+          // Official ZXing video stream decoder
+          await codeReader.decodeFromVideoDevice(
+            deviceId || undefined,
+            'qrScannerVideo',
+            (result, err) => {
+              if (result && result.getText()) {
+                const text = result.getText().trim();
+                if (text) {
+                  onQrScanSuccess(text);
+                }
+              }
+            }
+          );
+          if (placeholder) placeholder.style.display = 'none';
+
+          // Parallel jsQR loop for instant sub-frame detection
+          startParallelJsQrScanner();
+        } else {
+          throw new Error('ZXing codeReader not available');
+        }
       } catch (err) {
-        console.warn('Camera open error:', err);
+        console.error('Camera startup error:', err);
         if (placeholder) {
           placeholder.style.display = 'flex';
           placeholder.innerHTML = `
@@ -3575,8 +3624,7 @@
               <i class="fa-solid fa-video-slash text-3xl mb-1 text-rose-500"></i>
               <p class="font-bold text-rose-300">ไม่สามารถเข้าถึงกล้องได้</p>
               <p class="text-slate-400 text-[11px] leading-relaxed">
-                โปรดตรวจสอบการอนุญาตสิทธิ์กล้องในเบราว์เซอร์<br>
-                หรือกดปุ่ม <b>"เลือกไฟล์รูปภาพ QR จากเครื่อง"</b> หรือพิมพ์รหัสค้นหาด้านล่าง
+                โปรดอนุญาตสิทธิ์การใช้กล้อง หรือกดปุ่ม <b>"เลือกไฟล์รูปภาพ QR จากเครื่อง"</b>
               </p>
             </div>
           `;
@@ -3584,127 +3632,53 @@
       }
     }
 
-    async function onQrCameraChanged(deviceId) {
-      if (!deviceId || deviceId === selectedCameraId) return;
-      selectedCameraId = deviceId;
-      await startCameraStream(deviceId);
-    }
-
-    async function startCameraStream(deviceId) {
-      stopCameraStream();
-
-      const video = document.getElementById('qrScannerVideo');
-      const placeholder = document.getElementById('qrCameraPlaceholder');
-      if (placeholder) placeholder.style.display = 'flex';
-
-      const constraints = {
-        audio: false,
-        video: deviceId 
-          ? { deviceId: { exact: deviceId } } 
-          : { facingMode: { ideal: 'environment' }, width: { ideal: 1280 }, height: { ideal: 720 } }
-      };
-
-      try {
-        cameraMediaStream = await navigator.mediaDevices.getUserMedia(constraints);
-        if (video) {
-          video.srcObject = cameraMediaStream;
-          video.setAttribute('playsinline', 'true');
-          await video.play();
-        }
-        if (placeholder) placeholder.style.display = 'none';
-
-        // Start dual-engine continuous scanning
-        startContinuousScanner();
-      } catch (e) {
-        console.warn('getUserMedia error with constraint, trying generic video:', e);
+    function stopCamera() {
+      stopParallelJsQrScanner();
+      if (codeReader) {
         try {
-          cameraMediaStream = await navigator.mediaDevices.getUserMedia({ audio: false, video: true });
-          if (video) {
-            video.srcObject = cameraMediaStream;
-            video.setAttribute('playsinline', 'true');
-            await video.play();
-          }
-          if (placeholder) placeholder.style.display = 'none';
-          startContinuousScanner();
-        } catch (fallbackErr) {
-          throw fallbackErr;
-        }
-      }
-    }
-
-    function stopCameraStream() {
-      stopContinuousScanner();
-      if (cameraMediaStream) {
-        try {
-          cameraMediaStream.getTracks().forEach(track => track.stop());
+          codeReader.reset();
         } catch (e) {}
-        cameraMediaStream = null;
       }
       const video = document.getElementById('qrScannerVideo');
       if (video) video.srcObject = null;
     }
 
-    function startContinuousScanner() {
-      stopContinuousScanner();
+    function startParallelJsQrScanner() {
+      stopParallelJsQrScanner();
       const video = document.getElementById('qrScannerVideo');
       if (!video) return;
 
       const canvas = document.createElement('canvas');
       const ctx = canvas.getContext('2d', { willReadFrequently: true });
+      let lastScan = 0;
 
-      // Init ZXing Reader
-      if (typeof ZXing !== 'undefined' && !zxingReader) {
-        try {
-          zxingReader = new ZXing.BrowserMultiFormatReader();
-        } catch (e) {}
-      }
-
-      let lastScanTime = 0;
-
-      function scanFrame(timestamp) {
+      function loop(time) {
         if (isQrProcessing) return;
-
         if (video.readyState >= HTMLMediaElement.HAVE_ENOUGH_DATA && video.videoWidth > 0) {
-          if (!lastScanTime || timestamp - lastScanTime >= 80) {
-            lastScanTime = timestamp;
+          if (!lastScan || time - lastScan >= 70) {
+            lastScan = time;
+            canvas.width = video.videoWidth;
+            canvas.height = video.videoHeight;
+            ctx.drawImage(video, 0, 0);
 
-            const vw = video.videoWidth;
-            const vh = video.videoHeight;
-            canvas.width = vw;
-            canvas.height = vh;
-            ctx.drawImage(video, 0, 0, vw, vh);
-
-            // Engine 1: jsQR (Instant pure JS decoder)
             if (typeof jsQR !== 'undefined') {
               try {
-                const imgData = ctx.getImageData(0, 0, vw, vh);
-                const code = jsQR(imgData.data, vw, vh, { inversionAttempts: 'attemptBoth' });
+                const imgData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+                const code = jsQR(imgData.data, canvas.width, canvas.height, { inversionAttempts: 'attemptBoth' });
                 if (code && code.data && code.data.trim()) {
                   onQrScanSuccess(code.data.trim());
                   return;
                 }
               } catch (e) {}
             }
-
-            // Engine 2: ZXing Reader
-            if (zxingReader) {
-              try {
-                const zxResult = zxingReader.decodeFromCanvas(canvas);
-                if (zxResult && zxResult.getText() && zxResult.getText().trim()) {
-                  onQrScanSuccess(zxResult.getText().trim());
-                  return;
-                }
-              } catch (e) {}
-            }
           }
         }
-        scannerFrameLoopId = requestAnimationFrame(scanFrame);
+        scannerFrameLoopId = requestAnimationFrame(loop);
       }
-
-      scannerFrameLoopId = requestAnimationFrame(scanFrame);
+      scannerFrameLoopId = requestAnimationFrame(loop);
     }
 
-    function stopContinuousScanner() {
+    function stopParallelJsQrScanner() {
       if (scannerFrameLoopId) {
         cancelAnimationFrame(scannerFrameLoopId);
         scannerFrameLoopId = null;
@@ -3712,7 +3686,7 @@
     }
 
     async function closeQrScannerModal() {
-      stopCameraStream();
+      stopCamera();
       const modal = document.getElementById('qrScannerModal');
       if (modal) modal.style.display = 'none';
       isQrProcessing = false;
@@ -3760,86 +3734,70 @@
     }
 
     async function decodeQrFromFile(file) {
-      return new Promise((resolve, reject) => {
-        const reader = new FileReader();
-        reader.onload = async (e) => {
+      const objUrl = URL.createObjectURL(file);
+      try {
+        // 1. Try ZXing decodeFromImageUrl directly (Official ZXing image URL decoder)
+        if (!codeReader && typeof ZXing !== 'undefined') {
+          codeReader = new ZXing.BrowserMultiFormatReader();
+        }
+        if (codeReader && typeof codeReader.decodeFromImageUrl === 'function') {
+          try {
+            const zxRes = await codeReader.decodeFromImageUrl(objUrl);
+            if (zxRes && zxRes.getText() && zxRes.getText().trim()) {
+              URL.revokeObjectURL(objUrl);
+              return zxRes.getText().trim();
+            }
+          } catch (e) {}
+        }
+
+        // 2. Load into HTML Image and run jsQR at full resolution + regional crops
+        const text = await new Promise((resolve, reject) => {
           const img = new Image();
           img.onload = () => {
             try {
-              // Create canvas at full native resolution
-              const canvas = document.createElement('canvas');
-              canvas.width = img.width;
-              canvas.height = img.height;
-              const ctx = canvas.getContext('2d', { willReadFrequently: true });
-              ctx.drawImage(img, 0, 0);
-
-              // 1. Try jsQR on original full image
               if (typeof jsQR !== 'undefined') {
-                try {
-                  const imgData = ctx.getImageData(0, 0, canvas.width, canvas.height);
-                  const res = jsQR(imgData.data, canvas.width, canvas.height, { inversionAttempts: 'attemptBoth' });
-                  if (res && res.data && res.data.trim()) {
-                    return resolve(res.data.trim());
-                  }
-                } catch (e) {}
-              }
+                // Test 2.1: Full resolution canvas
+                const canvas = document.createElement('canvas');
+                canvas.width = img.width;
+                canvas.height = img.height;
+                const ctx = canvas.getContext('2d', { willReadFrequently: true });
+                ctx.drawImage(img, 0, 0);
+                const imgData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+                let code = jsQR(imgData.data, canvas.width, canvas.height, { inversionAttempts: 'attemptBoth' });
+                if (code && code.data && code.data.trim()) return resolve(code.data.trim());
 
-              // 2. Try ZXing on original canvas
-              if (typeof ZXing !== 'undefined') {
-                try {
-                  const reader = new ZXing.BrowserMultiFormatReader();
-                  const zxRes = reader.decodeFromCanvas(canvas);
-                  if (zxRes && zxRes.getText() && zxRes.getText().trim()) {
-                    return resolve(zxRes.getText().trim());
-                  }
-                } catch (e) {}
-              }
-
-              // 3. Try Regional Crops (Bank slips & receipts have QR in lower half or bottom-right)
-              const crops = [
-                // Bottom 60%
-                { x: 0, y: Math.floor(img.height * 0.4), w: img.width, h: Math.floor(img.height * 0.6) },
-                // Bottom-right quadrant
-                { x: Math.floor(img.width * 0.3), y: Math.floor(img.height * 0.4), w: Math.floor(img.width * 0.7), h: Math.floor(img.height * 0.6) },
-                // Top-right
-                { x: Math.floor(img.width * 0.3), y: 0, w: Math.floor(img.width * 0.7), h: Math.floor(img.height * 0.5) }
-              ];
-
-              for (const c of crops) {
-                const cropCanvas = document.createElement('canvas');
-                cropCanvas.width = c.w;
-                cropCanvas.height = c.h;
-                const cropCtx = cropCanvas.getContext('2d', { willReadFrequently: true });
-                cropCtx.drawImage(img, c.x, c.y, c.w, c.h, 0, 0, c.w, c.h);
-
-                if (typeof jsQR !== 'undefined') {
-                  try {
-                    const cData = cropCtx.getImageData(0, 0, c.w, c.h);
-                    const res = jsQR(cData.data, c.w, c.h, { inversionAttempts: 'attemptBoth' });
-                    if (res && res.data && res.data.trim()) return resolve(res.data.trim());
-                  } catch (e) {}
-                }
-
-                if (typeof ZXing !== 'undefined') {
-                  try {
-                    const reader = new ZXing.BrowserMultiFormatReader();
-                    const zxRes = reader.decodeFromCanvas(cropCanvas);
-                    if (zxRes && zxRes.getText() && zxRes.getText().trim()) return resolve(zxRes.getText().trim());
-                  } catch (e) {}
+                // Test 2.2: Bank slip crops (Bottom 60%, Bottom-right quadrant)
+                const crops = [
+                  { x: 0, y: Math.floor(img.height * 0.4), w: img.width, h: Math.floor(img.height * 0.6) },
+                  { x: Math.floor(img.width * 0.3), y: Math.floor(img.height * 0.4), w: Math.floor(img.width * 0.7), h: Math.floor(img.height * 0.6) },
+                  { x: Math.floor(img.width * 0.25), y: 0, w: Math.floor(img.width * 0.75), h: Math.floor(img.height * 0.5) }
+                ];
+                for (const c of crops) {
+                  const cCanvas = document.createElement('canvas');
+                  cCanvas.width = c.w;
+                  cCanvas.height = c.h;
+                  const cCtx = cCanvas.getContext('2d', { willReadFrequently: true });
+                  cCtx.drawImage(img, c.x, c.y, c.w, c.h, 0, 0, c.w, c.h);
+                  const cData = cCtx.getImageData(0, 0, c.w, c.h);
+                  code = jsQR(cData.data, c.w, c.h, { inversionAttempts: 'attemptBoth' });
+                  if (code && code.data && code.data.trim()) return resolve(code.data.trim());
                 }
               }
-
-              reject(new Error('No QR code detected in image'));
+              reject(new Error('No QR code found in image'));
             } catch (err) {
               reject(err);
             }
           };
           img.onerror = () => reject(new Error('Failed to load image'));
-          img.src = e.target.result;
-        };
-        reader.onerror = () => reject(new Error('Failed to read file'));
-        reader.readAsDataURL(file);
-      });
+          img.src = objUrl;
+        });
+
+        URL.revokeObjectURL(objUrl);
+        return text;
+      } catch (err) {
+        URL.revokeObjectURL(objUrl);
+        throw err;
+      }
     }
 
     function handleManualQrSubmit() {
