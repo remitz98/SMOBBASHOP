@@ -55,11 +55,20 @@ CREATE TABLE IF NOT EXISTS payments (
   student_id TEXT NOT NULL,
   amount REAL NOT NULL,
   slip_url TEXT DEFAULT '',
+  slip_hash TEXT DEFAULT '',
   verify_status TEXT NOT NULL DEFAULT 'รอตรวจสอบ',
   admin_notes TEXT DEFAULT '',
   created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
   FOREIGN KEY (order_id) REFERENCES orders(order_id)
 );
+
+-- อินเด็กซ์เพิ่มประสิทธิภาพการค้นหา (High-Performance Indices)
+CREATE INDEX IF NOT EXISTS idx_orders_student_id ON orders(student_id);
+CREATE INDEX IF NOT EXISTS idx_orders_status ON orders(status);
+CREATE INDEX IF NOT EXISTS idx_orders_date ON orders(order_date);
+CREATE INDEX IF NOT EXISTS idx_payments_order_id ON payments(order_id);
+CREATE INDEX IF NOT EXISTS idx_payments_student_id ON payments(student_id);
+CREATE INDEX IF NOT EXISTS idx_payments_slip_hash ON payments(slip_hash);
 
 -- 5. ตารางการตั้งค่าระบบ (Settings)
 CREATE TABLE IF NOT EXISTS settings (

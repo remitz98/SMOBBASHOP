@@ -757,21 +757,47 @@ app.post('/api/orders', async (c) => {
     const itemsSummary = itemsSummaryArr.join(', ');
     const paymentId = `PAY-${orderId}`;
 
+    // คำนวณ SHA-256 Hash ของสลิป และตรวจสอบการแนบสลิปซ้ำ
+    let slipHash = '';
+    let parsedSlip = null;
+    if (slipBase64) {
+      try {
+        parsedSlip = parseDataUrl(slipBase64);
+        if (parsedSlip && parsedSlip.buffer) {
+          const hashBuf = await crypto.subtle.digest('SHA-256', parsedSlip.buffer);
+          slipHash = Array.from(new Uint8Array(hashBuf)).map(b => b.toString(16).padStart(2, '0')).join('');
+
+          // ตรวจสอบว่าสลิปนี้เคยถูกใช้ในคำสั่งซื้อเดิมที่ยังไม่ถูกยกเลิกหรือไม่
+          const duplicateSlip = await db.prepare(`
+            SELECT p.order_id, o.customer_name, o.status 
+            FROM payments p 
+            JOIN orders o ON p.order_id = o.order_id 
+            WHERE p.slip_hash = ? AND o.status != 'ยกเลิกคำสั่งซื้อ' 
+            LIMIT 1
+          `).bind(slipHash).first();
+
+          if (duplicateSlip) {
+            return c.json({
+              success: false,
+              message: `สลิปนี้เคยถูกใช้ในคำสั่งซื้อ ${duplicateSlip.order_id} เรียบร้อยแล้ว หากเป็นรายการโอนใหม่โปรดตรวจสอบและแนบสลิปฉบับล่าสุด`
+            }, 400);
+          }
+        }
+      } catch (hashErr) {
+        console.error('Slip hashing / duplicate check error:', hashErr);
+      }
+    }
+
     // อัปโหลดสลิปเข้า Cloudflare R2 (ถ้าเปิดใช้งาน)
     let slipUrl = '';
-    if (slipBase64 && c.env.BUCKET) {
+    if (parsedSlip && parsedSlip.buffer && c.env.BUCKET) {
       try {
-        const parsed = parseDataUrl(slipBase64);
-        if (parsed) {
-          const ext = parsed.contentType.includes('png') ? 'png' : 'jpg';
-          const r2Key = `slips/${orderId}-${Date.now()}.${ext}`;
-          await c.env.BUCKET.put(r2Key, parsed.buffer, {
-            httpMetadata: { contentType: parsed.contentType }
-          });
-          slipUrl = `/api/images/${r2Key}`;
-        } else {
-          slipUrl = slipBase64;
-        }
+        const ext = parsedSlip.contentType.includes('png') ? 'png' : 'jpg';
+        const r2Key = `slips/${orderId}-${Date.now()}.${ext}`;
+        await c.env.BUCKET.put(r2Key, parsedSlip.buffer, {
+          httpMetadata: { contentType: parsedSlip.contentType }
+        });
+        slipUrl = `/api/images/${r2Key}`;
       } catch (err) {
         console.error('R2 slip upload error:', err);
         slipUrl = slipBase64;
@@ -791,9 +817,9 @@ app.post('/api/orders', async (c) => {
 
       // บันทึกลงตาราง payments
       db.prepare(`
-        INSERT INTO payments (payment_id, order_id, student_id, amount, slip_url, verify_status)
-        VALUES (?, ?, ?, ?, ?, ?)
-      `).bind(paymentId, orderId, studentId, calculatedTotal, slipUrl, 'รอตรวจสอบ')
+        INSERT INTO payments (payment_id, order_id, student_id, amount, slip_url, slip_hash, verify_status)
+        VALUES (?, ?, ?, ?, ?, ?, ?)
+      `).bind(paymentId, orderId, studentId, calculatedTotal, slipUrl, slipHash, 'รอตรวจสอบ')
     ];
 
     // ตัดสต็อกสินค้าทีละรายการด้วยคำสั่ง SQL ที่คำนวณและตรวจสอบเงื่อนไขในระดับฐานข้อมูลโดยตรง

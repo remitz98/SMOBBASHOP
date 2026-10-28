@@ -122,8 +122,8 @@ jobs:
           node -e "
             const fs = require('fs');
             const path = require('path');
-            const TAG = 'v2.3.12';
-            const VERSION = '2.3.12';
+            const TAG = 'v2.3.13';
+            const VERSION = '2.3.13';
             let merged = {
               version: VERSION,
               notes: 'SMO BBA SHOP ' + TAG + ' (Discord-style Auto-Update)',
@@ -193,7 +193,7 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          TAG="v2.3.12"
+          TAG="v2.3.13"
           shopt -s globstar nullglob
           FILES=(all-dist/**/*.apk all-dist/**/*.msi all-dist/**/*.exe all-dist/**/*.dmg all-dist/**/*.zip all-dist/**/*.tar.gz all-dist/**/*.sig all-dist/**/latest.json)
           echo "Release files found:"
@@ -204,7 +204,7 @@ jobs:
           else
             echo "Creating release $TAG..."
             gh release create "$TAG" \
-              --title "SMO BBA SHOP v2.3.12 (Unified v2.3.12 Versioning & Verified Build Update System)" \
-              --notes "เวอร์ชัน v2.3.12: 1. ปรับระบบตรวจสอบการอัปเดตแอป ให้ตรวจสอบว่า GitHub Actions ทำการ Build และอัปโหลดไฟล์เสร็จสมบูรณ์ 100% ก่อนจึงจะแสดงหน้าต่างแจ้งเตือน 2. ซิงค์เลขเวอร์ชันโปรแกรมและตัวติดตั้งทั้งหมดเป็น v2.3.12 ตรงกันทุกส่วน 3. ล็อกสีใบเสร็จ (Receipt Paper) เป็นกระดาษขาวคมชัดมาตรฐานเสมอ ไม่เปลี่ยนสีตาม Dark Theme 4. รองรับครบทุกแพลตฟอร์ม Windows (.exe, .msi), macOS (.dmg), Android (.apk)" \
+              --title "SMO BBA SHOP v2.3.13 (QR Pickup Scanner, PWA Fullscreen Support & Slip Duplicate Guard)" \
+              --notes "เวอร์ชัน v2.3.13: 1. เพิ่ม QR Code บนใบเสร็จ สำหรับยื่นรับเสื้อที่สโมสร 2. หน้าแอดมินเปิดกล้องสแกน QR Code รับเสื้อ พร้อมปุ่มยืนยันจ่ายเสื้อ 1-Click 3. รองรับ PWA (Progressive Web App) ติดตั้งบนหน้าจอโฮมแบบเต็มจอสำหรับ iPhone, iPad และ Android 4. ระบบตรวจสอบและป้องกันการแนบสลิปซ้ำ (Duplicate Slip Guard) 5. เพิ่มประสิทธิภาพ Database Indexing บน Cloudflare D1 ให้ค้นหาประวัติได้เร็วระดับเสี้ยววินาที" \
               "${FILES[@]}"
           fi

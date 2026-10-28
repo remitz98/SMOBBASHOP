@@ -1,0 +1,18 @@
+{
+  "name": "SMO BBA UBRU SHOP",
+  "short_name": "SMO BBA",
+  "description": "ระบบสั่งจองเสื้อสโมสรนักศึกษา คณะบริหารธุรกิจและการจัดการ มหาวิทยาลัยราชภัฏอุบลราชธานี",
+  "start_url": "/",
+  "display": "standalone",
+  "orientation": "portrait-primary",
+  "background_color": "#0f172a",
+  "theme_color": "#4338ca",
+  "icons": [
+    {
+      "src": "/logo.png",
+      "sizes": "192x192 512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ]
+}
