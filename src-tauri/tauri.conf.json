@@ -37,9 +37,7 @@
       "icons/icon.ico"
     ],
     "macOS": {
-      "infoPlist": {
-        "NSCameraUsageDescription": "ใช้กล้องถ่ายภาพสำหรับสแกน QR Code รับเสื้อสโมสร BBA UBRU"
-      }
+      "infoPlist": "Info.plist"
     }
   },
   "plugins": {
