@@ -31,6 +31,8 @@ class MainActivity : ComponentActivity() {
     private var fileUploadCallback: ValueCallback<Array<Uri>>? = null
     private val FILE_CHOOSER_REQUEST_CODE = 1001
     private val NOTIFICATION_PERMISSION_REQUEST_CODE = 2001
+    private val CAMERA_PERMISSION_REQUEST_CODE = 3001
+    private var pendingPermissionRequest: PermissionRequest? = null
     val NOTIFICATION_CHANNEL_ID = "bba_orders_channel"
 
     @SuppressLint("SetJavaScriptEnabled")
@@ -65,6 +67,7 @@ class MainActivity : ComponentActivity() {
                 displayZoomControls = false
                 cacheMode = WebSettings.LOAD_DEFAULT
                 mixedContentMode = WebSettings.MIXED_CONTENT_ALWAYS_ALLOW
+                mediaPlaybackRequiresUserGesture = false
                 userAgentString = "$userAgentString BBAStoreAndroidNativeApp/1.0"
             }
 
@@ -121,6 +124,24 @@ class MainActivity : ComponentActivity() {
                     }
                     return true
                 }
+
+                // Grant camera permissions for HTML5 QR Code Scanner
+                override fun onPermissionRequest(request: PermissionRequest?) {
+                    if (request == null) return
+                    runOnUiThread {
+                        val resources = request.resources
+                        if (resources.contains(PermissionRequest.RESOURCE_VIDEO_CAPTURE)) {
+                            if (checkSelfPermission(android.Manifest.permission.CAMERA) == android.content.pm.PackageManager.PERMISSION_GRANTED) {
+                                request.grant(resources)
+                            } else {
+                                pendingPermissionRequest = request
+                                requestPermissions(arrayOf(android.Manifest.permission.CAMERA), CAMERA_PERMISSION_REQUEST_CODE)
+                            }
+                        } else {
+                            request.grant(resources)
+                        }
+                    }
+                }
             }
 
             // Direct download listener
@@ -160,6 +181,21 @@ class MainActivity : ComponentActivity() {
             if (checkSelfPermission(android.Manifest.permission.POST_NOTIFICATIONS) != android.content.pm.PackageManager.PERMISSION_GRANTED) {
                 requestPermissions(arrayOf(android.Manifest.permission.POST_NOTIFICATIONS), NOTIFICATION_PERMISSION_REQUEST_CODE)
             }
+        }
+    }
+
+    override fun onRequestPermissionsResult(requestCode: Int, permissions: Array<out String>, grantResults: IntArray) {
+        super.onRequestPermissionsResult(requestCode, permissions, grantResults)
+        if (requestCode == CAMERA_PERMISSION_REQUEST_CODE) {
+            if (grantResults.isNotEmpty() && grantResults[0] == android.content.pm.PackageManager.PERMISSION_GRANTED) {
+                pendingPermissionRequest?.let { req ->
+                    req.grant(req.resources)
+                }
+            } else {
+                pendingPermissionRequest?.deny()
+                Toast.makeText(this, "โปรดอนุญาตสิทธิ์การใช้กล้องเพื่อสแกน QR Code", Toast.LENGTH_SHORT).show()
+            }
+            pendingPermissionRequest = null
         }
     }
 
@@ -232,7 +268,7 @@ class MainActivity : ComponentActivity() {
                     pInfo.versionCode
                 }
             } catch (e: Exception) {
-                27
+                28
             }
         }
 
@@ -240,9 +276,9 @@ class MainActivity : ComponentActivity() {
         fun getAppVersionName(): String {
             return try {
                 val pInfo = activity.packageManager.getPackageInfo(activity.packageName, 0)
-                pInfo.versionName ?: "2.3.13"
+                pInfo.versionName ?: "2.3.14"
             } catch (e: Exception) {
-                "2.3.13"
+                "2.3.14"
             }
         }
 

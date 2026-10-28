@@ -1806,14 +1806,14 @@
 
           <!-- Order QR Code for Fast Pickup Verification -->
           <div class="mt-3.5 p-3 rounded-xl border border-dashed border-indigo-200 bg-indigo-50/50 flex items-center justify-between gap-3">
-            <div class="space-y-0.5">
-              <div class="font-bold text-indigo-950 text-xs flex items-center gap-1.5">
+            <div class="space-y-1">
+              <div class="font-bold text-indigo-950 text-xs sm:text-sm flex items-center gap-1.5">
                 <i class="fa-solid fa-qrcode text-indigo-700"></i> QR Code ประจำคำสั่งซื้อ
               </div>
-              <p class="text-[10px] text-slate-500">แสดง QR Code นี้ให้กรรมการสโมสรสแกนเพื่อรับเสื้อได้ทันที</p>
-              <div class="font-mono text-[10px] text-indigo-700 font-semibold" id="receiptQrOrderIdText"></div>
+              <p class="text-[11px] text-slate-600 leading-snug">แสดง QR Code นี้ให้กรรมการสโมสรสแกนเพื่อรับเสื้อได้ทันที</p>
+              <div class="font-mono text-xs font-bold text-indigo-700 bg-white px-2 py-0.5 rounded border border-indigo-100 inline-block" id="receiptQrOrderIdText"></div>
             </div>
-            <div class="p-1 bg-white rounded-lg border border-slate-200 shrink-0 shadow-sm flex items-center justify-center">
+            <div class="p-2 bg-white rounded-xl border border-slate-200 shrink-0 shadow-sm flex items-center justify-center">
               <div id="receiptQrCanvas"></div>
             </div>
           </div>
@@ -3907,11 +3907,11 @@
           try {
             new QRCode(qrEl, {
               text: String(orderData.orderId),
-              width: 68,
-              height: 68,
+              width: 128,
+              height: 128,
               colorDark: '#0f172a',
               colorLight: '#ffffff',
-              correctLevel: QRCode.CorrectLevel.M
+              correctLevel: QRCode.CorrectLevel.H
             });
           } catch (qrErr) {
             console.warn('QR Code generation error:', qrErr);
@@ -4400,7 +4400,7 @@
 
     // ==================== APP UPDATE CHECKER ====================
     function promptManualAppUpdate() {
-      const CURRENT_LATEST_VERSION = 'v2.3.13';
+      const CURRENT_LATEST_VERSION = 'v2.3.14';
       Swal.fire({
         icon: 'info',
         title: 'อัปเดตแอปพลิเคชัน',
@@ -4419,8 +4419,8 @@
 
     async function checkAppUpdateNotification() {
       const isAndroidNative = (window.AndroidNative && typeof window.AndroidNative.isAndroidNativeApp === 'function');
-      const CURRENT_LATEST_VERSION = 'v2.3.13';
-      const CURRENT_LATEST_BUILD = 27;
+      const CURRENT_LATEST_VERSION = 'v2.3.14';
+      const CURRENT_LATEST_BUILD = 28;
       const DISMISS_KEY = 'bba_update_dismissed_' + CURRENT_LATEST_VERSION;
 
       if (isAndroidNative) {
@@ -4480,11 +4480,11 @@
                   <div class="pt-1 text-slate-700 leading-relaxed">
                     <b>รายการปรับปรุงในเวอร์ชัน ${CURRENT_LATEST_VERSION}:</b>
                     <ul class="list-disc list-inside mt-1 space-y-1 text-slate-600 text-xs">
-                      <li>เพิ่ม QR Code บนใบเสร็จ สำหรับยื่นสแกนรับเสื้อที่ห้องสโมสรได้ทันที</li>
-                      <li>หน้าแอดมินรองรับการเปิดกล้องสแกน QR Code รับเสื้อ บันทึกสถานะได้ใน 1 วินาที</li>
-                      <li>รองรับ PWA ติดตั้งแอปบนหน้าจอโฮมแบบเต็มจอสำหรับ iPhone, iPad และ Android</li>
-                      <li>ระบบตรวจสอบและป้องกันการแนบสลิปซ้ำ (Duplicate Slip Guard)</li>
-                      <li>ปรับแต่ง Database Indexing บน Cloudflare D1 ค้นหาประวัติได้เร็วระดับเสี้ยววินาที</li>
+                      <li>เพิ่มการขออนุญาตสิทธิ์การใช้งานกล้องในแอปพลิเคชัน (Camera Permission) บน Android และ macOS</li>
+                      <li>อัปเกรดระบบสแกน QR Code บนเว็บ ตรวจจับกล้องและมีเมนูสลับกล้องอัตโนมัติ</li>
+                      <li>เพิ่มปุ่มเลือกไฟล์รูปภาพ QR Code จากในเครื่องเพื่อสแกนรับเสื้อได้ทันที</li>
+                      <li>ขยายขนาด QR Code ใบเสร็จเป็น 128x128 พร้อมระดับความคมชัดสูง สแกนติดง่ายและเร็วขึ้น</li>
+                      <li>เพิ่ม QR Code ประจำคำสั่งซื้อ พร้อมระบบค้นหารวดเร็วและระบบตรวจจับสลิปซ้ำ</li>
                     </ul>
                   </div>
                 </div>
@@ -4510,13 +4510,13 @@
     function handleMobileAccountClick() {
       const isAndroidNative = (window.AndroidNative && typeof window.AndroidNative.isAndroidNativeApp === 'function');
       let isOldVersion = false;
-      const curVer = 'v2.3.13';
+      const curVer = 'v2.3.14';
       if (isAndroidNative) {
         let build = 0;
         if (typeof window.AndroidNative.getAppVersionCode === 'function') {
           try { build = Number(window.AndroidNative.getAppVersionCode()) || 0; } catch (e) {}
         }
-        if (build > 0 && build < 27) isOldVersion = true;
+        if (build > 0 && build < 28) isOldVersion = true;
       }
 
       const hasAdminPin = Boolean(localStorage.getItem('bba_admin_pin') || sessionStorage.getItem('bba_admin_pin'));
@@ -4733,7 +4733,7 @@
           console.log('[AutoUpdater] Check result:', update);
 
           if (update) {
-            const newVersion = update.version || 'v2.3.13';
+            const newVersion = update.version || 'v2.3.14';
             if (statusText) statusText.innerText = `พบเวอร์ชันใหม่ (${newVersion})!`;
             if (detailText) detailText.innerText = 'กำลังดาวน์โหลดและติดตั้งอัปเดตอัตโนมัติ...';
             if (progressBar) progressBar.style.width = '30%';

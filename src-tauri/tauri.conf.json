@@ -1,7 +1,7 @@
 {
   "$schema": "../node_modules/@tauri-apps/cli/config.schema.json",
   "productName": "SMO BBA SHOP",
-  "version": "2.3.13",
+  "version": "2.3.14",
   "identifier": "org.smobba.store",
   "build": {
     "frontendDist": "../public"
@@ -35,7 +35,12 @@
       "icons/128x128@2x.png",
       "icons/icon.icns",
       "icons/icon.ico"
-    ]
+    ],
+    "macOS": {
+      "infoPlist": {
+        "NSCameraUsageDescription": "ใช้กล้องถ่ายภาพสำหรับสแกน QR Code รับเสื้อสโมสร BBA UBRU"
+      }
+    }
   },
   "plugins": {
     "updater": {
