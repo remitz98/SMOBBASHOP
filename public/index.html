@@ -2041,7 +2041,6 @@
     let currentReceiptData = null;
     let trackOrdersCache = [];
     let simulatedOrdersSession = [];
-    let serverWebAppUrl = '';
 
     // ฟังก์ชันนำทางไปหน้าระบบแอดมินหลังบ้าน
     function goToAdmin(event) {
@@ -2050,45 +2049,6 @@
     }
 
     let storeCategories = ['เสื้อโปโล', 'เสื้อยืด Oversize', 'เสื้อกิจกรรม', 'เสื้อกันหนาว/แจ็คเก็ต'];
-
-    const defaultSampleProducts = [
-      {
-        productId: 'BBA-01',
-        name: 'เสื้อโปโลสโมสรนักศึกษา BBA UBRU คณะบริหารธุรกิจและการจัดการ',
-        category: 'เสื้อโปโล',
-        price: 350,
-        sizes: ['S', 'M', 'L', 'XL', '2XL', '3XL'],
-        colors: ['ฟ้าคราม-ทอง', 'กรมท่า-ขาว'],
-        stock: 100,
-        imageUrl: 'https://images.unsplash.com/photo-1586363104862-3a5e2ab60d99?w=800&q=80',
-        description: 'ผ้าเนื้อดี นุ่มระบายเหงื่อ ปักตราสโมสรนักศึกษาคณะบริหารธุรกิจและการจัดการ สวยหรู เรียบร้อย ใส่ทางการได้',
-        status: 'พร้อมจำหน่าย'
-      },
-      {
-        productId: 'BBA-02',
-        name: 'เสื้อยืด Oversize BBA UBRU สไตล์ Streetwear',
-        category: 'เสื้อยืด Oversize',
-        price: 290,
-        sizes: ['M', 'L', 'XL', '2XL'],
-        colors: ['ดำฟอก', 'ขาวออฟไวท์'],
-        stock: 80,
-        imageUrl: 'https://images.unsplash.com/photo-1503342217505-b0a15ec3261c?w=800&q=80',
-        description: 'ผ้า Cotton 100% สกรีนลายกราฟิก BBA UBRU STUDENT UNION ลุคเท่ ใส่ร่วมกิจกรรมได้ทุกวัน',
-        status: 'พร้อมจำหน่าย'
-      },
-      {
-        productId: 'BBA-03',
-        name: 'เสื้อยืดกิจกรรม Freshy BBA UBRU บริหารธุรกิจสัมพันธ์',
-        category: 'เสื้อกิจกรรม',
-        price: 200,
-        sizes: ['S', 'M', 'L', 'XL', '2XL'],
-        colors: ['ฟ้า', 'เหลือง', 'ขาว'],
-        stock: 150,
-        imageUrl: 'https://images.unsplash.com/photo-1521572267360-ee0c2909d518?w=800&q=80',
-        description: 'เสื้อยืดรุ่นพิเศษใส่สบาย สีสันสดใส ลายสกรีนต้อนรับน้องใหม่คณะบริหารธุรกิจและการจัดการ',
-        status: 'พร้อมจำหน่าย'
-      }
-    ];
 
     // LocalStorage Helper
     function readStoredJson(key, fallback) {
@@ -2584,14 +2544,6 @@
         trackInput.value = '';
       }
       switchView('track');
-    }
-
-    function trackMyOrders() {
-      if (!currentStudent) {
-        openLoginModal();
-        return;
-      }
-      handleTrackSearch();
     }
 
     function setMobileBottomNavVisible(visible) {

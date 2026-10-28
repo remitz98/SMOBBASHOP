@@ -1,7 +1,24 @@
 node_modules/
 .wrangler/
 dist/
+dist-apk/
+all-dist/
 src-tauri/target/
 src-tauri/gen/
 *.log
 .tauri/
+
+# Android & Gradle
+.gradle/
+build/
+kmp-app/build/
+kmp-app/.gradle/
+
+# IDE & Editor
+.idea/
+*.iml
+.vscode/
+
+# OS Artifacts
+.DS_Store
+Thumbs.db

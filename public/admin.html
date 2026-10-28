@@ -1725,8 +1725,6 @@
       });
     }
 
-    let serverWebAppUrl = '';
-
     // ฟังก์ชันกลับไปหน้าร้านค้าหลัก
     function goToShop(event) {
       if (event) event.preventDefault();
@@ -1784,10 +1782,6 @@
       }
     }
 
-    function renderProducts(prods) {
-      // Stub for admin page compatibility
-    }
-
     function handlePinFormSubmit(e) {
       if (e) e.preventDefault();
       const input = document.getElementById('inputLoginPin');
@@ -1798,15 +1792,6 @@
       }
       adminTokenPin = pin;
       loadAdminData();
-    }
-
-    function openAdminModal() {
-      if (adminTokenPin) {
-        switchView('admin');
-        loadAdminData();
-        return;
-      }
-      switchView('login');
     }
 
     function exitAdmin() {
@@ -2066,7 +2051,7 @@
           try {
             new Notification('🛒 มีคำสั่งซื้อใหม่เข้ามา! (SMO BBA SHOP)', {
               body: `${data.customerName} สั่งซื้อเสื้อยอด ฿${Number(data.totalAmount || 0).toLocaleString()} (รหัส ${data.orderId})`,
-              icon: '/app-icon.png'
+              icon: '/logo.png'
             });
           } catch (e) {}
         }
@@ -3556,7 +3541,6 @@
     }
 
     // ==================== QR CODE SCANNER FOR SHIRT PICKUP ====================
-    let html5QrScannerInstance = null;
     let isQrProcessing = false;
 
     function playBeepSound() {
