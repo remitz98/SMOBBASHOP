@@ -15,8 +15,8 @@
   <link rel="apple-touch-icon" href="logo.png">
   <meta name="theme-color" content="#4338ca">
 
-  <!-- HTML5 QR Code Scanner Library for Admin Shirt Pickup Camera Scan -->
-  <script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
+  <!-- ZXing Official Library for Barcode/QR Scanning -->
+  <script src="https://unpkg.com/@zxing/library@0.21.3/umd/index.min.js"></script>
   <!-- jsQR High-Performance QR Decoding Library (Dual-Engine Fallback) -->
   <script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.min.js"></script>
 
@@ -1012,23 +1012,22 @@
           </div>
         </div>
 
-        <!-- Scanner Viewport with Visual Overlay Guide -->
-        <div class="relative w-full rounded-2xl overflow-hidden bg-slate-950 border border-slate-700 aspect-[4/3] max-h-[300px] flex items-center justify-center">
-          <div id="qrReader" class="w-full h-full flex items-center justify-center">
-            <div class="text-xs text-slate-400 p-4 text-center flex flex-col items-center justify-center">
-              <i class="fa-solid fa-spinner fa-spin text-xl mb-2 text-indigo-400"></i>
-              <span>กำลังเริ่มต้นการทำงานของกล้อง...</span>
-            </div>
+        <!-- Scanner Viewport: Direct Native HTML5 Video Element -->
+        <div class="relative w-full rounded-2xl overflow-hidden bg-black border border-slate-700 aspect-[4/3] max-h-[300px] flex items-center justify-center">
+          <video id="qrScannerVideo" class="w-full h-full object-cover" playsinline autoplay muted></video>
+          <div id="qrCameraPlaceholder" class="absolute inset-0 flex flex-col items-center justify-center text-slate-400 text-xs p-4 text-center bg-slate-950">
+            <i class="fa-solid fa-spinner fa-spin text-2xl text-indigo-400 mb-2"></i>
+            <span>กำลังเปิดกล้องถ่ายภาพ...</span>
           </div>
-          <!-- Visual Target Overlay (Purely visual, does NOT restrict scanning area) -->
+          <!-- Visual Target Frame Guide (Pointer events none) -->
           <div class="pointer-events-none absolute inset-0 flex items-center justify-center">
-            <div class="w-48 h-48 sm:w-56 sm:h-56 border border-indigo-400/50 rounded-2xl relative shadow-[0_0_0_9999px_rgba(15,23,42,0.3)]">
+            <div class="w-48 h-48 sm:w-56 sm:h-56 border-2 border-indigo-400/50 rounded-2xl relative shadow-[0_0_0_9999px_rgba(15,23,42,0.4)]">
               <!-- Corner Brackets -->
               <div class="absolute -top-1 -left-1 w-6 h-6 border-t-4 border-l-4 border-indigo-400 rounded-tl-xl"></div>
               <div class="absolute -top-1 -right-1 w-6 h-6 border-t-4 border-r-4 border-indigo-400 rounded-tr-xl"></div>
               <div class="absolute -bottom-1 -left-1 w-6 h-6 border-b-4 border-l-4 border-indigo-400 rounded-bl-xl"></div>
               <div class="absolute -bottom-1 -right-1 w-6 h-6 border-b-4 border-r-4 border-indigo-400 rounded-br-xl"></div>
-              <!-- Subtle pulsing scan bar -->
+              <!-- Pulsing Center Scan Line -->
               <div class="w-full h-0.5 bg-gradient-to-r from-transparent via-indigo-400 to-transparent absolute top-1/2 -translate-y-1/2 animate-pulse"></div>
             </div>
           </div>
@@ -3514,54 +3513,11 @@
       } catch (e) {}
     }
 
+    let zxingReader = null;
+    let cameraMediaStream = null;
+    let scannerFrameLoopId = null;
     let availableCameras = [];
     let selectedCameraId = null;
-    let jsQrScannerLoopId = null;
-
-    function startJsQrLoop() {
-      stopJsQrLoop();
-      const offscreenCanvas = document.createElement('canvas');
-      const offscreenCtx = offscreenCanvas.getContext('2d', { willReadFrequently: true });
-
-      function tick() {
-        if (isQrProcessing) return;
-        const video = document.querySelector('#qrReader video');
-        if (video && video.readyState >= HTMLMediaElement.HAVE_CURRENT_DATA && video.videoWidth > 0) {
-          const vw = video.videoWidth;
-          const vh = video.videoHeight;
-          // Scale to max 800px width for maximum speed and accuracy
-          let sampleW = vw;
-          let sampleH = vh;
-          if (sampleW > 800) {
-            sampleH = Math.round(sampleH * (800 / sampleW));
-            sampleW = 800;
-          }
-          offscreenCanvas.width = sampleW;
-          offscreenCanvas.height = sampleH;
-          offscreenCtx.drawImage(video, 0, 0, sampleW, sampleH);
-
-          try {
-            const imgData = offscreenCtx.getImageData(0, 0, sampleW, sampleH);
-            if (typeof jsQR !== 'undefined') {
-              const code = jsQR(imgData.data, sampleW, sampleH, { inversionAttempts: "dontInvert" });
-              if (code && code.data && code.data.trim()) {
-                onQrScanSuccess(code.data.trim());
-                return;
-              }
-            }
-          } catch (e) {}
-        }
-        jsQrScannerLoopId = requestAnimationFrame(tick);
-      }
-      jsQrScannerLoopId = requestAnimationFrame(tick);
-    }
-
-    function stopJsQrLoop() {
-      if (jsQrScannerLoopId) {
-        cancelAnimationFrame(jsQrScannerLoopId);
-        jsQrScannerLoopId = null;
-      }
-    }
 
     async function openQrScannerModal() {
       const modal = document.getElementById('qrScannerModal');
@@ -3570,36 +3526,36 @@
       if (input) input.value = '';
       isQrProcessing = false;
 
-      // Start HTML5 QR Code Scanner
-      const readerEl = document.getElementById('qrReader');
-      if (readerEl) readerEl.innerHTML = '<div class="text-xs text-slate-400 p-4 text-center flex flex-col items-center justify-center h-full"><i class="fa-solid fa-spinner fa-spin text-xl mb-2 text-indigo-400"></i><span>กำลังเชื่อมต่อกล้องถ่ายภาพ...</span></div>';
+      const placeholder = document.getElementById('qrCameraPlaceholder');
+      if (placeholder) {
+        placeholder.style.display = 'flex';
+        placeholder.innerHTML = `
+          <i class="fa-solid fa-spinner fa-spin text-2xl text-indigo-400 mb-2"></i>
+          <span>กำลังเปิดกล้องถ่ายภาพ...</span>
+        `;
+      }
 
       try {
-        // Enumerate cameras first
-        if (typeof Html5Qrcode !== 'undefined') {
-          try {
-            availableCameras = await Html5Qrcode.getCameras();
-          } catch (e) {
-            availableCameras = [];
-          }
+        if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+          throw new Error('เบราว์เซอร์ไม่รองรับการใช้งานกล้อง');
         }
 
+        // List video input devices
+        const devices = await navigator.mediaDevices.enumerateDevices();
+        availableCameras = devices.filter(d => d.kind === 'videoinput');
         const cameraSelectContainer = document.getElementById('qrCameraSelectContainer');
         const cameraSelect = document.getElementById('qrCameraSelect');
 
-        if (availableCameras && availableCameras.length > 0) {
+        if (availableCameras.length > 0) {
           if (cameraSelect) {
             cameraSelect.innerHTML = availableCameras.map((cam, idx) => 
-              `<option value="${cam.id}">${cam.label || ('กล้องที่ ' + (idx + 1))}</option>`
+              `<option value="${cam.deviceId}">${cam.label || ('กล้องที่ ' + (idx + 1))}</option>`
             ).join('');
           }
-
-          // Pick back/environment camera if present, or last camera (often rear on mobile), or first
-          let preferredCam = availableCameras.find(c => /back|rear|environment|หลัง/i.test(c.label));
-          if (!preferredCam) {
-            preferredCam = availableCameras[availableCameras.length - 1];
-          }
-          selectedCameraId = preferredCam.id;
+          // Select rear/back camera by label if available, or last
+          let preferred = availableCameras.find(c => /back|rear|environment|หลัง/i.test(c.label));
+          if (!preferred) preferred = availableCameras[availableCameras.length - 1];
+          selectedCameraId = preferred.deviceId;
           if (cameraSelect) cameraSelect.value = selectedCameraId;
 
           if (cameraSelectContainer && availableCameras.length > 1) {
@@ -3607,173 +3563,159 @@
           } else if (cameraSelectContainer) {
             cameraSelectContainer.classList.add('hidden');
           }
-
-          await startQrScannerWithCamera(selectedCameraId);
-        } else {
-          // Fallback to constraint if getCameras() returned empty
-          if (cameraSelectContainer) cameraSelectContainer.classList.add('hidden');
-          await startQrScannerWithConstraint({ facingMode: { ideal: "environment" } });
         }
-      } catch (camErr) {
-        console.warn('Camera enumeration or start error:', camErr);
-        // Try fallback with facingMode constraint
+
+        await startCameraStream(selectedCameraId);
+      } catch (err) {
+        console.warn('Camera open error:', err);
+        if (placeholder) {
+          placeholder.style.display = 'flex';
+          placeholder.innerHTML = `
+            <div class="text-rose-400 text-center p-4 space-y-1">
+              <i class="fa-solid fa-video-slash text-3xl mb-1 text-rose-500"></i>
+              <p class="font-bold text-rose-300">ไม่สามารถเข้าถึงกล้องได้</p>
+              <p class="text-slate-400 text-[11px] leading-relaxed">
+                โปรดตรวจสอบการอนุญาตสิทธิ์กล้องในเบราว์เซอร์<br>
+                หรือกดปุ่ม <b>"เลือกไฟล์รูปภาพ QR จากเครื่อง"</b> หรือพิมพ์รหัสค้นหาด้านล่าง
+              </p>
+            </div>
+          `;
+        }
+      }
+    }
+
+    async function onQrCameraChanged(deviceId) {
+      if (!deviceId || deviceId === selectedCameraId) return;
+      selectedCameraId = deviceId;
+      await startCameraStream(deviceId);
+    }
+
+    async function startCameraStream(deviceId) {
+      stopCameraStream();
+
+      const video = document.getElementById('qrScannerVideo');
+      const placeholder = document.getElementById('qrCameraPlaceholder');
+      if (placeholder) placeholder.style.display = 'flex';
+
+      const constraints = {
+        audio: false,
+        video: deviceId 
+          ? { deviceId: { exact: deviceId } } 
+          : { facingMode: { ideal: 'environment' }, width: { ideal: 1280 }, height: { ideal: 720 } }
+      };
+
+      try {
+        cameraMediaStream = await navigator.mediaDevices.getUserMedia(constraints);
+        if (video) {
+          video.srcObject = cameraMediaStream;
+          video.setAttribute('playsinline', 'true');
+          await video.play();
+        }
+        if (placeholder) placeholder.style.display = 'none';
+
+        // Start dual-engine continuous scanning
+        startContinuousScanner();
+      } catch (e) {
+        console.warn('getUserMedia error with constraint, trying generic video:', e);
         try {
-          await startQrScannerWithConstraint({ facingMode: { ideal: "environment" } });
+          cameraMediaStream = await navigator.mediaDevices.getUserMedia({ audio: false, video: true });
+          if (video) {
+            video.srcObject = cameraMediaStream;
+            video.setAttribute('playsinline', 'true');
+            await video.play();
+          }
+          if (placeholder) placeholder.style.display = 'none';
+          startContinuousScanner();
         } catch (fallbackErr) {
-          console.warn('Camera fallback error:', fallbackErr);
-          stopJsQrLoop();
-          if (readerEl) {
-            readerEl.innerHTML = `
-              <div class="p-4 text-center text-rose-400 text-xs space-y-2 flex flex-col items-center justify-center h-full">
-                <i class="fa-solid fa-video-slash text-3xl mb-1 text-rose-500"></i>
-                <p class="font-bold text-rose-400">ไม่สามารถเข้าถึงกล้องได้</p>
-                <p class="text-slate-400 text-[11px] leading-relaxed max-w-xs">
-                  โปรดอนุญาตสิทธิ์เข้าถึงกล้องในเบราว์เซอร์หรือแอปพลิเคชัน<br>
-                  หรือเลือกใช้ปุ่ม <b>"เลือกไฟล์รูปภาพ QR จากเครื่อง"</b> หรือพิมพ์รหัสคำสั่งจองด้านล่าง
-                </p>
-              </div>
-            `;
-          }
+          throw fallbackErr;
         }
       }
     }
 
-    async function onQrCameraChanged(cameraId) {
-      if (!cameraId || cameraId === selectedCameraId) return;
-      selectedCameraId = cameraId;
-      await startQrScannerWithCamera(cameraId);
+    function stopCameraStream() {
+      stopContinuousScanner();
+      if (cameraMediaStream) {
+        try {
+          cameraMediaStream.getTracks().forEach(track => track.stop());
+        } catch (e) {}
+        cameraMediaStream = null;
+      }
+      const video = document.getElementById('qrScannerVideo');
+      if (video) video.srcObject = null;
     }
 
-    async function startQrScannerWithCamera(cameraId) {
-      stopJsQrLoop();
-      if (html5QrScannerInstance) {
+    function startContinuousScanner() {
+      stopContinuousScanner();
+      const video = document.getElementById('qrScannerVideo');
+      if (!video) return;
+
+      const canvas = document.createElement('canvas');
+      const ctx = canvas.getContext('2d', { willReadFrequently: true });
+
+      // Init ZXing Reader
+      if (typeof ZXing !== 'undefined' && !zxingReader) {
         try {
-          if (html5QrScannerInstance.isScanning) {
-            await html5QrScannerInstance.stop();
-          }
-          html5QrScannerInstance.clear();
+          zxingReader = new ZXing.BrowserMultiFormatReader();
         } catch (e) {}
-        html5QrScannerInstance = null;
       }
 
-      html5QrScannerInstance = new Html5Qrcode("qrReader", {
-        formatsToSupport: [ Html5QrcodeSupportedFormats.QR_CODE ],
-        verbose: false
-      });
+      let lastScanTime = 0;
 
-      // Scan entire 100% video frame with natural aspect ratio (prevents squishing or cropped finder patterns)
-      await html5QrScannerInstance.start(
-        cameraId,
-        { fps: 20 },
-        onQrScanSuccess,
-        () => {} // scan frame pass
-      );
+      function scanFrame(timestamp) {
+        if (isQrProcessing) return;
 
-      // Start parallel high-speed jsQR frame grabber on the running video element
-      startJsQrLoop();
-    }
+        if (video.readyState >= HTMLMediaElement.HAVE_ENOUGH_DATA && video.videoWidth > 0) {
+          if (!lastScanTime || timestamp - lastScanTime >= 80) {
+            lastScanTime = timestamp;
 
-    async function startQrScannerWithConstraint(constraints) {
-      stopJsQrLoop();
-      if (html5QrScannerInstance) {
-        try {
-          if (html5QrScannerInstance.isScanning) {
-            await html5QrScannerInstance.stop();
-          }
-          html5QrScannerInstance.clear();
-        } catch (e) {}
-        html5QrScannerInstance = null;
-      }
+            const vw = video.videoWidth;
+            const vh = video.videoHeight;
+            canvas.width = vw;
+            canvas.height = vh;
+            ctx.drawImage(video, 0, 0, vw, vh);
 
-      html5QrScannerInstance = new Html5Qrcode("qrReader", {
-        formatsToSupport: [ Html5QrcodeSupportedFormats.QR_CODE ],
-        verbose: false
-      });
-
-      await html5QrScannerInstance.start(
-        constraints,
-        { fps: 20 },
-        onQrScanSuccess,
-        () => {}
-      );
-
-      // Start parallel high-speed jsQR frame grabber on the running video element
-      startJsQrLoop();
-    }
-
-    async function decodeQrFromFile(file) {
-      return new Promise((resolve, reject) => {
-        const reader = new FileReader();
-        reader.onload = async (e) => {
-          const img = new Image();
-          img.onload = async () => {
-            try {
-              if (typeof jsQR !== 'undefined') {
-                // 1. Try full image across multiple resolutions (ideal for phone photos & screenshots)
-                const targetSizes = [1000, 800, 1400, 600, Math.max(img.width, img.height)];
-                for (const maxDim of targetSizes) {
-                  let w = img.width;
-                  let h = img.height;
-                  if (w > maxDim || h > maxDim) {
-                    if (w > h) {
-                      h = Math.round(h * (maxDim / w));
-                      w = maxDim;
-                    } else {
-                      w = Math.round(w * (maxDim / h));
-                      h = maxDim;
-                    }
-                  }
-                  const canvas = document.createElement('canvas');
-                  canvas.width = w;
-                  canvas.height = h;
-                  const ctx = canvas.getContext('2d', { willReadFrequently: true });
-                  ctx.drawImage(img, 0, 0, w, h);
-                  const imgData = ctx.getImageData(0, 0, w, h);
-                  const res = jsQR(imgData.data, w, h, { inversionAttempts: "attemptBoth" });
-                  if (res && res.data && res.data.trim()) {
-                    return resolve(res.data.trim());
-                  }
+            // Engine 1: jsQR (Instant pure JS decoder)
+            if (typeof jsQR !== 'undefined') {
+              try {
+                const imgData = ctx.getImageData(0, 0, vw, vh);
+                const code = jsQR(imgData.data, vw, vh, { inversionAttempts: 'attemptBoth' });
+                if (code && code.data && code.data.trim()) {
+                  onQrScanSuccess(code.data.trim());
+                  return;
                 }
-
-                // 2. Try regional crops (bank slips typically place the mini-QR in bottom 60% or bottom-right)
-                const crops = [
-                  { x: 0, y: Math.floor(img.height * 0.4), w: img.width, h: Math.floor(img.height * 0.6) },
-                  { x: Math.floor(img.width * 0.3), y: Math.floor(img.height * 0.4), w: Math.floor(img.width * 0.7), h: Math.floor(img.height * 0.6) },
-                  { x: Math.floor(img.width * 0.3), y: 0, w: Math.floor(img.width * 0.7), h: Math.floor(img.height * 0.6) }
-                ];
-                for (const c of crops) {
-                  const canvas = document.createElement('canvas');
-                  canvas.width = c.w;
-                  canvas.height = c.h;
-                  const ctx = canvas.getContext('2d', { willReadFrequently: true });
-                  ctx.drawImage(img, c.x, c.y, c.w, c.h, 0, 0, c.w, c.h);
-                  const imgData = ctx.getImageData(0, 0, c.w, c.h);
-                  const res = jsQR(imgData.data, c.w, c.h, { inversionAttempts: "attemptBoth" });
-                  if (res && res.data && res.data.trim()) {
-                    return resolve(res.data.trim());
-                  }
-                }
-              }
-
-              // 3. ZXing fallback via Html5Qrcode
-              if (html5QrScannerInstance) {
-                try {
-                  const zxResult = await html5QrScannerInstance.scanFile(file, false);
-                  if (zxResult && zxResult.trim()) return resolve(zxResult.trim());
-                } catch (zxErr) {}
-              }
-
-              reject(new Error("No QR code detected"));
-            } catch (err) {
-              reject(err);
+              } catch (e) {}
             }
-          };
-          img.onerror = () => reject(new Error("Cannot load image"));
-          img.src = e.target.result;
-        };
-        reader.onerror = () => reject(new Error("Cannot read file"));
-        reader.readAsDataURL(file);
-      });
+
+            // Engine 2: ZXing Reader
+            if (zxingReader) {
+              try {
+                const zxResult = zxingReader.decodeFromCanvas(canvas);
+                if (zxResult && zxResult.getText() && zxResult.getText().trim()) {
+                  onQrScanSuccess(zxResult.getText().trim());
+                  return;
+                }
+              } catch (e) {}
+            }
+          }
+        }
+        scannerFrameLoopId = requestAnimationFrame(scanFrame);
+      }
+
+      scannerFrameLoopId = requestAnimationFrame(scanFrame);
+    }
+
+    function stopContinuousScanner() {
+      if (scannerFrameLoopId) {
+        cancelAnimationFrame(scannerFrameLoopId);
+        scannerFrameLoopId = null;
+      }
+    }
+
+    async function closeQrScannerModal() {
+      stopCameraStream();
+      const modal = document.getElementById('qrScannerModal');
+      if (modal) modal.style.display = 'none';
+      isQrProcessing = false;
     }
 
     async function handleQrFileSelected(event) {
@@ -3781,8 +3723,8 @@
       if (!file) return;
 
       Swal.fire({
-        title: 'กำลังอ่าน QR Code...',
-        text: 'กำลังสแกนรูปภาพด้วยระบบวิเคราะห์ภาพความละเอียดสูง',
+        title: 'กำลังสแกน QR Code...',
+        text: 'กำลังประมวลผลรูปภาพด้วยระบบวิเคราะห์ภาพคู่ขนาน (Dual-Engine)',
         allowOutsideClick: false,
         didOpen: () => Swal.showLoading()
       });
@@ -3793,10 +3735,10 @@
         if (decodedText) {
           onQrScanSuccess(decodedText);
         } else {
-          throw new Error("No data");
+          throw new Error('No QR code detected');
         }
       } catch (err) {
-        console.warn('File QR decode failed:', err);
+        console.warn('File decode error:', err);
         Swal.fire({
           icon: 'warning',
           title: 'ไม่พบ QR Code ในรูปภาพ',
@@ -3805,7 +3747,7 @@
               <p>ระบบไม่พบ QR Code ในไฟล์รูปภาพที่เลือก กรุณาตรวจสอบว่า:</p>
               <ul class="list-disc list-inside space-y-1 text-slate-500">
                 <li>รูปภาพมีความสว่างและเห็น QR Code ชัดเจน ไม่เบลอหรือขาดหาย</li>
-                <li>เป็นรูปภาพใบเสร็จรับเงิน (E-Receipt) หรือสลิปที่มี QR Code</li>
+                <li>เป็นรูปภาพใบเสร็จรับเงิน (E-Receipt) หรือสลิปโอนเงินที่มี QR Code</li>
               </ul>
               <p class="pt-1 text-slate-400">หรือสามารถพิมพ์รหัสคำสั่งซื้อ <b>BBA-...</b> หรือรหัสนักศึกษาในช่องค้นหาได้ครับ</p>
             </div>
@@ -3817,20 +3759,87 @@
       }
     }
 
-    async function closeQrScannerModal() {
-      stopJsQrLoop();
-      if (html5QrScannerInstance) {
-        try {
-          if (html5QrScannerInstance.isScanning) {
-            await html5QrScannerInstance.stop();
-          }
-          html5QrScannerInstance.clear();
-        } catch (e) {}
-        html5QrScannerInstance = null;
-      }
-      const modal = document.getElementById('qrScannerModal');
-      if (modal) modal.style.display = 'none';
-      isQrProcessing = false;
+    async function decodeQrFromFile(file) {
+      return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = async (e) => {
+          const img = new Image();
+          img.onload = () => {
+            try {
+              // Create canvas at full native resolution
+              const canvas = document.createElement('canvas');
+              canvas.width = img.width;
+              canvas.height = img.height;
+              const ctx = canvas.getContext('2d', { willReadFrequently: true });
+              ctx.drawImage(img, 0, 0);
+
+              // 1. Try jsQR on original full image
+              if (typeof jsQR !== 'undefined') {
+                try {
+                  const imgData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+                  const res = jsQR(imgData.data, canvas.width, canvas.height, { inversionAttempts: 'attemptBoth' });
+                  if (res && res.data && res.data.trim()) {
+                    return resolve(res.data.trim());
+                  }
+                } catch (e) {}
+              }
+
+              // 2. Try ZXing on original canvas
+              if (typeof ZXing !== 'undefined') {
+                try {
+                  const reader = new ZXing.BrowserMultiFormatReader();
+                  const zxRes = reader.decodeFromCanvas(canvas);
+                  if (zxRes && zxRes.getText() && zxRes.getText().trim()) {
+                    return resolve(zxRes.getText().trim());
+                  }
+                } catch (e) {}
+              }
+
+              // 3. Try Regional Crops (Bank slips & receipts have QR in lower half or bottom-right)
+              const crops = [
+                // Bottom 60%
+                { x: 0, y: Math.floor(img.height * 0.4), w: img.width, h: Math.floor(img.height * 0.6) },
+                // Bottom-right quadrant
+                { x: Math.floor(img.width * 0.3), y: Math.floor(img.height * 0.4), w: Math.floor(img.width * 0.7), h: Math.floor(img.height * 0.6) },
+                // Top-right
+                { x: Math.floor(img.width * 0.3), y: 0, w: Math.floor(img.width * 0.7), h: Math.floor(img.height * 0.5) }
+              ];
+
+              for (const c of crops) {
+                const cropCanvas = document.createElement('canvas');
+                cropCanvas.width = c.w;
+                cropCanvas.height = c.h;
+                const cropCtx = cropCanvas.getContext('2d', { willReadFrequently: true });
+                cropCtx.drawImage(img, c.x, c.y, c.w, c.h, 0, 0, c.w, c.h);
+
+                if (typeof jsQR !== 'undefined') {
+                  try {
+                    const cData = cropCtx.getImageData(0, 0, c.w, c.h);
+                    const res = jsQR(cData.data, c.w, c.h, { inversionAttempts: 'attemptBoth' });
+                    if (res && res.data && res.data.trim()) return resolve(res.data.trim());
+                  } catch (e) {}
+                }
+
+                if (typeof ZXing !== 'undefined') {
+                  try {
+                    const reader = new ZXing.BrowserMultiFormatReader();
+                    const zxRes = reader.decodeFromCanvas(cropCanvas);
+                    if (zxRes && zxRes.getText() && zxRes.getText().trim()) return resolve(zxRes.getText().trim());
+                  } catch (e) {}
+                }
+              }
+
+              reject(new Error('No QR code detected in image'));
+            } catch (err) {
+              reject(err);
+            }
+          };
+          img.onerror = () => reject(new Error('Failed to load image'));
+          img.src = e.target.result;
+        };
+        reader.onerror = () => reject(new Error('Failed to read file'));
+        reader.readAsDataURL(file);
+      });
     }
 
     function handleManualQrSubmit() {

@@ -1727,10 +1727,31 @@ app.get('/', async (c) => {
   return c.text('BBA Store Frontend');
 });
 
-// เสิร์ฟหน้าแอดมิน (Admin)
+// เสิร์ฟหน้าแอดมิน (Admin) - ปิด Cache เพื่อให้อัปเดตโค้ดและสแกนเนอร์ทำงานล่าสุดเสมอ
 app.get('/admin', async (c) => {
   if (c.env.ASSETS) {
-    return c.env.ASSETS.fetch(new Request(new URL('/admin.html', c.req.url)));
+    const res = await c.env.ASSETS.fetch(new Request(new URL('/admin.html', c.req.url)));
+    const newHeaders = new Headers(res.headers);
+    newHeaders.set('Cache-Control', 'no-store, no-cache, must-revalidate, max-age=0');
+    return new Response(res.body, {
+      status: res.status,
+      statusText: res.statusText,
+      headers: newHeaders
+    });
+  }
+  return c.text('BBA Store Admin Dashboard');
+});
+
+app.get('/admin.html', async (c) => {
+  if (c.env.ASSETS) {
+    const res = await c.env.ASSETS.fetch(new Request(new URL('/admin.html', c.req.url)));
+    const newHeaders = new Headers(res.headers);
+    newHeaders.set('Cache-Control', 'no-store, no-cache, must-revalidate, max-age=0');
+    return new Response(res.body, {
+      status: res.status,
+      statusText: res.statusText,
+      headers: newHeaders
+    });
   }
   return c.text('BBA Store Admin Dashboard');
 });
