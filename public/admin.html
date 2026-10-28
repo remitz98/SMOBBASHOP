@@ -638,10 +638,13 @@
       color: #4338ca !important;
     }
 
-    /* Slip Viewer Modal Clean Theme Immunity */
+    /* Slip Viewer Modal Clean Theme Immunity & Top Stacking */
     #slipViewerModal,
+    html.dark #slipViewerModal {
+      z-index: 999999 !important;
+      color-scheme: light !important;
+    }
     #slipViewerModal *,
-    html.dark #slipViewerModal,
     html.dark #slipViewerModal * {
       color-scheme: light !important;
     }
@@ -1087,8 +1090,8 @@
     </div>
   </div>
 
-  <div id="slipViewerModal" class="fixed inset-0 z-[10000] bg-slate-950/80 backdrop-blur-sm items-center justify-center p-4" style="display: none;" onclick="if(event.target===this) closeSlipViewer()">
-    <div class="bg-white rounded-2xl max-w-md w-full overflow-hidden shadow-2xl p-4 animate-fade-in flex flex-col relative" onclick="event.stopPropagation()">
+  <div id="slipViewerModal" class="fixed inset-0 bg-slate-950/80 backdrop-blur-sm items-center justify-center p-4" style="display: none; z-index: 999999 !important;" onclick="if(event.target===this) closeSlipViewer()">
+    <div class="bg-white rounded-2xl max-w-md w-full overflow-hidden shadow-2xl p-4 animate-fade-in flex flex-col relative" style="z-index: 1000000 !important;" onclick="event.stopPropagation()">
       <div class="flex justify-between items-center pb-2.5 mb-2 border-b border-slate-100">
         <div class="flex items-center gap-2">
           <i class="fa-solid fa-file-invoice-dollar text-indigo-700"></i>
@@ -2444,6 +2447,11 @@
       link.href = driveDirectLink;
       if (errorLink) errorLink.href = driveDirectLink;
 
+      // Ensure slip modal is topmost above any SweetAlert dialogs (z-index 999999) and at the end of body
+      if (modal && modal.parentNode !== document.body) {
+        document.body.appendChild(modal);
+      }
+      modal.style.zIndex = '999999';
       modal.style.display = 'flex';
 
       if (isDataUrl || !fileId) {
