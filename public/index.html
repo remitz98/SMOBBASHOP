@@ -2423,6 +2423,10 @@
               if (currentView === 'track') {
                 handleTrackSearch();
               }
+            } else if (data.type === 'ORDER_DELETED') {
+              if (currentView === 'track') {
+                handleTrackSearch();
+              }
             }
           } catch (e) {}
         };

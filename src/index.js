@@ -1249,6 +1249,96 @@ app.post('/api/admin/orders/status', async (c) => {
   }
 });
 
+// 2.3.1 ลบคำสั่งซื้อ (กรณีคนกดสั่งผิด / รายการขยะ) พร้อมคืนสต็อกเสื้ออัตโนมัติหากยังไม่ได้ยกเลิก
+app.post('/api/admin/orders/delete', async (c) => {
+  try {
+    const db = c.env.DB;
+    const body = await c.req.json();
+    const isValid = await verifyAdminPin(db, body.pin);
+
+    if (!isValid) return c.json({ success: false, message: 'รหัส PIN ไม่ถูกต้อง' }, 401);
+
+    const { orderId } = body;
+    if (!orderId) return c.json({ success: false, message: 'กรุณาระบุรหัสคำสั่งซื้อ' }, 400);
+
+    const order = await db.prepare("SELECT * FROM orders WHERE order_id = ?").bind(orderId).first();
+    if (!order) return c.json({ success: false, message: 'ไม่พบคำสั่งซื้อนี้ในระบบ' }, 404);
+
+    const batchOps = [];
+
+    // คืนสต็อกเสื้อกลับสู่คลังอัตโนมัติหากคำสั่งซื้อนี้ยังไม่ได้ถูกยกเลิกมาก่อน
+    if (order.status !== 'ยกเลิกคำสั่งซื้อ') {
+      let items = [];
+      try { items = JSON.parse(order.items_json || '[]'); } catch (e) {}
+
+      for (const item of items) {
+        const prod = await db.prepare("SELECT * FROM products WHERE product_id = ?").bind(item.productId).first();
+        if (prod) {
+          let sizeStock = {};
+          try { sizeStock = JSON.parse(prod.size_stock || '{}'); } catch (e) {}
+
+          let newTotal = Number(prod.stock) + item.qty;
+          if (item.size && sizeStock[item.size] !== undefined) {
+            sizeStock[item.size] = Number(sizeStock[item.size]) + item.qty;
+            newTotal = Object.values(sizeStock).reduce((acc, v) => acc + (Number(v) || 0), 0);
+          }
+
+          let newProdStatus = prod.status;
+          if (newProdStatus !== 'ปิดรับการสั่งจอง' && newTotal > 0) {
+            newProdStatus = 'พร้อมจำหน่าย';
+          }
+
+          batchOps.push(
+            db.prepare("UPDATE products SET stock = ?, size_stock = ?, status = ? WHERE product_id = ?")
+              .bind(newTotal, JSON.stringify(sizeStock), newProdStatus, item.productId)
+          );
+        }
+      }
+    }
+
+    // ลบรายการออกจากตาราง orders และ payments
+    batchOps.push(db.prepare("DELETE FROM orders WHERE order_id = ?").bind(orderId));
+    batchOps.push(db.prepare("DELETE FROM payments WHERE order_id = ?").bind(orderId));
+
+    if (batchOps.length > 0) {
+      await db.batch(batchOps);
+    }
+
+    // ลบไฟล์สลิปจาก R2 Bucket (ถ้ามี)
+    try {
+      if (c.env.BUCKET && order.slip_url && order.slip_url.includes('/api/slips/')) {
+        const key = order.slip_url.split('/api/slips/')[1];
+        if (key) await c.env.BUCKET.delete(decodeURIComponent(key));
+      }
+    } catch (r2Err) {
+      console.warn('Could not delete slip from R2:', r2Err);
+    }
+
+    // กระจายสัญญาณ WebSocket แจ้งทุกหน้าจอว่าคำสั่งซื้อถูกลบแล้ว
+    try {
+      if (c.env.ORDER_NOTIFIER) {
+        const doId = c.env.ORDER_NOTIFIER.idFromName('global_order_notifier');
+        const stub = c.env.ORDER_NOTIFIER.get(doId);
+        await stub.fetch('http://order-notifier/broadcast', {
+          method: 'POST',
+          body: JSON.stringify({
+            type: 'ORDER_DELETED',
+            orderId: orderId,
+            studentId: order.student_id,
+            timestamp: new Date().toISOString()
+          })
+        });
+      }
+    } catch (e) {
+      console.error('DO broadcast order delete error:', e);
+    }
+
+    return c.json({ success: true, message: `ลบคำสั่งซื้อ ${orderId} สำเร็จเรียบร้อย` });
+  } catch (error) {
+    return c.json({ success: false, message: error.toString() }, 500);
+  }
+});
+
 // 2.4 เพิ่มหรือแก้ไขข้อมูลสินค้า
 app.post('/api/admin/products', async (c) => {
   try {

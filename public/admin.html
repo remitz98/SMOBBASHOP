@@ -638,7 +638,7 @@
       color: #4338ca !important;
     }
 
-    /* Slip Viewer Modal Clean Theme Immunity & Top Stacking */
+    /* Slip Viewer & Fullscreen Overlay Clean Theme Immunity & Top Stacking */
     #slipViewerModal,
     html.dark #slipViewerModal {
       z-index: 999999 !important;
@@ -653,6 +653,10 @@
       background-color: #ffffff !important;
       color: #0f172a !important;
       border: 1px solid #e2e8f0 !important;
+    }
+    #slipFullscreenOverlay,
+    html.dark #slipFullscreenOverlay {
+      z-index: 10000000 !important;
     }
 
     /* SweetAlert2 in Dark Mode */
@@ -1097,39 +1101,59 @@
           <i class="fa-solid fa-file-invoice-dollar text-indigo-700"></i>
           <h4 class="font-bold text-sm text-slate-800">หลักฐานการโอนเงิน (สลิป)</h4>
         </div>
-        <button onclick="closeSlipViewer()" class="w-7 h-7 rounded-full text-slate-400 hover:text-slate-700 hover:bg-slate-100 flex items-center justify-center transition">
-          <i class="fa-solid fa-xmark"></i>
-        </button>
+        <div class="flex items-center gap-1.5">
+          <button type="button" onclick="openSlipFullscreen()" title="กดดูเต็มจอ" class="w-7 h-7 rounded-full text-indigo-600 hover:text-indigo-800 hover:bg-indigo-50 flex items-center justify-center transition">
+            <i class="fa-solid fa-expand text-xs"></i>
+          </button>
+          <button onclick="closeSlipViewer()" class="w-7 h-7 rounded-full text-slate-400 hover:text-slate-700 hover:bg-slate-100 flex items-center justify-center transition">
+            <i class="fa-solid fa-xmark"></i>
+          </button>
+        </div>
       </div>
 
       <!-- Slip Image Box -->
-      <div class="flex items-center justify-center min-h-[320px] max-h-[520px] overflow-auto bg-slate-50 rounded-xl relative p-2 border border-slate-100">
+      <div class="flex items-center justify-center min-h-[320px] max-h-[520px] overflow-auto bg-slate-50 rounded-xl relative p-2 border border-slate-100 group">
         <!-- Loading Spinner -->
         <div id="slipViewerSpinner" class="flex flex-col items-center justify-center text-slate-400 py-12">
           <i class="fa-solid fa-circle-notch fa-spin text-3xl text-indigo-600 mb-2.5"></i>
-          <span class="text-xs font-medium text-slate-500">กำลังดึงภาพสลิปจาก Google Drive...</span>
+          <span class="text-xs font-medium text-slate-500">กำลังดึงภาพสลิปโอนเงิน...</span>
         </div>
 
-        <!-- Rendered Image -->
-        <img id="viewerSlipImg" src="" alt="สลิปโอนเงิน" class="hidden max-w-full max-h-[500px] object-contain rounded-lg shadow-sm">
+        <!-- Rendered Image (Clickable for Fullscreen) -->
+        <img id="viewerSlipImg" src="" alt="สลิปโอนเงิน" onclick="openSlipFullscreen()" class="hidden max-w-full max-h-[500px] object-contain rounded-lg shadow-sm cursor-zoom-in hover:opacity-95 transition" title="คลิกเพื่อดูเต็มจอ">
 
         <!-- Error State -->
         <div id="slipViewerError" class="hidden text-center text-slate-500 py-8 px-4 text-xs space-y-2">
           <i class="fa-solid fa-image-slash text-3xl text-rose-400"></i>
           <p class="font-semibold text-slate-700">ไม่สามารถแสดงผลภาพสลิปในหน้านี้ได้</p>
-          <p class="text-slate-400">เนื่องจากข้อจำกัดด้านสิทธิ์ความปลอดภัยของ Google Drive</p>
+          <p class="text-slate-400">ไฟล์รูปภาพอาจไม่สามารถเข้าถึงได้หรือรูปแบบไม่ถูกต้อง</p>
           <a id="errorSlipLink" href="#" target="_blank" class="inline-block mt-2 px-4 py-2 bg-indigo-50 text-indigo-700 font-semibold rounded-xl border border-indigo-200 hover:bg-indigo-100 transition">
-            เปิดดูรูปใน Google Drive โดยตรง <i class="fa-solid fa-arrow-up-right-from-square text-[10px]"></i>
+            เปิดดูรูปในแท็บใหม่ <i class="fa-solid fa-arrow-up-right-from-square text-[10px]"></i>
           </a>
         </div>
       </div>
 
       <div class="mt-3 flex items-center justify-between text-xs text-slate-500 pt-1">
         <span class="text-[11px] text-slate-400">* ตรวจสอบยอดเงินและเวลาโอน</span>
-        <a id="viewerSlipLink" href="#" target="_blank" class="text-indigo-700 font-medium hover:underline inline-flex items-center gap-1">
-          เปิดใน Drive <i class="fa-solid fa-arrow-up-right-from-square text-[10px]"></i>
-        </a>
+        <button id="btnSlipFullscreen" type="button" onclick="openSlipFullscreen()" class="px-3.5 py-1.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-semibold text-xs shadow-sm transition inline-flex items-center gap-1.5 active:scale-95">
+          <i class="fa-solid fa-expand"></i> <span>กดดูเต็มจอ</span>
+        </button>
       </div>
+    </div>
+  </div>
+
+  <!-- ==================== SLIP FULLSCREEN LIGHTBOX ==================== -->
+  <div id="slipFullscreenOverlay" class="fixed inset-0 bg-slate-950/95 backdrop-blur-md items-center justify-center p-2 sm:p-4 select-none cursor-zoom-out" style="display: none; z-index: 10000000 !important;" onclick="closeSlipFullscreen()">
+    <div class="absolute top-4 right-4 z-20 flex items-center gap-2">
+      <button type="button" onclick="event.stopPropagation(); closeSlipFullscreen();" class="px-3.5 py-1.5 rounded-full bg-white/20 hover:bg-white/30 text-white text-xs font-semibold backdrop-blur-sm transition flex items-center gap-1.5 shadow-lg">
+        <i class="fa-solid fa-xmark text-sm"></i> <span>ปิดเต็มจอ (ESC)</span>
+      </button>
+    </div>
+    <div class="absolute top-4 left-4 z-20 text-white/80 text-xs bg-black/60 px-3.5 py-1.5 rounded-full backdrop-blur-sm pointer-events-none hidden sm:inline-flex items-center gap-1.5">
+      <i class="fa-solid fa-magnifying-glass-plus"></i> แตะหรือคลิกที่ไหนก็ได้เพื่อปิดโหมดเต็มจอ
+    </div>
+    <div class="w-full h-full flex items-center justify-center overflow-auto p-2" onclick="event.stopPropagation(); closeSlipFullscreen();">
+      <img id="fullscreenSlipImg" src="" alt="สลิปโอนเงินเต็มจอ" class="max-w-[96vw] max-h-[94vh] object-contain rounded-xl shadow-2xl transition-transform duration-200 cursor-zoom-out" onclick="event.stopPropagation(); closeSlipFullscreen();">
     </div>
   </div>
 
@@ -1287,7 +1311,9 @@
 
       <!-- Modal Bottom Actions Bar -->
       <div class="p-3.5 sm:p-4 border-t border-slate-200 bg-white flex items-center justify-between gap-2.5 shrink-0 no-print">
-        <span class="text-xs text-slate-500">ตรวจสอบความถูกต้องของรายการสั่งจอง</span>
+        <button onclick="adminDeleteCurrentReceiptOrder()" type="button" class="px-3 py-1.5 rounded-xl text-rose-600 hover:text-white hover:bg-rose-600 border border-rose-200 text-xs font-semibold transition inline-flex items-center gap-1.5 shadow-sm active:scale-95" title="ลบรายการที่สั่งผิด">
+          <i class="fa-solid fa-trash-can"></i> <span>ลบรายการนี้</span>
+        </button>
         <button onclick="closeReceiptModal()" type="button" class="px-4 py-2 rounded-xl bg-slate-900 hover:bg-slate-800 text-white text-xs font-bold transition">
           ปิดหน้าต่าง
         </button>
@@ -2068,7 +2094,7 @@
         });
 
         loadAdminData(true);
-      } else if (data.type === 'ORDER_UPDATED') {
+      } else if (data.type === 'ORDER_UPDATED' || data.type === 'ORDER_DELETED') {
         loadAdminData(true);
       }
     }
@@ -2400,6 +2426,7 @@
             (item.status === 'รับเสื้อแล้ว' ? '<button onclick="adminPromptRevertPickup(\'' + safeOrderId + '\')" class="px-2.5 py-1 rounded-lg bg-amber-500 hover:bg-amber-600 text-white text-xs font-semibold shadow-sm transition inline-flex items-center justify-center gap-1.5"><i class="fa-solid fa-rotate-left"></i> <span>แก้ไขสถานะรับเสื้อ</span></button>' : '') +
             (item.status === 'รับเสื้อแล้ว' ? '<button onclick="adminEditOrderStatusModal(\'' + safeOrderId + '\', \'' + safeStatus + '\')" class="px-2 py-0.5 rounded text-[11px] text-slate-500 hover:text-indigo-700 hover:bg-slate-100 transition inline-flex items-center justify-center gap-1"><i class="fa-solid fa-pen"></i> <span>เปลี่ยนสถานะอื่น</span></button>' : '') +
             (item.status !== 'ยกเลิกคำสั่งซื้อ' && item.status !== 'รับเสื้อแล้ว' ? '<button onclick="adminCancelOrder(\'' + safeOrderId + '\')" class="px-2 py-0.5 rounded text-[11px] text-rose-500 hover:text-rose-700 hover:bg-rose-50 transition">ยกเลิกการจอง</button>' : '') +
+            '<button type="button" onclick="adminDeleteOrder(\'' + safeOrderId + '\', \'' + escapeHtml(item.customerName || '') + '\')" class="px-2 py-0.5 rounded text-[11px] text-rose-600 hover:text-white hover:bg-rose-600 border border-rose-200 transition inline-flex items-center justify-center gap-1 mt-0.5 active:scale-95" title="ลบรายการที่คนกดสั่งผิด"><i class="fa-solid fa-trash-can"></i> <span>ลบรายการ</span></button>' +
           '</div></td>' +
         '</tr>';
       }).join('');
@@ -2418,7 +2445,6 @@
       const img = document.getElementById('viewerSlipImg');
       const spinner = document.getElementById('slipViewerSpinner');
       const errorBox = document.getElementById('slipViewerError');
-      const link = document.getElementById('viewerSlipLink');
       const errorLink = document.getElementById('errorSlipLink');
 
       img.src = '';
@@ -2428,9 +2454,8 @@
 
       const isDataUrl = typeof url === 'string' && url.startsWith('data:');
       const fileId = extractDriveId(url);
-      const driveDirectLink = isDataUrl ? '#' : (fileId ? ('https://drive.google.com/file/d/' + fileId + '/view') : url);
-      link.href = driveDirectLink;
-      if (errorLink) errorLink.href = driveDirectLink;
+      const directLink = isDataUrl ? '#' : (fileId ? ('https://drive.google.com/file/d/' + fileId + '/view') : url);
+      if (errorLink) errorLink.href = directLink;
 
       // Ensure slip modal is topmost above any SweetAlert dialogs (z-index 999999) and at the end of body
       if (modal && modal.parentNode !== document.body) {
@@ -2464,9 +2489,63 @@
     }
 
     function closeSlipViewer() {
-      document.getElementById('slipViewerModal').style.display = 'none';
-      document.getElementById('viewerSlipImg').src = '';
+      closeSlipFullscreen();
+      const modal = document.getElementById('slipViewerModal');
+      if (modal) modal.style.display = 'none';
+      const img = document.getElementById('viewerSlipImg');
+      if (img) img.src = '';
     }
+
+    function openSlipFullscreen() {
+      const img = document.getElementById('viewerSlipImg');
+      if (!img || !img.src) return;
+      const overlay = document.getElementById('slipFullscreenOverlay');
+      const fsImg = document.getElementById('fullscreenSlipImg');
+      if (!overlay || !fsImg) return;
+
+      fsImg.src = img.src;
+      if (overlay.parentNode !== document.body) {
+        document.body.appendChild(overlay);
+      }
+      overlay.style.display = 'flex';
+
+      try {
+        if (overlay.requestFullscreen) {
+          overlay.requestFullscreen().catch(() => {});
+        } else if (overlay.webkitRequestFullscreen) {
+          overlay.webkitRequestFullscreen();
+        }
+      } catch (e) {}
+    }
+
+    function closeSlipFullscreen() {
+      const overlay = document.getElementById('slipFullscreenOverlay');
+      if (overlay) overlay.style.display = 'none';
+      const fsImg = document.getElementById('fullscreenSlipImg');
+      if (fsImg) fsImg.src = '';
+      try {
+        if (document.fullscreenElement && document.exitFullscreen) {
+          document.exitFullscreen().catch(() => {});
+        } else if (document.webkitFullscreenElement && document.webkitExitFullscreen) {
+          document.webkitExitFullscreen();
+        }
+      } catch (e) {}
+    }
+
+    // Keyboard support: ESC to close fullscreen slip or slip modal
+    window.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape') {
+        const fsOverlay = document.getElementById('slipFullscreenOverlay');
+        if (fsOverlay && fsOverlay.style.display !== 'none') {
+          closeSlipFullscreen();
+          return;
+        }
+        const slipModal = document.getElementById('slipViewerModal');
+        if (slipModal && slipModal.style.display !== 'none') {
+          closeSlipViewer();
+        }
+      }
+    });
 
     function openCurrentOrderSlip(orderId) {
       if (!adminOrdersList || adminOrdersList.length === 0) return;
@@ -2880,6 +2959,74 @@
           executeAdminUpdateStatus(orderId, 'ยกเลิกคำสั่งซื้อ');
         }
       });
+    }
+
+    function adminDeleteCurrentReceiptOrder() {
+      if (!currentAdminReceiptData || !currentAdminReceiptData.orderId) return;
+      const orderId = currentAdminReceiptData.orderId;
+      const custName = currentAdminReceiptData.customerName || '';
+      adminDeleteOrder(orderId, custName, () => {
+        closeReceiptModal();
+      });
+    }
+
+    function adminDeleteOrder(orderId, customerName, onSuccess) {
+      const nameText = customerName ? ` (${customerName})` : '';
+      Swal.fire({
+        title: 'ยืนยันลบคำสั่งซื้อ?',
+        html: `<div class="text-left text-xs sm:text-sm text-slate-600 space-y-2">
+                 <p>คุณต้องการลบคำสั่งซื้อรหัส <b class="font-mono text-indigo-700">${orderId}</b>${nameText} ออกจากระบบ?</p>
+                 <p class="text-rose-600 font-semibold"><i class="fa-solid fa-triangle-exclamation"></i> รายการนี้จะถูกลบออกจากฐานข้อมูลอย่างถาวร (สำหรับกรณีคนกดสั่งผิด / รายการขยะ)</p>
+                 <p class="text-[11px] text-slate-500">* หากรายการนี้ยังไม่ได้ยกเลิก ระบบจะคืนสต็อกเสื้อกลับสู่คลังให้อัตโนมัติ</p>
+               </div>`,
+        icon: 'warning',
+        showCancelButton: true,
+        confirmButtonText: '<i class="fa-solid fa-trash-can"></i> ยืนยันลบรายการ',
+        cancelButtonText: 'ยกเลิก',
+        confirmButtonColor: '#e11d48',
+        cancelButtonColor: '#64748b',
+        focusCancel: true
+      }).then(async (result) => {
+        if (result.isConfirmed) {
+          executeAdminDeleteOrder(orderId, onSuccess);
+        }
+      });
+    }
+
+    async function executeAdminDeleteOrder(orderId, onSuccess) {
+      Swal.fire({
+        title: 'กำลังลบคำสั่งซื้อ...',
+        allowOutsideClick: false,
+        didOpen: () => Swal.showLoading()
+      });
+      try {
+        const res = await fetch(API_BASE + '/api/admin/orders/delete', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            pin: adminTokenPin,
+            orderId: orderId
+          })
+        });
+        const resData = await res.json();
+        Swal.close();
+        if (resData && resData.success) {
+          Swal.fire({
+            icon: 'success',
+            title: 'ลบรายการสำเร็จ',
+            text: resData.message || 'ลบคำสั่งซื้อเรียบร้อยแล้ว',
+            timer: 2000,
+            showConfirmButton: false
+          });
+          if (typeof onSuccess === 'function') onSuccess();
+          loadAdminData(true);
+        } else {
+          Swal.fire('เกิดข้อผิดพลาด', (resData && resData.message) ? resData.message : 'ไม่สามารถลบคำสั่งซื้อได้', 'error');
+        }
+      } catch (err) {
+        Swal.close();
+        Swal.fire('เกิดข้อผิดพลาด', err.message || 'การเชื่อมต่อขัดข้อง', 'error');
+      }
     }
 
     async function executeAdminUpdateStatus(orderId, newStatus, notifyEmail, adminNotes) {
