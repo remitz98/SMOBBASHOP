@@ -17,6 +17,8 @@
 
   <!-- HTML5 QR Code Scanner Library for Admin Shirt Pickup Camera Scan -->
   <script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
+  <!-- jsQR High-Performance QR Decoding Library (Dual-Engine Fallback) -->
+  <script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.min.js"></script>
 
   <!-- QRCode Library for Official E-Receipt -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
@@ -1010,13 +1012,30 @@
           </div>
         </div>
 
-        <!-- Scanner Viewport -->
-        <div id="qrReader" class="w-full rounded-2xl overflow-hidden border-2 border-dashed border-indigo-300 bg-slate-900 min-h-[260px] flex items-center justify-center">
-          <div class="text-xs text-slate-400 p-4 text-center">กำลังเริ่มต้นการทำงานของกล้อง...</div>
+        <!-- Scanner Viewport with Visual Overlay Guide -->
+        <div class="relative w-full rounded-2xl overflow-hidden bg-slate-950 border border-slate-700 aspect-[4/3] max-h-[300px] flex items-center justify-center">
+          <div id="qrReader" class="w-full h-full flex items-center justify-center">
+            <div class="text-xs text-slate-400 p-4 text-center flex flex-col items-center justify-center">
+              <i class="fa-solid fa-spinner fa-spin text-xl mb-2 text-indigo-400"></i>
+              <span>กำลังเริ่มต้นการทำงานของกล้อง...</span>
+            </div>
+          </div>
+          <!-- Visual Target Overlay (Purely visual, does NOT restrict scanning area) -->
+          <div class="pointer-events-none absolute inset-0 flex items-center justify-center">
+            <div class="w-48 h-48 sm:w-56 sm:h-56 border border-indigo-400/50 rounded-2xl relative shadow-[0_0_0_9999px_rgba(15,23,42,0.3)]">
+              <!-- Corner Brackets -->
+              <div class="absolute -top-1 -left-1 w-6 h-6 border-t-4 border-l-4 border-indigo-400 rounded-tl-xl"></div>
+              <div class="absolute -top-1 -right-1 w-6 h-6 border-t-4 border-r-4 border-indigo-400 rounded-tr-xl"></div>
+              <div class="absolute -bottom-1 -left-1 w-6 h-6 border-b-4 border-l-4 border-indigo-400 rounded-bl-xl"></div>
+              <div class="absolute -bottom-1 -right-1 w-6 h-6 border-b-4 border-r-4 border-indigo-400 rounded-br-xl"></div>
+              <!-- Subtle pulsing scan bar -->
+              <div class="w-full h-0.5 bg-gradient-to-r from-transparent via-indigo-400 to-transparent absolute top-1/2 -translate-y-1/2 animate-pulse"></div>
+            </div>
+          </div>
         </div>
 
         <div class="mt-3 text-center text-xs text-slate-500 space-y-1">
-          <p class="font-medium text-slate-700">จัดตำแหน่ง QR Code ให้อยู่ในกรอบสี่เหลี่ยม</p>
+          <p class="font-medium text-slate-700">หันกล้องไปที่ QR Code บนใบเสร็จรับเงิน (E-Receipt)</p>
           <p class="text-[11px] text-slate-400">ระบบจะทำการค้นหาคำสั่งซื้อและเปิดข้อมูลยืนยันการรับเสื้ออัตโนมัติ</p>
         </div>
 
@@ -1208,14 +1227,14 @@
 
           <!-- Order QR Code for Fast Pickup Verification -->
           <div class="mt-3.5 p-3 rounded-xl border border-dashed border-indigo-200 bg-indigo-50/50 flex items-center justify-between gap-3">
-            <div class="space-y-1">
-              <div class="font-bold text-indigo-950 text-xs sm:text-sm flex items-center gap-1.5">
+            <div class="space-y-0.5">
+              <div class="font-bold text-indigo-950 text-xs flex items-center gap-1.5">
                 <i class="fa-solid fa-qrcode text-indigo-700"></i> QR Code ประจำคำสั่งซื้อ
               </div>
-              <p class="text-[11px] text-slate-600 leading-snug">สแกนรหัสนี้เพื่อยืนยันการรับเสื้อ ณ ห้องสโมสร</p>
-              <div class="font-mono text-xs font-bold text-indigo-700 bg-white px-2 py-0.5 rounded border border-indigo-100 inline-block" id="receiptQrOrderIdText"></div>
+              <p class="text-[10px] text-slate-500">สแกนรหัสนี้เพื่อยืนยันการรับเสื้อ ณ ห้องสโมสร</p>
+              <div class="font-mono text-[10px] text-indigo-700 font-semibold" id="receiptQrOrderIdText"></div>
             </div>
-            <div class="p-2 bg-white rounded-xl border border-slate-200 shrink-0 shadow-sm flex items-center justify-center">
+            <div class="p-1 bg-white rounded-lg border border-slate-200 shrink-0 shadow-sm flex items-center justify-center">
               <div id="receiptQrCanvas"></div>
             </div>
           </div>
@@ -2528,11 +2547,11 @@
           try {
             new QRCode(qrEl, {
               text: String(currentAdminReceiptData.orderId),
-              width: 128,
-              height: 128,
+              width: 68,
+              height: 68,
               colorDark: '#0f172a',
               colorLight: '#ffffff',
-              correctLevel: QRCode.CorrectLevel.H
+              correctLevel: QRCode.CorrectLevel.M
             });
           } catch (qrErr) {
             console.warn('QR Code generation error:', qrErr);
@@ -3497,6 +3516,52 @@
 
     let availableCameras = [];
     let selectedCameraId = null;
+    let jsQrScannerLoopId = null;
+
+    function startJsQrLoop() {
+      stopJsQrLoop();
+      const offscreenCanvas = document.createElement('canvas');
+      const offscreenCtx = offscreenCanvas.getContext('2d', { willReadFrequently: true });
+
+      function tick() {
+        if (isQrProcessing) return;
+        const video = document.querySelector('#qrReader video');
+        if (video && video.readyState >= HTMLMediaElement.HAVE_CURRENT_DATA && video.videoWidth > 0) {
+          const vw = video.videoWidth;
+          const vh = video.videoHeight;
+          // Scale to max 800px width for maximum speed and accuracy
+          let sampleW = vw;
+          let sampleH = vh;
+          if (sampleW > 800) {
+            sampleH = Math.round(sampleH * (800 / sampleW));
+            sampleW = 800;
+          }
+          offscreenCanvas.width = sampleW;
+          offscreenCanvas.height = sampleH;
+          offscreenCtx.drawImage(video, 0, 0, sampleW, sampleH);
+
+          try {
+            const imgData = offscreenCtx.getImageData(0, 0, sampleW, sampleH);
+            if (typeof jsQR !== 'undefined') {
+              const code = jsQR(imgData.data, sampleW, sampleH, { inversionAttempts: "dontInvert" });
+              if (code && code.data && code.data.trim()) {
+                onQrScanSuccess(code.data.trim());
+                return;
+              }
+            }
+          } catch (e) {}
+        }
+        jsQrScannerLoopId = requestAnimationFrame(tick);
+      }
+      jsQrScannerLoopId = requestAnimationFrame(tick);
+    }
+
+    function stopJsQrLoop() {
+      if (jsQrScannerLoopId) {
+        cancelAnimationFrame(jsQrScannerLoopId);
+        jsQrScannerLoopId = null;
+      }
+    }
 
     async function openQrScannerModal() {
       const modal = document.getElementById('qrScannerModal');
@@ -3507,17 +3572,18 @@
 
       // Start HTML5 QR Code Scanner
       const readerEl = document.getElementById('qrReader');
-      if (readerEl) readerEl.innerHTML = '<div class="text-xs text-slate-400 p-4 text-center"><i class="fa-solid fa-spinner fa-spin mr-1"></i> กำลังเชื่อมต่อกล้องถ่ายภาพ...</div>';
-
-      if (typeof Html5Qrcode === 'undefined') {
-        Swal.fire('ข้อผิดพลาด', 'ไม่พบไลบรารีสแกนเนอร์ กรุณารีเฟรชหน้าเว็บ', 'error');
-        closeQrScannerModal();
-        return;
-      }
+      if (readerEl) readerEl.innerHTML = '<div class="text-xs text-slate-400 p-4 text-center flex flex-col items-center justify-center h-full"><i class="fa-solid fa-spinner fa-spin text-xl mb-2 text-indigo-400"></i><span>กำลังเชื่อมต่อกล้องถ่ายภาพ...</span></div>';
 
       try {
         // Enumerate cameras first
-        availableCameras = await Html5Qrcode.getCameras();
+        if (typeof Html5Qrcode !== 'undefined') {
+          try {
+            availableCameras = await Html5Qrcode.getCameras();
+          } catch (e) {
+            availableCameras = [];
+          }
+        }
+
         const cameraSelectContainer = document.getElementById('qrCameraSelectContainer');
         const cameraSelect = document.getElementById('qrCameraSelect');
 
@@ -3555,14 +3621,15 @@
           await startQrScannerWithConstraint({ facingMode: { ideal: "environment" } });
         } catch (fallbackErr) {
           console.warn('Camera fallback error:', fallbackErr);
+          stopJsQrLoop();
           if (readerEl) {
             readerEl.innerHTML = `
-              <div class="p-4 text-center text-rose-500 text-xs space-y-2">
-                <i class="fa-solid fa-video-slash text-3xl mb-1 text-rose-400"></i>
-                <p class="font-bold text-rose-600">ไม่สามารถเข้าถึงกล้องได้</p>
-                <p class="text-slate-400 text-[11px] leading-relaxed">
-                  โปรดตรวจสอบว่าได้อนุญาตสิทธิ์เข้าถึงกล้องในเบราว์เซอร์หรือแอปพลิเคชันแล้ว<br>
-                  หรือเลือกใช้ปุ่ม <b>"เลือกไฟล์รูปภาพ QR"</b> หรือพิมพ์รหัสคำสั่งจองด้านล่าง
+              <div class="p-4 text-center text-rose-400 text-xs space-y-2 flex flex-col items-center justify-center h-full">
+                <i class="fa-solid fa-video-slash text-3xl mb-1 text-rose-500"></i>
+                <p class="font-bold text-rose-400">ไม่สามารถเข้าถึงกล้องได้</p>
+                <p class="text-slate-400 text-[11px] leading-relaxed max-w-xs">
+                  โปรดอนุญาตสิทธิ์เข้าถึงกล้องในเบราว์เซอร์หรือแอปพลิเคชัน<br>
+                  หรือเลือกใช้ปุ่ม <b>"เลือกไฟล์รูปภาพ QR จากเครื่อง"</b> หรือพิมพ์รหัสคำสั่งจองด้านล่าง
                 </p>
               </div>
             `;
@@ -3578,6 +3645,7 @@
     }
 
     async function startQrScannerWithCamera(cameraId) {
+      stopJsQrLoop();
       if (html5QrScannerInstance) {
         try {
           if (html5QrScannerInstance.isScanning) {
@@ -3588,35 +3656,25 @@
         html5QrScannerInstance = null;
       }
 
-      html5QrScannerInstance = new Html5Qrcode("qrReader");
-      const qrboxFunction = function(viewfinderWidth, viewfinderHeight) {
-        const minEdgePercentage = 0.72;
-        const minEdgeSize = Math.min(viewfinderWidth, viewfinderHeight);
-        const qrboxSize = Math.floor(minEdgeSize * minEdgePercentage);
-        return {
-          width: qrboxSize,
-          height: qrboxSize
-        };
-      };
+      html5QrScannerInstance = new Html5Qrcode("qrReader", {
+        formatsToSupport: [ Html5QrcodeSupportedFormats.QR_CODE ],
+        verbose: false
+      });
 
-      const config = {
-        fps: 15,
-        qrbox: qrboxFunction,
-        aspectRatio: 1.0,
-        experimentalFeatures: {
-          useBarCodeDetectorIfSupported: true
-        }
-      };
-
+      // Scan entire 100% video frame with natural aspect ratio (prevents squishing or cropped finder patterns)
       await html5QrScannerInstance.start(
         cameraId,
-        config,
+        { fps: 20 },
         onQrScanSuccess,
         () => {} // scan frame pass
       );
+
+      // Start parallel high-speed jsQR frame grabber on the running video element
+      startJsQrLoop();
     }
 
     async function startQrScannerWithConstraint(constraints) {
+      stopJsQrLoop();
       if (html5QrScannerInstance) {
         try {
           if (html5QrScannerInstance.isScanning) {
@@ -3627,61 +3685,140 @@
         html5QrScannerInstance = null;
       }
 
-      html5QrScannerInstance = new Html5Qrcode("qrReader");
-      const qrboxFunction = function(viewfinderWidth, viewfinderHeight) {
-        const minEdgePercentage = 0.72;
-        const minEdgeSize = Math.min(viewfinderWidth, viewfinderHeight);
-        const qrboxSize = Math.floor(minEdgeSize * minEdgePercentage);
-        return {
-          width: qrboxSize,
-          height: qrboxSize
-        };
-      };
-
-      const config = {
-        fps: 15,
-        qrbox: qrboxFunction,
-        aspectRatio: 1.0,
-        experimentalFeatures: {
-          useBarCodeDetectorIfSupported: true
-        }
-      };
+      html5QrScannerInstance = new Html5Qrcode("qrReader", {
+        formatsToSupport: [ Html5QrcodeSupportedFormats.QR_CODE ],
+        verbose: false
+      });
 
       await html5QrScannerInstance.start(
         constraints,
-        config,
+        { fps: 20 },
         onQrScanSuccess,
         () => {}
       );
+
+      // Start parallel high-speed jsQR frame grabber on the running video element
+      startJsQrLoop();
+    }
+
+    async function decodeQrFromFile(file) {
+      return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = async (e) => {
+          const img = new Image();
+          img.onload = async () => {
+            try {
+              if (typeof jsQR !== 'undefined') {
+                // 1. Try full image across multiple resolutions (ideal for phone photos & screenshots)
+                const targetSizes = [1000, 800, 1400, 600, Math.max(img.width, img.height)];
+                for (const maxDim of targetSizes) {
+                  let w = img.width;
+                  let h = img.height;
+                  if (w > maxDim || h > maxDim) {
+                    if (w > h) {
+                      h = Math.round(h * (maxDim / w));
+                      w = maxDim;
+                    } else {
+                      w = Math.round(w * (maxDim / h));
+                      h = maxDim;
+                    }
+                  }
+                  const canvas = document.createElement('canvas');
+                  canvas.width = w;
+                  canvas.height = h;
+                  const ctx = canvas.getContext('2d', { willReadFrequently: true });
+                  ctx.drawImage(img, 0, 0, w, h);
+                  const imgData = ctx.getImageData(0, 0, w, h);
+                  const res = jsQR(imgData.data, w, h, { inversionAttempts: "attemptBoth" });
+                  if (res && res.data && res.data.trim()) {
+                    return resolve(res.data.trim());
+                  }
+                }
+
+                // 2. Try regional crops (bank slips typically place the mini-QR in bottom 60% or bottom-right)
+                const crops = [
+                  { x: 0, y: Math.floor(img.height * 0.4), w: img.width, h: Math.floor(img.height * 0.6) },
+                  { x: Math.floor(img.width * 0.3), y: Math.floor(img.height * 0.4), w: Math.floor(img.width * 0.7), h: Math.floor(img.height * 0.6) },
+                  { x: Math.floor(img.width * 0.3), y: 0, w: Math.floor(img.width * 0.7), h: Math.floor(img.height * 0.6) }
+                ];
+                for (const c of crops) {
+                  const canvas = document.createElement('canvas');
+                  canvas.width = c.w;
+                  canvas.height = c.h;
+                  const ctx = canvas.getContext('2d', { willReadFrequently: true });
+                  ctx.drawImage(img, c.x, c.y, c.w, c.h, 0, 0, c.w, c.h);
+                  const imgData = ctx.getImageData(0, 0, c.w, c.h);
+                  const res = jsQR(imgData.data, c.w, c.h, { inversionAttempts: "attemptBoth" });
+                  if (res && res.data && res.data.trim()) {
+                    return resolve(res.data.trim());
+                  }
+                }
+              }
+
+              // 3. ZXing fallback via Html5Qrcode
+              if (html5QrScannerInstance) {
+                try {
+                  const zxResult = await html5QrScannerInstance.scanFile(file, false);
+                  if (zxResult && zxResult.trim()) return resolve(zxResult.trim());
+                } catch (zxErr) {}
+              }
+
+              reject(new Error("No QR code detected"));
+            } catch (err) {
+              reject(err);
+            }
+          };
+          img.onerror = () => reject(new Error("Cannot load image"));
+          img.src = e.target.result;
+        };
+        reader.onerror = () => reject(new Error("Cannot read file"));
+        reader.readAsDataURL(file);
+      });
     }
 
     async function handleQrFileSelected(event) {
       const file = event.target.files && event.target.files[0];
       if (!file) return;
 
-      try {
-        if (!html5QrScannerInstance) {
-          html5QrScannerInstance = new Html5Qrcode("qrReader");
-        }
-        Swal.fire({
-          title: 'กำลังสแกนรูปภาพ...',
-          allowOutsideClick: false,
-          didOpen: () => Swal.showLoading()
-        });
+      Swal.fire({
+        title: 'กำลังอ่าน QR Code...',
+        text: 'กำลังสแกนรูปภาพด้วยระบบวิเคราะห์ภาพความละเอียดสูง',
+        allowOutsideClick: false,
+        didOpen: () => Swal.showLoading()
+      });
 
-        const decodedResult = await html5QrScannerInstance.scanFile(file, true);
+      try {
+        const decodedText = await decodeQrFromFile(file);
         Swal.close();
-        if (decodedResult) {
-          onQrScanSuccess(decodedResult);
+        if (decodedText) {
+          onQrScanSuccess(decodedText);
+        } else {
+          throw new Error("No data");
         }
       } catch (err) {
-        Swal.fire('ไม่พบ QR Code', 'ไม่สามารถอ่าน QR Code จากรูปภาพที่เลือกได้ โปรดลองอีกครั้งหรือใช้รูปภาพที่ชัดเจนขึ้น', 'warning');
+        console.warn('File QR decode failed:', err);
+        Swal.fire({
+          icon: 'warning',
+          title: 'ไม่พบ QR Code ในรูปภาพ',
+          html: `
+            <div class="text-left text-xs space-y-1.5 text-slate-600">
+              <p>ระบบไม่พบ QR Code ในไฟล์รูปภาพที่เลือก กรุณาตรวจสอบว่า:</p>
+              <ul class="list-disc list-inside space-y-1 text-slate-500">
+                <li>รูปภาพมีความสว่างและเห็น QR Code ชัดเจน ไม่เบลอหรือขาดหาย</li>
+                <li>เป็นรูปภาพใบเสร็จรับเงิน (E-Receipt) หรือสลิปที่มี QR Code</li>
+              </ul>
+              <p class="pt-1 text-slate-400">หรือสามารถพิมพ์รหัสคำสั่งซื้อ <b>BBA-...</b> หรือรหัสนักศึกษาในช่องค้นหาได้ครับ</p>
+            </div>
+          `,
+          confirmButtonColor: '#4338ca'
+        });
       } finally {
         event.target.value = '';
       }
     }
 
     async function closeQrScannerModal() {
+      stopJsQrLoop();
       if (html5QrScannerInstance) {
         try {
           if (html5QrScannerInstance.isScanning) {
@@ -3719,9 +3856,14 @@
 
     function processScannedOrder(rawText) {
       if (!rawText) return;
+      const cleanText = String(rawText).trim();
+
+      // Check if this is a Bank Slip QR code (Thai QR Payment / PromptPay EMVCo standard)
+      const isBankSlipQr = cleanText.startsWith('000201') || cleanText.startsWith('004600') || /scbeasy|promptpay|kasikorn|krungthai|kplus|bangkokbank/i.test(cleanText);
+
       // Clean order ID: extract BBA-XXXXXX-XXXXXXXX if surrounded by text or URL
-      let orderId = rawText.trim();
-      const match = orderId.match(/BBA-[A-Za-z0-9-]+/i);
+      let orderId = cleanText;
+      const match = cleanText.match(/BBA-[A-Za-z0-9-]+/i);
       if (match) {
         orderId = match[0].toUpperCase();
       }
@@ -3733,6 +3875,25 @@
 
       const order = adminOrdersList.find(o => o.orderId.toUpperCase() === orderId.toUpperCase() || o.studentId === orderId);
       if (!order) {
+        if (isBankSlipQr) {
+          Swal.fire({
+            icon: 'info',
+            title: 'ตรวจพบ QR Code สลิปธนาคาร',
+            html: `
+              <div class="text-left text-xs sm:text-sm space-y-2 text-slate-700">
+                <p class="font-bold text-emerald-700">✅ ระบบอ่าน QR Code บนสลิปโอนเงินสำเร็จแล้ว!</p>
+                <div class="p-3 bg-slate-50 rounded-xl border border-slate-200 text-xs text-slate-600 space-y-1.5">
+                  <p><b>คำชี้แจง:</b> QR Code บนสลิปธนาคารเป็นรหัสตรวจสอบธุรกรรมการเงินของธนาคาร</p>
+                  <p>สำหรับการ <b>"รับเสื้อที่ห้องสโมสร"</b> กรุณาให้ผู้สั่งซื้อเปิด <b>"ใบเสร็จรับเงิน (E-Receipt)"</b> เพื่อสแกน QR Code ประจำคำสั่งซื้อ (รหัส <span class="font-mono font-bold text-indigo-700">BBA-...</span>) หรือค้นหาด้วยรหัสนักศึกษาในช่องค้นหาด้านล่างครับ</p>
+                </div>
+              </div>
+            `,
+            confirmButtonColor: '#4338ca',
+            confirmButtonText: 'เข้าใจแล้ว'
+          });
+          return;
+        }
+
         Swal.fire({
           icon: 'error',
           title: 'ไม่พบคำสั่งซื้อ',
