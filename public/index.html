@@ -4351,7 +4351,7 @@
 
     // ==================== APP UPDATE CHECKER ====================
     function promptManualAppUpdate() {
-      const CURRENT_LATEST_VERSION = 'v2.3.15';
+      const CURRENT_LATEST_VERSION = 'v2.3.16';
       Swal.fire({
         icon: 'info',
         title: 'อัปเดตแอปพลิเคชัน',
@@ -4370,8 +4370,8 @@
 
     async function checkAppUpdateNotification() {
       const isAndroidNative = (window.AndroidNative && typeof window.AndroidNative.isAndroidNativeApp === 'function');
-      const CURRENT_LATEST_VERSION = 'v2.3.15';
-      const CURRENT_LATEST_BUILD = 29;
+      const CURRENT_LATEST_VERSION = 'v2.3.16';
+      const CURRENT_LATEST_BUILD = 30;
       const DISMISS_KEY = 'bba_update_dismissed_' + CURRENT_LATEST_VERSION;
 
       if (isAndroidNative) {
@@ -4461,13 +4461,13 @@
     function handleMobileAccountClick() {
       const isAndroidNative = (window.AndroidNative && typeof window.AndroidNative.isAndroidNativeApp === 'function');
       let isOldVersion = false;
-      const curVer = 'v2.3.15';
+      const curVer = 'v2.3.16';
       if (isAndroidNative) {
         let build = 0;
         if (typeof window.AndroidNative.getAppVersionCode === 'function') {
           try { build = Number(window.AndroidNative.getAppVersionCode()) || 0; } catch (e) {}
         }
-        if (build > 0 && build < 29) isOldVersion = true;
+        if (build > 0 && build < 30) isOldVersion = true;
       }
 
       const hasAdminPin = Boolean(localStorage.getItem('bba_admin_pin') || sessionStorage.getItem('bba_admin_pin'));
@@ -4684,7 +4684,7 @@
           console.log('[AutoUpdater] Check result:', update);
 
           if (update) {
-            const newVersion = update.version || 'v2.3.15';
+            const newVersion = update.version || 'v2.3.16';
             if (statusText) statusText.innerText = `พบเวอร์ชันใหม่ (${newVersion})!`;
             if (detailText) detailText.innerText = 'กำลังดาวน์โหลดและติดตั้งอัปเดตอัตโนมัติ...';
             if (progressBar) progressBar.style.width = '30%';
