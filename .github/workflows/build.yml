@@ -122,8 +122,9 @@ jobs:
           node -e "
             const fs = require('fs');
             const path = require('path');
-            const TAG = 'v2.3.14';
-            const VERSION = '2.3.14';
+            const pkg = JSON.parse(fs.readFileSync('package.json', 'utf8'));
+            const VERSION = pkg.version;
+            const TAG = 'v' + VERSION;
             let merged = {
               version: VERSION,
               notes: 'SMO BBA SHOP ' + TAG + ' (Discord-style Auto-Update)',
@@ -193,10 +194,11 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          TAG="v2.3.14"
+          VERSION=$(node -p "require('./package.json').version")
+          TAG="v$VERSION"
           shopt -s globstar nullglob
           FILES=(all-dist/**/*.apk all-dist/**/*.msi all-dist/**/*.exe all-dist/**/*.dmg all-dist/**/*.zip all-dist/**/*.tar.gz all-dist/**/*.sig all-dist/**/latest.json)
-          echo "Release files found:"
+          echo "Release files found for $TAG:"
           ls -lh "${FILES[@]}"
           if gh release view "$TAG" >/dev/null 2>&1; then
             echo "Release $TAG exists, uploading assets..."
@@ -204,7 +206,7 @@ jobs:
           else
             echo "Creating release $TAG..."
             gh release create "$TAG" \
-              --title "SMO BBA SHOP v2.3.14 (Camera Permissions, Camera Selector & Fast QR Pickup)" \
-              --notes "เวอร์ชัน v2.3.14: 1. เพิ่มสิทธิ์การใช้งานกล้อง (Camera Permission) ในแอป Android และ macOS Desktop 2. ปรับปรุงตัวสแกน QR Code บนเว็บ ตรวจจับกล้องอัตโนมัติพร้อมเมนูสลับกล้อง 3. เพิ่มตัวเลือกอัปโหลดไฟล์รูปภาพ QR Code สแกนได้ทันที 4. ขยายขนาด QR Code ใบเสร็จเป็น 128x128 พร้อมระดับความคมชัดสูง สแกนติดง่ายและเร็วขึ้น" \
+              --title "SMO BBA SHOP $TAG (Security Hardening, Order Stock Fix & Modern Dark Mode)" \
+              --notes "เวอร์ชัน $TAG: 1. ปิดช่องโหว่ความปลอดภัย IDOR และเพิ่มระบบ Progressive SHA-256 PIN Hashing 2. เพิ่มระบบ Rate Limiting ป้องกันการสุ่มรหัส PIN 3. แก้ไขระบบลบสลิปบน Cloudflare R2 และคืนสต็อกอัตโนมัติ 4. ปรับปรุง UI Touch Target และสีปุ่มในโหมดมืด" \
               "${FILES[@]}"
           fi

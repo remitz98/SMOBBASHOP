@@ -66,8 +66,8 @@ android {
         applicationId = "org.smobba.store"
         minSdk = 24
         targetSdk = 35
-        versionCode = 28
-        versionName = "2.3.14"
+        versionCode = 29
+        versionName = "2.3.15"
     }
 
     signingConfigs {
