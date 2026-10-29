@@ -9,6 +9,26 @@ app.use('*', cors());
 
 // ==================== HELPER FUNCTIONS ====================
 
+// Rate limiting in-memory map (IP -> { count, resetAt })
+const rateLimitMap = new Map();
+function checkRateLimit(key, maxAttempts = 5, windowMs = 60000) {
+  const now = Date.now();
+  const record = rateLimitMap.get(key);
+  if (!record || now > record.resetAt) {
+    rateLimitMap.set(key, { count: 1, resetAt: now + windowMs });
+    return { allowed: true };
+  }
+  if (record.count >= maxAttempts) {
+    const waitSec = Math.ceil((record.resetAt - now) / 1000);
+    return { allowed: false, waitSec };
+  }
+  record.count++;
+  return { allowed: true };
+}
+function clearRateLimit(key) {
+  rateLimitMap.delete(key);
+}
+
 function normalizePin(val) {
   if (val === null || val === undefined) return '';
   let s = String(val).trim();
@@ -17,6 +37,26 @@ function normalizePin(val) {
   if (!s) return '';
   if (s.length < 4) s = s.padStart(4, '0');
   return s;
+}
+
+async function hashPin(pin, salt = 'bba_ubru_pin_salt_') {
+  const norm = normalizePin(pin);
+  if (!norm) return '';
+  const buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(salt + norm));
+  return Array.from(new Uint8Array(buf)).map(b => b.toString(16).padStart(2, '0')).join('');
+}
+
+async function verifyPin(storedPin, inputPin) {
+  const normInput = normalizePin(inputPin);
+  if (!normInput || !storedPin) return false;
+  const storedStr = String(storedPin).trim();
+  // รองรับ PIN 4 หลักเดิมแบบ Backward-compatible
+  if (storedStr.length === 4) {
+    return normalizePin(storedStr) === normInput;
+  }
+  // ตรวจสอบกับ SHA-256 Hash
+  const inputHash = await hashPin(normInput);
+  return storedStr === inputHash;
 }
 
 function normalizePhone(val) {
@@ -38,8 +78,8 @@ function normalizeStudentId(val) {
 
 async function verifyAdminPin(db, pin) {
   const row = await db.prepare("SELECT value FROM settings WHERE key = 'AdminPIN'").first();
-  const correctPin = normalizePin(row ? row.value : '1234');
-  return normalizePin(pin) === correctPin;
+  const stored = row ? String(row.value).trim() : '1234';
+  return await verifyPin(stored, pin);
 }
 
 function escapeHtml(text) {
@@ -617,10 +657,13 @@ app.post('/api/register', async (c) => {
       return c.json({ success: false, message: 'รหัสนักศึกษานี้ลงทะเบียนไว้ในระบบแล้ว กรุณาเข้าสู่ระบบ' }, 400);
     }
 
+    // เข้ารหัส PIN ด้วย SHA-256 ก่อนบันทึกลงฐานข้อมูล
+    const hashedPin = await hashPin(pin);
+
     await db.prepare(`
       INSERT INTO customers (student_id, name, email, phone, pin)
       VALUES (?, ?, ?, ?, ?)
-    `).bind(studentId, name, email, phone, pin).run();
+    `).bind(studentId, name, email, phone, hashedPin).run();
 
     return c.json({
       success: true,
@@ -638,6 +681,12 @@ app.post('/api/login', async (c) => {
     const db = c.env.DB;
     const body = await c.req.json();
 
+    const clientIp = c.req.header('cf-connecting-ip') || c.req.header('x-forwarded-for') || 'local';
+    const limit = checkRateLimit(`login_${clientIp}`, 5, 60000);
+    if (!limit.allowed) {
+      return c.json({ success: false, message: `ป้อนรหัสผิดบ่อยเกินไป กรุณารออีก ${limit.waitSec} วินาที` }, 429);
+    }
+
     const studentId = normalizeStudentId(body.studentId);
     const pin = normalizePin(body.pin);
 
@@ -650,8 +699,21 @@ app.post('/api/login', async (c) => {
       return c.json({ success: false, message: 'ไม่พบรหัสนักศึกษานี้ในระบบ กรุณาลงทะเบียนก่อนเข้าสู่ระบบ' }, 404);
     }
 
-    if (normalizePin(customer.pin) !== pin) {
+    const isPinValid = await verifyPin(customer.pin, pin);
+    if (!isPinValid) {
       return c.json({ success: false, message: 'รหัส PIN 4 หลักไม่ถูกต้อง กรุณาลองใหม่อีกครั้ง' }, 401);
+    }
+
+    clearRateLimit(`login_${clientIp}`);
+
+    // อัปเกรดรหัส PIN เดิมเป็น SHA-256 แบบเงียบๆ หากยังเป็น plaintext 4 หลัก
+    if (customer.pin && String(customer.pin).trim().length === 4) {
+      const newHash = await hashPin(pin);
+      if (c.executionCtx && typeof c.executionCtx.waitUntil === 'function') {
+        c.executionCtx.waitUntil(
+          db.prepare("UPDATE customers SET pin = ? WHERE student_id = ?").bind(newHash, studentId).run().catch(() => {})
+        );
+      }
     }
 
     return c.json({
@@ -669,25 +731,28 @@ app.post('/api/login', async (c) => {
   }
 });
 
-// 1.4 ดึงประวัติการสั่งซื้อของนักศึกษา
+// 1.4 ดึงประวัติการสั่งซื้อของนักศึกษา (ป้องกัน IDOR ด้วยการตรวจสอบ PIN เสมอ)
 app.post('/api/my-orders', async (c) => {
   try {
     const db = c.env.DB;
     const body = await c.req.json();
 
     const studentId = normalizeStudentId(body.studentId);
-    if (!studentId) {
-      return c.json({ success: false, message: 'กรุณาระบุรหัสนักศึกษา' }, 400);
-    }
-
     const pin = normalizePin(body.pin);
 
-    // ยืนยันตัวตนก่อนดูประวัติ: หากในคำขอระบุ PIN มาและในระบบมี PIN ให้ตรวจสอบความถูกต้อง
+    if (!studentId || !pin) {
+      return c.json({ success: false, message: 'กรุณากรอกรหัสนักศึกษาและรหัส PIN 4 หลัก' }, 401);
+    }
+
+    // ยืนยันตัวตนก่อนดูประวัติ: ป้องกัน IDOR โดยไม่อนุญาตให้ดูข้อมูลถ้าไม่มี PIN หรือ PIN ไม่ถูกต้อง
     const customer = await db.prepare("SELECT pin FROM customers WHERE student_id = ?").bind(studentId).first();
-    if (customer && customer.pin && pin) {
-      if (normalizePin(customer.pin) !== pin) {
-        return c.json({ success: false, message: 'รหัส PIN ไม่ถูกต้อง' }, 401);
-      }
+    if (!customer) {
+      return c.json({ success: false, message: 'ไม่พบข้อมูลนักศึกษานี้ในระบบ' }, 404);
+    }
+
+    const isPinValid = await verifyPin(customer.pin, pin);
+    if (!isPinValid) {
+      return c.json({ success: false, message: 'รหัส PIN ไม่ถูกต้อง' }, 401);
     }
 
     const { results: orders } = await db.prepare(`
@@ -994,16 +1059,25 @@ app.post('/api/orders', async (c) => {
 
 // ==================== 2. ADMIN API (หลังบ้านสโมสร) ====================
 
-// 2.1 เข้าสู่ระบบแอดมิน (Verify PIN)
+// 2.1 เข้าสู่ระบบแอดมิน (Verify PIN พร้อม Rate Limiting)
 app.post('/api/admin/login', async (c) => {
   try {
     const db = c.env.DB;
     const body = await c.req.json();
+
+    const clientIp = c.req.header('cf-connecting-ip') || c.req.header('x-forwarded-for') || 'local';
+    const limit = checkRateLimit(`admin_${clientIp}`, 5, 60000);
+    if (!limit.allowed) {
+      return c.json({ success: false, message: `ป้อนรหัสผิดบ่อยเกินไป กรุณารออีก ${limit.waitSec} วินาที` }, 429);
+    }
+
     const isValid = await verifyAdminPin(db, body.pin);
 
     if (!isValid) {
       return c.json({ success: false, message: 'รหัส PIN ไม่ถูกต้อง' }, 401);
     }
+
+    clearRateLimit(`admin_${clientIp}`);
     return c.json({ success: true, message: 'ยืนยันสิทธิ์สำเร็จ' });
   } catch (error) {
     return c.json({ success: false, message: error.toString() }, 500);
@@ -1273,10 +1347,15 @@ app.post('/api/admin/orders/delete', async (c) => {
       await db.batch(batchOps);
     }
 
-    // ลบไฟล์สลิปจาก R2 Bucket (ถ้ามี)
+    // ลบไฟล์สลิปจาก R2 Bucket (ถ้ามี - รองรับทั้ง /api/images/ และ /api/slips/)
     try {
-      if (c.env.BUCKET && order.slip_url && order.slip_url.includes('/api/slips/')) {
-        const key = order.slip_url.split('/api/slips/')[1];
+      if (c.env.BUCKET && order.slip_url) {
+        let key = null;
+        if (order.slip_url.includes('/api/images/')) {
+          key = order.slip_url.split('/api/images/')[1];
+        } else if (order.slip_url.includes('/api/slips/')) {
+          key = order.slip_url.split('/api/slips/')[1];
+        }
         if (key) await c.env.BUCKET.delete(decodeURIComponent(key));
       }
     } catch (r2Err) {
@@ -1512,10 +1591,15 @@ app.post('/api/admin/settings', async (c) => {
     if (settings && typeof settings === 'object') {
       const ops = [];
       for (const [key, value] of Object.entries(settings)) {
+        let valToSave = String(value ?? '');
+        // หากมีการเปลี่ยน AdminPIN ให้เข้ารหัสแบบแฮช SHA-256 ก่อนบันทึก
+        if (key === 'AdminPIN' && valToSave.trim().length === 4) {
+          valToSave = await hashPin(valToSave);
+        }
         ops.push(
           db.prepare(
             "INSERT INTO settings (key, value, description) VALUES (?, ?, '') ON CONFLICT(key) DO UPDATE SET value = excluded.value"
-          ).bind(key, String(value ?? ''))
+          ).bind(key, valToSave)
         );
       }
       if (ops.length > 0) {

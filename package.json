@@ -5,6 +5,7 @@
   "scripts": {
     "dev": "wrangler dev",
     "deploy": "wrangler deploy",
+    "test": "node test/security-and-logic.test.mjs",
     "tauri": "tauri"
   },
   "dependencies": {
