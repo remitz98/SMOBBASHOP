@@ -50,13 +50,13 @@ async function verifyPin(storedPin, inputPin) {
   const normInput = normalizePin(inputPin);
   if (!normInput || !storedPin) return false;
   const storedStr = String(storedPin).trim();
-  // รองรับ PIN 4 หลักเดิมแบบ Backward-compatible
-  if (storedStr.length === 4) {
-    return normalizePin(storedStr) === normInput;
+  // หากเป็น SHA-256 Hex Hash (ความยาว 64 ตัวอักษร)
+  if (storedStr.length === 64) {
+    const inputHash = await hashPin(normInput);
+    return storedStr === inputHash;
   }
-  // ตรวจสอบกับ SHA-256 Hash
-  const inputHash = await hashPin(normInput);
-  return storedStr === inputHash;
+  // รองรับ Plaintext PIN ทุกความยาว (เช่น 4 หลักของนักศึกษา หรือ 6 หลัก 505050 ของแอดมิน)
+  return normalizePin(storedStr) === normInput;
 }
 
 function normalizePhone(val) {
@@ -1592,10 +1592,6 @@ app.post('/api/admin/settings', async (c) => {
       const ops = [];
       for (const [key, value] of Object.entries(settings)) {
         let valToSave = String(value ?? '');
-        // หากมีการเปลี่ยน AdminPIN ให้เข้ารหัสแบบแฮช SHA-256 ก่อนบันทึก
-        if (key === 'AdminPIN' && valToSave.trim().length === 4) {
-          valToSave = await hashPin(valToSave);
-        }
         ops.push(
           db.prepare(
             "INSERT INTO settings (key, value, description) VALUES (?, ?, '') ON CONFLICT(key) DO UPDATE SET value = excluded.value"

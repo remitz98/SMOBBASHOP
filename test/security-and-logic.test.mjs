@@ -22,11 +22,11 @@ async function verifyPin(storedPin, inputPin) {
   const normInput = normalizePin(inputPin);
   if (!normInput || !storedPin) return false;
   const storedStr = String(storedPin).trim();
-  if (storedStr.length === 4) {
-    return normalizePin(storedStr) === normInput;
+  if (storedStr.length === 64) {
+    const inputHash = await hashPin(normInput);
+    return storedStr === inputHash;
   }
-  const inputHash = await hashPin(normInput);
-  return storedStr === inputHash;
+  return normalizePin(storedStr) === normInput;
 }
 
 // 2. Logic under test: Rate limiter
@@ -74,6 +74,11 @@ async function runTests() {
   const legacyPlaintext = '1234';
   assert.strictEqual(await verifyPin(legacyPlaintext, '1234'), true);
   assert.strictEqual(await verifyPin(legacyPlaintext, '5678'), false);
+
+  // Test 2.1: 6-digit Admin PIN (505050)
+  const admin6Digit = '505050';
+  assert.strictEqual(await verifyPin(admin6Digit, '505050'), true);
+  assert.strictEqual(await verifyPin(admin6Digit, '123456'), false);
 
   const hashed = await hashPin('1234');
   assert.strictEqual(hashed.length, 64);
