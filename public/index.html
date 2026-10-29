@@ -113,30 +113,11 @@
     }
     body {
       min-height: 100vh;
+      font-family: 'Prompt', sans-serif;
+      background-color: #f8fafc;
     }
 
-    /* 4. Sleek Modern Scrollbar for PC */
-    ::-webkit-scrollbar {
-      width: 8px;
-      height: 8px;
-    }
-    ::-webkit-scrollbar-track {
-      background: #f1f5f9;
-    }
-    ::-webkit-scrollbar-thumb {
-      background: #cbd5e1;
-      border-radius: 9999px;
-      border: 2px solid #f1f5f9;
-    }
-    ::-webkit-scrollbar-thumb:hover {
-      background: #94a3b8;
-    }
-    * {
-      scrollbar-width: thin;
-      scrollbar-color: #cbd5e1 #f1f5f9;
-    }
-
-    /* 5. Header Fixed at Top & Android/PC Safe Area */
+    /* 4. Header Fixed at Top & Android/PC Safe Area */
     #mainHeader {
       position: fixed !important;
       top: 0 !important;
@@ -210,10 +191,6 @@
 
     .hidden { display: none !important; }
     .swal2-container { z-index: 10000 !important; }
-    body {
-      font-family: 'Prompt', sans-serif;
-      background-color: #f8fafc;
-    }
     .hide-scrollbar::-webkit-scrollbar {
       display: none;
     }

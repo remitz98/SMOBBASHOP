@@ -52,6 +52,47 @@ function escapeHtml(text) {
     .replace(/'/g, '&#039;');
 }
 
+// Helper: กระจายสัญญาณ WebSocket ผ่าน Durable Object ไปยังทุกหน้าจอ
+async function broadcastOrderNotification(env, payload) {
+  try {
+    if (env.ORDER_NOTIFIER) {
+      const doId = env.ORDER_NOTIFIER.idFromName('global_order_notifier');
+      await env.ORDER_NOTIFIER.get(doId).fetch('http://order-notifier/broadcast', {
+        method: 'POST',
+        body: JSON.stringify({ ...payload, timestamp: new Date().toISOString() })
+      });
+    }
+  } catch (err) {
+    console.warn('DO broadcast error:', err);
+  }
+}
+
+// Helper: คืนสต็อกเสื้อเข้าคลังสินค้า (สำหรับกรณียกเลิกหรือลบคำสั่งซื้อ)
+async function restoreOrderStock(db, itemsJson, batchOps) {
+  let items = [];
+  try { items = JSON.parse(itemsJson || '[]'); } catch (e) {}
+  for (const item of items) {
+    const prod = await db.prepare("SELECT * FROM products WHERE product_id = ?").bind(item.productId).first();
+    if (prod) {
+      let sizeStock = {};
+      try { sizeStock = JSON.parse(prod.size_stock || '{}'); } catch (e) {}
+      let newTotal = Number(prod.stock) + item.qty;
+      if (item.size && sizeStock[item.size] !== undefined) {
+        sizeStock[item.size] = Number(sizeStock[item.size]) + item.qty;
+        newTotal = Object.values(sizeStock).reduce((acc, v) => acc + (Number(v) || 0), 0);
+      }
+      let newProdStatus = prod.status;
+      if (newProdStatus !== 'ปิดรับการสั่งจอง' && newTotal > 0) {
+        newProdStatus = 'พร้อมจำหน่าย';
+      }
+      batchOps.push(
+        db.prepare("UPDATE products SET stock = ?, size_stock = ?, status = ? WHERE product_id = ?")
+          .bind(newTotal, JSON.stringify(sizeStock), newProdStatus, item.productId)
+      );
+    }
+  }
+}
+
 function buildReadyPickupEmailHtml({
   name,
   studentId,
@@ -900,27 +941,15 @@ app.post('/api/orders', async (c) => {
     }
 
     // กระจายสัญญาณคำสั่งซื้อใหม่แบบ Realtime ไปยังหน้าจอแอดมินผ่าน WebSocket + Durable Objects
-    try {
-      if (c.env.ORDER_NOTIFIER) {
-        const doId = c.env.ORDER_NOTIFIER.idFromName('global_order_notifier');
-        const stub = c.env.ORDER_NOTIFIER.get(doId);
-        await stub.fetch('http://order-notifier/broadcast', {
-          method: 'POST',
-          body: JSON.stringify({
-            type: 'NEW_ORDER',
-            orderId: orderId,
-            customerName: customerName,
-            studentId: studentId,
-            totalAmount: calculatedTotal,
-            itemsSummary: itemsSummary,
-            pickupLocation: pickupLocation,
-            timestamp: new Date().toISOString()
-          })
-        });
-      }
-    } catch (wsErr) {
-      console.error('Failed to broadcast new order:', wsErr);
-    }
+    await broadcastOrderNotification(c.env, {
+      type: 'NEW_ORDER',
+      orderId,
+      customerName,
+      studentId,
+      totalAmount: calculatedTotal,
+      itemsSummary,
+      pickupLocation
+    });
 
     // ส่ง Push Notification ผ่าน Firebase Cloud Messaging (FCM) ไปยังอุปกรณ์แอดมินทุกคน
     try {
@@ -1079,32 +1108,7 @@ app.post('/api/admin/orders/status', async (c) => {
 
     // คืนสต็อกสินค้าอัตโนมัติหากเปลี่ยนเป็น 'ยกเลิกคำสั่งซื้อ'
     if (newStatus === 'ยกเลิกคำสั่งซื้อ' && oldStatus !== 'ยกเลิกคำสั่งซื้อ') {
-      let items = [];
-      try { items = JSON.parse(order.items_json || '[]'); } catch (e) {}
-
-      for (const item of items) {
-        const prod = await db.prepare("SELECT * FROM products WHERE product_id = ?").bind(item.productId).first();
-        if (prod) {
-          let sizeStock = {};
-          try { sizeStock = JSON.parse(prod.size_stock || '{}'); } catch (e) {}
-
-          let newTotal = Number(prod.stock) + item.qty;
-          if (item.size && sizeStock[item.size] !== undefined) {
-            sizeStock[item.size] = Number(sizeStock[item.size]) + item.qty;
-            newTotal = Object.values(sizeStock).reduce((acc, v) => acc + (Number(v) || 0), 0);
-          }
-
-          let newProdStatus = prod.status;
-          if (newProdStatus !== 'ปิดรับการสั่งจอง' && newTotal > 0) {
-            newProdStatus = 'พร้อมจำหน่าย';
-          }
-
-          batchOps.push(
-            db.prepare("UPDATE products SET stock = ?, size_stock = ?, status = ? WHERE product_id = ?")
-              .bind(newTotal, JSON.stringify(sizeStock), newProdStatus, item.productId)
-          );
-        }
-      }
+      await restoreOrderStock(db, order.items_json, batchOps);
     }
 
     // กรณีเปลี่ยนจาก 'ยกเลิกคำสั่งซื้อ' กลับมาเป็นสถานะปกติ (ตัดสต็อกกลับ)
@@ -1184,27 +1188,15 @@ app.post('/api/admin/orders/status', async (c) => {
     }
 
     // กระจายสัญญาณอัปเดตสถานะคำสั่งซื้อไปยังหน้าจอแอดมินและนักศึกษาเจ้าของคำสั่งซื้อ
-    try {
-      if (c.env.ORDER_NOTIFIER) {
-        const doId = c.env.ORDER_NOTIFIER.idFromName('global_order_notifier');
-        const stub = c.env.ORDER_NOTIFIER.get(doId);
-        await stub.fetch('http://order-notifier/broadcast', {
-          method: 'POST',
-          body: JSON.stringify({
-            type: 'ORDER_UPDATED',
-            orderId: orderId,
-            newStatus: newStatus,
-            studentId: order.student_id,
-            customerName: order.customer_name,
-            itemsSummary: order.items_summary,
-            adminNotes: finalAdminNotes,
-            timestamp: new Date().toISOString()
-          })
-        });
-      }
-    } catch (e) {
-      console.error('DO broadcast status error:', e);
-    }
+    await broadcastOrderNotification(c.env, {
+      type: 'ORDER_UPDATED',
+      orderId,
+      newStatus,
+      studentId: order.student_id,
+      customerName: order.customer_name,
+      itemsSummary: order.items_summary,
+      adminNotes: finalAdminNotes
+    });
 
     // ส่ง Push Notification ผ่าน Firebase Cloud Messaging (FCM) ไปยังนักศึกษาเจ้าของคำสั่งซื้อ
     try {
@@ -1268,32 +1260,7 @@ app.post('/api/admin/orders/delete', async (c) => {
 
     // คืนสต็อกเสื้อกลับสู่คลังอัตโนมัติหากคำสั่งซื้อนี้ยังไม่ได้ถูกยกเลิกมาก่อน
     if (order.status !== 'ยกเลิกคำสั่งซื้อ') {
-      let items = [];
-      try { items = JSON.parse(order.items_json || '[]'); } catch (e) {}
-
-      for (const item of items) {
-        const prod = await db.prepare("SELECT * FROM products WHERE product_id = ?").bind(item.productId).first();
-        if (prod) {
-          let sizeStock = {};
-          try { sizeStock = JSON.parse(prod.size_stock || '{}'); } catch (e) {}
-
-          let newTotal = Number(prod.stock) + item.qty;
-          if (item.size && sizeStock[item.size] !== undefined) {
-            sizeStock[item.size] = Number(sizeStock[item.size]) + item.qty;
-            newTotal = Object.values(sizeStock).reduce((acc, v) => acc + (Number(v) || 0), 0);
-          }
-
-          let newProdStatus = prod.status;
-          if (newProdStatus !== 'ปิดรับการสั่งจอง' && newTotal > 0) {
-            newProdStatus = 'พร้อมจำหน่าย';
-          }
-
-          batchOps.push(
-            db.prepare("UPDATE products SET stock = ?, size_stock = ?, status = ? WHERE product_id = ?")
-              .bind(newTotal, JSON.stringify(sizeStock), newProdStatus, item.productId)
-          );
-        }
-      }
+      await restoreOrderStock(db, order.items_json, batchOps);
     }
 
     // 1. ลบรายการประวัติการชำระเงินใน payments ที่อ้างอิงคำสั่งซื้อนี้ออกก่อนเสมอ (ป้องกัน Foreign Key Constraint)
@@ -1317,23 +1284,11 @@ app.post('/api/admin/orders/delete', async (c) => {
     }
 
     // กระจายสัญญาณ WebSocket แจ้งทุกหน้าจอว่าคำสั่งซื้อถูกลบแล้ว
-    try {
-      if (c.env.ORDER_NOTIFIER) {
-        const doId = c.env.ORDER_NOTIFIER.idFromName('global_order_notifier');
-        const stub = c.env.ORDER_NOTIFIER.get(doId);
-        await stub.fetch('http://order-notifier/broadcast', {
-          method: 'POST',
-          body: JSON.stringify({
-            type: 'ORDER_DELETED',
-            orderId: orderId,
-            studentId: order.student_id,
-            timestamp: new Date().toISOString()
-          })
-        });
-      }
-    } catch (e) {
-      console.error('DO broadcast order delete error:', e);
-    }
+    await broadcastOrderNotification(c.env, {
+      type: 'ORDER_DELETED',
+      orderId,
+      studentId: order.student_id
+    });
 
     return c.json({ success: true, message: `ลบคำสั่งซื้อ ${orderId} สำเร็จเรียบร้อย` });
   } catch (error) {
@@ -1820,29 +1775,15 @@ app.get('/', async (c) => {
 });
 
 // เสิร์ฟหน้าแอดมิน (Admin) - ปิด Cache เพื่อให้อัปเดตโค้ดและสแกนเนอร์ทำงานล่าสุดเสมอ
-app.get('/admin', async (c) => {
+app.on('GET', ['/admin', '/admin.html'], async (c) => {
   if (c.env.ASSETS) {
     const res = await c.env.ASSETS.fetch(new Request(new URL('/admin.html', c.req.url)));
-    const newHeaders = new Headers(res.headers);
-    newHeaders.set('Cache-Control', 'no-store, no-cache, must-revalidate, max-age=0');
+    const headers = new Headers(res.headers);
+    headers.set('Cache-Control', 'no-store, no-cache, must-revalidate, max-age=0');
     return new Response(res.body, {
       status: res.status,
       statusText: res.statusText,
-      headers: newHeaders
-    });
-  }
-  return c.text('BBA Store Admin Dashboard');
-});
-
-app.get('/admin.html', async (c) => {
-  if (c.env.ASSETS) {
-    const res = await c.env.ASSETS.fetch(new Request(new URL('/admin.html', c.req.url)));
-    const newHeaders = new Headers(res.headers);
-    newHeaders.set('Cache-Control', 'no-store, no-cache, must-revalidate, max-age=0');
-    return new Response(res.body, {
-      status: res.status,
-      statusText: res.statusText,
-      headers: newHeaders
+      headers
     });
   }
   return c.text('BBA Store Admin Dashboard');
