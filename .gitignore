@@ -22,3 +22,6 @@ kmp-app/.gradle/
 # OS Artifacts
 .DS_Store
 Thumbs.db
+
+# Archify Artifacts
+.archify/
