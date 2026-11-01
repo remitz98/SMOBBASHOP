@@ -15,9 +15,20 @@ jobs:
       matrix:
         include:
           - platform: 'windows-latest'
-            name: 'Windows'
+            name: 'Windows x64'
+            args: '--target x86_64-pc-windows-msvc'
+            rust_target: 'x86_64-pc-windows-msvc'
+            upload_name: 'SMO-BBA-SHOP-Windows-x64'
+          - platform: 'windows-latest'
+            name: 'Windows ARM64'
+            args: '--target aarch64-pc-windows-msvc --bundles nsis'
+            rust_target: 'aarch64-pc-windows-msvc'
+            upload_name: 'SMO-BBA-SHOP-Windows-arm64'
           - platform: 'macos-latest'
-            name: 'macOS'
+            name: 'macOS Universal'
+            args: '--target universal-apple-darwin'
+            rust_target: 'aarch64-apple-darwin,x86_64-apple-darwin'
+            upload_name: 'SMO-BBA-SHOP-macOS'
 
     runs-on: ${{ matrix.platform }}
     steps:
@@ -31,7 +42,7 @@ jobs:
       - name: Install Rust stable
         uses: dtolnay/rust-toolchain@stable
         with:
-          targets: ${{ matrix.platform == 'macos-latest' && 'aarch64-apple-darwin,x86_64-apple-darwin' || '' }}
+          targets: ${{ matrix.rust_target }}
 
       - name: Install dependencies
         run: npm install
@@ -46,31 +57,34 @@ jobs:
           tagName: ''
           releaseDraft: false
           prerelease: false
+          args: ${{ matrix.args }}
 
       - name: Upload Windows Installers
         if: matrix.platform == 'windows-latest'
         uses: actions/upload-artifact@v4
         with:
-          name: SMO-BBA-SHOP-Windows
+          name: ${{ matrix.upload_name }}
           path: |
-            src-tauri/target/release/bundle/msi/*.msi
-            src-tauri/target/release/bundle/nsis/*.exe
-            src-tauri/target/release/bundle/nsis/*.zip
-            src-tauri/target/release/bundle/nsis/*.sig
-            src-tauri/target/release/bundle/msi/*.zip
-            src-tauri/target/release/bundle/msi/*.sig
-            src-tauri/target/release/latest.json
+            src-tauri/target/**/bundle/msi/*.msi
+            src-tauri/target/**/bundle/nsis/*.exe
+            src-tauri/target/**/bundle/nsis/*.zip
+            src-tauri/target/**/bundle/nsis/*.sig
+            src-tauri/target/**/bundle/msi/*.zip
+            src-tauri/target/**/bundle/msi/*.sig
+            src-tauri/target/**/latest.json
+          if-no-files-found: warn
 
       - name: Upload macOS App
         if: matrix.platform == 'macos-latest'
         uses: actions/upload-artifact@v4
         with:
-          name: SMO-BBA-SHOP-macOS
+          name: ${{ matrix.upload_name }}
           path: |
             src-tauri/target/**/bundle/dmg/*.dmg
             src-tauri/target/**/bundle/macos/*.tar.gz
             src-tauri/target/**/bundle/macos/*.sig
             src-tauri/target/**/latest.json
+          if-no-files-found: warn
 
   build-android:
     runs-on: ubuntu-latest
@@ -158,32 +172,43 @@ jobs:
               }
             }
 
-            // Look for Windows updater (exe or nsis.zip) and signature
-            const winSig = allFiles.find(f => (f.endsWith('-setup.exe.sig') || f.endsWith('.exe.sig') || f.endsWith('.nsis.zip.sig')) && !f.includes('macos') && !f.includes('darwin'));
-            const winTarget = allFiles.find(f => (f.endsWith('-setup.exe') || f.endsWith('.nsis.zip')) && !f.includes('macos') && !f.includes('darwin'));
-            if (winTarget && winSig && !merged.platforms['windows-x86_64']) {
-              const sig = fs.readFileSync(winSig, 'utf8').trim();
-              const sanitizedWin = path.basename(winTarget).replace(/\s+/g, '.');
+            // 1. Windows x86_64 (Intel/AMD)
+            const winX64Sig = allFiles.find(f => (f.includes('x64') || f.includes('x86_64') || f.includes('Windows-x64')) && (f.endsWith('-setup.exe.sig') || f.endsWith('.exe.sig') || f.endsWith('.nsis.zip.sig')) && !f.includes('macos') && !f.includes('darwin'));
+            const winX64Target = allFiles.find(f => (f.includes('x64') || f.includes('x86_64') || f.includes('Windows-x64')) && (f.endsWith('-setup.exe') || f.endsWith('.nsis.zip')) && !f.includes('macos') && !f.includes('darwin') && !f.endsWith('.sig'));
+            if (winX64Target && winX64Sig && !merged.platforms['windows-x86_64']) {
+              const sig = fs.readFileSync(winX64Sig, 'utf8').trim();
+              const sanitizedWin = path.basename(winX64Target).replace(/\s+/g, '.');
               merged.platforms['windows-x86_64'] = {
                 signature: sig,
                 url: 'https://github.com/remitz98/SMOBBASHOP/releases/download/' + TAG + '/' + sanitizedWin
               };
             }
 
-            // Look for macOS updater tar.gz and signature
-            const macTar = allFiles.find(f => f.endsWith('.tar.gz') || f.endsWith('.app.tar.gz'));
+            // 2. Windows aarch64 (ARM64 Snapdragon / Surface)
+            const winArmSig = allFiles.find(f => (f.includes('arm64') || f.includes('aarch64') || f.includes('Windows-arm64')) && (f.endsWith('-setup.exe.sig') || f.endsWith('.exe.sig') || f.endsWith('.nsis.zip.sig')) && !f.includes('macos') && !f.includes('darwin'));
+            const winArmTarget = allFiles.find(f => (f.includes('arm64') || f.includes('aarch64') || f.includes('Windows-arm64')) && (f.endsWith('-setup.exe') || f.endsWith('.nsis.zip')) && !f.includes('macos') && !f.includes('darwin') && !f.endsWith('.sig'));
+            if (winArmTarget && winArmSig && !merged.platforms['windows-aarch64']) {
+              const sig = fs.readFileSync(winArmSig, 'utf8').trim();
+              const sanitizedWinArm = path.basename(winArmTarget).replace(/\s+/g, '.');
+              merged.platforms['windows-aarch64'] = {
+                signature: sig,
+                url: 'https://github.com/remitz98/SMOBBASHOP/releases/download/' + TAG + '/' + sanitizedWinArm
+              };
+            }
+
+            // 3. macOS Universal (Apple Silicon & Intel)
+            const macTar = allFiles.find(f => (f.endsWith('.tar.gz') || f.endsWith('.app.tar.gz')) && !f.endsWith('.sig'));
             const macSig = allFiles.find(f => f.endsWith('.tar.gz.sig') || f.endsWith('.app.tar.gz.sig'));
             if (macTar && macSig) {
               const sig = fs.readFileSync(macSig, 'utf8').trim();
               const sanitizedMac = path.basename(macTar).replace(/\s+/g, '.');
-              merged.platforms['darwin-aarch64'] = {
+              const macEntry = {
                 signature: sig,
                 url: 'https://github.com/remitz98/SMOBBASHOP/releases/download/' + TAG + '/' + sanitizedMac
               };
-              merged.platforms['darwin-x86_64'] = {
-                signature: sig,
-                url: 'https://github.com/remitz98/SMOBBASHOP/releases/download/' + TAG + '/' + sanitizedMac
-              };
+              merged.platforms['darwin-universal'] = macEntry;
+              merged.platforms['darwin-aarch64'] = macEntry;
+              merged.platforms['darwin-x86_64'] = macEntry;
             }
 
             fs.writeFileSync('all-dist/latest.json', JSON.stringify(merged, null, 2));
@@ -206,7 +231,7 @@ jobs:
           else
             echo "Creating release $TAG..."
             gh release create "$TAG" \
-              --title "SMO BBA SHOP $TAG (Security Hardening, Order Stock Fix & Modern Dark Mode)" \
-              --notes "เวอร์ชัน $TAG: 1. ปิดช่องโหว่ความปลอดภัย IDOR และเพิ่มระบบ Progressive SHA-256 PIN Hashing 2. เพิ่มระบบ Rate Limiting ป้องกันการสุ่มรหัส PIN 3. แก้ไขระบบลบสลิปบน Cloudflare R2 และคืนสต็อกอัตโนมัติ 4. ปรับปรุง UI Touch Target และสีปุ่มในโหมดมืด" \
+              --title "SMO BBA SHOP $TAG (Windows x64/ARM64, macOS Universal & Android APK)" \
+              --notes "เวอร์ชัน $TAG: 1. รองรับ Windows ARM64 (Surface / Snapdragon X / Copilot+ PC) และ Windows x64 2. รองรับ macOS Universal Binary (ใช้งานได้ลื่นไหลทั้ง Apple Silicon M1-M4 และ Intel Mac) 3. รองรับ Android APK (ARM64 & x86_64) พร้อมระบบอัปเดตอัตโนมัติ" \
               "${FILES[@]}"
           fi
