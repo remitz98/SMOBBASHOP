@@ -120,6 +120,7 @@ jobs:
 
   release:
     needs: [build-desktop, build-android]
+    if: always() && (needs.build-android.result == 'success' || needs.build-desktop.result == 'success' || needs.build-desktop.result == 'failure' || needs.build-desktop.result == 'cancelled')
     runs-on: ubuntu-latest
     permissions:
       contents: write
@@ -223,6 +224,10 @@ jobs:
           TAG="v$VERSION"
           shopt -s globstar nullglob
           FILES=(all-dist/**/*.apk all-dist/**/*.msi all-dist/**/*.exe all-dist/**/*.dmg all-dist/**/*.zip all-dist/**/*.tar.gz all-dist/**/*.sig all-dist/**/latest.json)
+          if [ ${#FILES[@]} -eq 0 ]; then
+            echo "No build artifacts found to release!"
+            exit 1
+          fi
           echo "Release files found for $TAG:"
           ls -lh "${FILES[@]}"
           if gh release view "$TAG" >/dev/null 2>&1; then
