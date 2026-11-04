@@ -3127,9 +3127,7 @@
         const extraBadge = extra > 0 ? ' <span class="text-[10px] font-bold text-amber-500">(+' + extra + '฿)</span>' : '';
         const szStock = hasSizeStock && sizeStock[sz] !== undefined ? Math.max(0, parseInt(sizeStock[sz], 10) || 0) : null;
         const isOutOfStock = szStock !== null && szStock <= 0;
-        const stockBadge = szStock !== null
-          ? (isOutOfStock ? ' <span class="text-[10px] text-rose-500 font-bold ml-1">(หมด)</span>' : ' <span class="text-[10px] text-slate-400 ml-1">(' + szStock + ')</span>')
-          : '';
+        const stockBadge = isOutOfStock ? ' <span class="text-[10px] text-rose-500 font-bold ml-1">(หมด)</span>' : '';
 
         let btnClass = 'size-pill min-w-[42px] px-3.5 py-1.5 rounded-xl border text-xs font-semibold transition flex items-center justify-center ';
         if (isSelected) {
@@ -4362,7 +4360,7 @@
 
     // ==================== APP UPDATE CHECKER ====================
     function promptManualAppUpdate() {
-      const CURRENT_LATEST_VERSION = 'v2.3.18';
+      const CURRENT_LATEST_VERSION = 'v2.3.19';
       Swal.fire({
         icon: 'info',
         title: 'อัปเดตแอปพลิเคชัน',
@@ -4381,8 +4379,8 @@
 
     async function checkAppUpdateNotification() {
       const isAndroidNative = (window.AndroidNative && typeof window.AndroidNative.isAndroidNativeApp === 'function');
-      const CURRENT_LATEST_VERSION = 'v2.3.18';
-      const CURRENT_LATEST_BUILD = 32;
+      const CURRENT_LATEST_VERSION = 'v2.3.19';
+      const CURRENT_LATEST_BUILD = 33;
       const DISMISS_KEY = 'bba_update_dismissed_' + CURRENT_LATEST_VERSION;
 
       if (isAndroidNative) {
@@ -4472,13 +4470,13 @@
     function handleMobileAccountClick() {
       const isAndroidNative = (window.AndroidNative && typeof window.AndroidNative.isAndroidNativeApp === 'function');
       let isOldVersion = false;
-      const curVer = 'v2.3.18';
+      const curVer = 'v2.3.19';
       if (isAndroidNative) {
         let build = 0;
         if (typeof window.AndroidNative.getAppVersionCode === 'function') {
           try { build = Number(window.AndroidNative.getAppVersionCode()) || 0; } catch (e) {}
         }
-        if (build > 0 && build < 32) isOldVersion = true;
+        if (build > 0 && build < 33) isOldVersion = true;
       }
 
       const hasAdminPin = Boolean(localStorage.getItem('bba_admin_pin') || sessionStorage.getItem('bba_admin_pin'));
@@ -4695,7 +4693,7 @@
           console.log('[AutoUpdater] Check result:', update);
 
           if (update) {
-            const newVersion = update.version || 'v2.3.18';
+            const newVersion = update.version || 'v2.3.19';
             if (statusText) statusText.innerText = `พบเวอร์ชันใหม่ (${newVersion})!`;
             if (detailText) detailText.innerText = 'กำลังดาวน์โหลดและติดตั้งอัปเดตอัตโนมัติ...';
             if (progressBar) progressBar.style.width = '30%';
