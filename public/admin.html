@@ -3436,6 +3436,13 @@
         return;
       }
 
+      const cleanSizeStock = {};
+      const activeSizes = (sizes || '').split(',').map(s => s.trim()).filter(Boolean);
+      activeSizes.forEach(sz => {
+        cleanSizeStock[sz] = Math.max(0, parseInt(currentFormSizeStock[sz], 10) || 0);
+      });
+      const calculatedTotalStock = Object.values(cleanSizeStock).reduce((acc, v) => acc + (Number(v) || 0), 0);
+
       const payload = {
         pin: adminTokenPin,
         mode: mode,
@@ -3446,7 +3453,8 @@
         price: price,
         sizes: sizes || 'S, M, L, XL, 2XL, 3XL',
         colors: colors || 'มาตรฐาน',
-        stock: stock,
+        stock: activeSizes.length > 0 ? calculatedTotalStock : stock,
+        sizeStock: cleanSizeStock,
         images: (typeof adminFormImages !== 'undefined' && Array.isArray(adminFormImages)) ? adminFormImages : [],
         description: description,
         status: status,

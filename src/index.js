@@ -1391,7 +1391,17 @@ app.post('/api/admin/products', async (c) => {
     const price = Number(body.price) || 0;
     const sizes = String(body.sizes || '').trim();
     const colors = String(body.colors || '').trim();
-    const sizeStock = typeof body.sizeStock === 'object' ? JSON.stringify(body.sizeStock) : '{}';
+    let sizeStock = '{}';
+    if (body.sizeStock && typeof body.sizeStock === 'object') {
+      sizeStock = JSON.stringify(body.sizeStock);
+    } else if (typeof body.sizeStock === 'string' && body.sizeStock.trim()) {
+      try {
+        JSON.parse(body.sizeStock);
+        sizeStock = body.sizeStock;
+      } catch (e) {
+        sizeStock = '{}';
+      }
+    }
     const stock = Number(body.stock) || 0;
     const description = String(body.description || '').trim();
     const status = String(body.status || 'พร้อมจำหน่าย').trim();

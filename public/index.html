@@ -1407,7 +1407,7 @@
             <div class="flex items-center justify-between pt-3 border-t border-slate-100">
               <div>
                 <span class="block text-xs text-slate-500 font-medium">จำนวนที่จอง:</span>
-                <span class="text-xs text-slate-400">คงเหลือในไซส์นี้: <span id="modalStockText" class="font-bold text-indigo-700"></span> ตัว</span>
+                <span class="text-xs text-slate-400"><span id="modalStockLabel">คงเหลือในไซส์นี้:</span> <span id="modalStockText" class="font-bold text-indigo-700"></span> ตัว</span>
               </div>
               <div class="flex items-center border border-slate-200 rounded-xl bg-slate-50 p-1">
                 <button type="button" onclick="changeModalQty(-1)" class="w-8 h-8 rounded-lg bg-white text-slate-700 hover:bg-slate-200 flex items-center justify-center font-bold shadow-sm transition">-</button>
@@ -3033,8 +3033,12 @@
     function getSelectedSizeStock() {
       if (!selectedProduct) return 0;
       const sizeStock = selectedProduct.sizeStock || {};
-      if (Object.keys(sizeStock).length > 0 && selectedSize && sizeStock[selectedSize] !== undefined) {
-        return Math.max(0, parseInt(sizeStock[selectedSize], 10) || 0);
+      const hasSizeStock = sizeStock && typeof sizeStock === 'object' && Object.keys(sizeStock).length > 0;
+      if (hasSizeStock) {
+        if (selectedSize && sizeStock[selectedSize] !== undefined) {
+          return Math.max(0, parseInt(sizeStock[selectedSize], 10) || 0);
+        }
+        return 0;
       }
       return Math.max(0, parseInt(selectedProduct.stock, 10) || 0);
     }
@@ -3045,6 +3049,13 @@
       const stockEl = document.getElementById('modalStockText');
       if (stockEl) {
         stockEl.textContent = availableForSize.toLocaleString();
+      }
+
+      const sizeStock = (selectedProduct && selectedProduct.sizeStock) || {};
+      const hasSpecificStock = Object.keys(sizeStock).length > 0 && selectedSize && sizeStock[selectedSize] !== undefined;
+      const labelEl = document.getElementById('modalStockLabel');
+      if (labelEl) {
+        labelEl.textContent = hasSpecificStock ? 'คงเหลือในไซส์นี้:' : 'คงเหลือรวมทุกไซส์:';
       }
 
       const btnAdd = document.getElementById('btnModalAddToCart');
