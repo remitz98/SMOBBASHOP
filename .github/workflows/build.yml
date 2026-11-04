@@ -1,4 +1,4 @@
-name: Build Apps (Windows, macOS, Android)
+name: Build Apps (Windows, Android)
 
 on:
   workflow_dispatch:
@@ -24,11 +24,6 @@ jobs:
             args: '--target aarch64-pc-windows-msvc --bundles nsis'
             rust_target: 'aarch64-pc-windows-msvc'
             upload_name: 'SMO-BBA-SHOP-Windows-arm64'
-          - platform: 'macos-latest'
-            name: 'macOS Universal'
-            args: '--target universal-apple-darwin'
-            rust_target: 'aarch64-apple-darwin,x86_64-apple-darwin'
-            upload_name: 'SMO-BBA-SHOP-macOS'
 
     runs-on: ${{ matrix.platform }}
     steps:
@@ -236,7 +231,7 @@ jobs:
           else
             echo "Creating release $TAG..."
             gh release create "$TAG" \
-              --title "SMO BBA SHOP $TAG (Windows x64/ARM64, macOS Universal & Android APK)" \
-              --notes "เวอร์ชัน $TAG: 1. รองรับ Windows ARM64 (Surface / Snapdragon X / Copilot+ PC) และ Windows x64 2. รองรับ macOS Universal Binary (ใช้งานได้ลื่นไหลทั้ง Apple Silicon M1-M4 และ Intel Mac) 3. รองรับ Android APK (ARM64 & x86_64) พร้อมระบบอัปเดตอัตโนมัติ" \
+              --title "SMO BBA SHOP $TAG (Windows x64/ARM64 & Android APK)" \
+              --notes "เวอร์ชัน $TAG: 1. รองรับ Windows ARM64 (Surface / Snapdragon X / Copilot+ PC) และ Windows x64 2. รองรับ Android APK (ARM64 & x86_64) พร้อมระบบอัปเดตอัตโนมัติ" \
               "${FILES[@]}"
           fi
