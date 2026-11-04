@@ -127,16 +127,24 @@ async function runTests() {
   assert.strictEqual(parseDataUrlTest('data:image/jpeg;base64,' + 'A'.repeat(7000000), 5 * 1024 * 1024), null, 'Oversized file (>5MB) must be rejected');
   console.log('✔ Test 5: parseDataUrl Safe MIME & Size Limit passed');
 
-  // Test 6: Order Item & Server-Authoritative Price Calculation
-  function calculateOrderTotalTest(items, dbProducts) {
+  // Test 6: Order Item & Server-Authoritative Price Calculation & Strict Qty/Size Validation
+  function validateAndNormalizeOrderItems(items, dbProducts) {
     const prodMap = new Map(dbProducts.map(p => [p.product_id, p]));
     let total = 0;
     for (const it of items) {
-      const qty = parseInt(it.qty, 10);
-      if (isNaN(qty) || qty <= 0 || qty > 100) throw new Error('Invalid qty');
+      const numQty = Number(it.qty);
+      if (!Number.isInteger(numQty) || numQty <= 0 || numQty > 100) throw new Error('Invalid qty: must be integer 1-100');
+      it.qty = numQty;
+
       const prod = prodMap.get(it.productId);
       if (!prod) throw new Error('Product not found');
       
+      const validSizes = prod.sizes ? prod.sizes.split(',').map(s => s.trim()).filter(Boolean) : [];
+      const itemSizeUpper = String(it.size || '').trim().toUpperCase();
+      const matchedSize = validSizes.find(s => s.toUpperCase() === itemSizeUpper);
+      if (validSizes.length > 0 && !matchedSize) throw new Error('Invalid size');
+      if (matchedSize) it.size = matchedSize; // Normalize to DB exact case!
+
       const basePrice = Number(prod.price) || 0; // DB price ONLY
       let extra = 0;
       const sz = String(it.size || '').toUpperCase().trim();
@@ -147,20 +155,44 @@ async function runTests() {
       else if (sz === '6XL' || sz === 'XXXXXXL') extra = 100;
       else if (sz === '7XL' || sz === 'XXXXXXXL') extra = 120;
       
-      total += (basePrice + extra) * qty;
+      it.price = basePrice + extra;
+      total += it.price * it.qty;
     }
     return total;
   }
 
-  const sampleDbProds = [{ product_id: 'BBA-01', price: 290 }];
-  // Client attempts to spoof price as 1 baht or send negative quantity:
-  const spoofedItems = [{ productId: 'BBA-01', price: 1, size: '2XL', qty: 2 }];
-  const verifiedTotal = calculateOrderTotalTest(spoofedItems, sampleDbProds);
-  assert.strictEqual(verifiedTotal, (290 + 20) * 2, 'Total must equal (290 + 20) * 2 = 620, ignoring client price 1');
+  const sampleDbProds = [{ product_id: 'BBA-01', price: 290, sizes: 'S, M, L, XL, 2XL' }];
+  
+  // Case 1: Client sends lowercase size '2xl' -> must normalize to '2XL'
+  const itemToNormalize = [{ productId: 'BBA-01', price: 1, size: '2xl', qty: 2 }];
+  const verifiedTotal = validateAndNormalizeOrderItems(itemToNormalize, sampleDbProds);
+  assert.strictEqual(itemToNormalize[0].size, '2XL', 'Size must be normalized to uppercase 2XL');
+  assert.strictEqual(verifiedTotal, (290 + 20) * 2, 'Total must equal (290 + 20) * 2 = 620');
 
-  assert.throws(() => calculateOrderTotalTest([{ productId: 'BBA-01', price: 290, qty: -5 }], sampleDbProds), /Invalid qty/);
-  assert.throws(() => calculateOrderTotalTest([{ productId: 'BBA-01', price: 290, qty: 0 }], sampleDbProds), /Invalid qty/);
-  console.log('✔ Test 6: Server-Authoritative Price & Qty Validation passed');
+  // Case 2: Reject floats like 1.5, negative numbers, 0, or invalid sizes
+  assert.throws(() => validateAndNormalizeOrderItems([{ productId: 'BBA-01', qty: 1.5, size: 'M' }], sampleDbProds), /Invalid qty/);
+  assert.throws(() => validateAndNormalizeOrderItems([{ productId: 'BBA-01', qty: -5, size: 'M' }], sampleDbProds), /Invalid qty/);
+  assert.throws(() => validateAndNormalizeOrderItems([{ productId: 'BBA-01', qty: 0, size: 'M' }], sampleDbProds), /Invalid qty/);
+  assert.throws(() => validateAndNormalizeOrderItems([{ productId: 'BBA-01', qty: 1, size: 'XXS' }], sampleDbProds), /Invalid size/);
+  console.log('✔ Test 6: Strict Integer Qty, Exact Case Size Normalization & DB Price passed');
+
+  // Test 7: Atomic Cancellation Guard
+  function simulateAtomicCancellation(currentOrderStatus, targetStatus, attemptedOldStatus) {
+    if (currentOrderStatus !== attemptedOldStatus) {
+      return { success: false, changes: 0, restoredStock: false };
+    }
+    // State transitions atomically
+    currentOrderStatus = targetStatus;
+    return { success: true, changes: 1, restoredStock: true };
+  }
+  const firstCancel = simulateAtomicCancellation('รอตรวจสอบการชำระเงิน', 'ยกเลิกคำสั่งซื้อ', 'รอตรวจสอบการชำระเงิน');
+  assert.strictEqual(firstCancel.success, true);
+  assert.strictEqual(firstCancel.restoredStock, true);
+  // Second concurrent cancel:
+  const secondCancel = simulateAtomicCancellation('ยกเลิกคำสั่งซื้อ', 'ยกเลิกคำสั่งซื้อ', 'รอตรวจสอบการชำระเงิน');
+  assert.strictEqual(secondCancel.success, false);
+  assert.strictEqual(secondCancel.restoredStock, false, 'Second cancel MUST NOT restore stock again');
+  console.log('✔ Test 7: Atomic Cancellation Guard passed');
 
   console.log('🎉 ALL TESTS PASSED SUCCESSFULLY!');
 }

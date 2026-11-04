@@ -820,11 +820,11 @@ app.post('/api/orders', async (c) => {
     const prodMap = new Map(prods.map(p => [p.product_id, p]));
 
     for (const item of items) {
-      const qty = parseInt(item.qty, 10);
-      if (isNaN(qty) || qty <= 0 || qty > 100) {
-        return c.json({ success: false, message: 'จำนวนสินค้าต้องเป็นตัวเลข 1-100 ตัว' }, 400);
+      const numQty = Number(item.qty);
+      if (!Number.isInteger(numQty) || numQty <= 0 || numQty > 100) {
+        return c.json({ success: false, message: 'จำนวนสินค้าต้องเป็นจำนวนเต็มบวก 1-100 ตัว' }, 400);
       }
-      item.qty = qty;
+      item.qty = numQty;
 
       const prod = prodMap.get(item.productId);
       if (!prod) {
@@ -834,11 +834,15 @@ app.post('/api/orders', async (c) => {
         return c.json({ success: false, message: `สินค้า "${prod.name}" ปิดรับการสั่งจองแล้ว` }, 400);
       }
 
-      // ตรวจสอบความถูกต้องของไซส์
-      const validSizes = prod.sizes ? prod.sizes.split(',').map(s => s.trim().toUpperCase()).filter(Boolean) : [];
-      const itemSize = String(item.size || '').trim().toUpperCase();
-      if (validSizes.length > 0 && !validSizes.includes(itemSize)) {
+      // ตรวจสอบความถูกต้องของไซส์ และ normalize ตัวพิมพ์ให้ตรงกับในฐานข้อมูลเป๊ะๆ
+      const validSizes = prod.sizes ? prod.sizes.split(',').map(s => s.trim()).filter(Boolean) : [];
+      const itemSizeUpper = String(item.size || '').trim().toUpperCase();
+      const matchedSize = validSizes.find(s => s.toUpperCase() === itemSizeUpper);
+      if (validSizes.length > 0 && !matchedSize) {
         return c.json({ success: false, message: `สินค้า "${prod.name}" ไม่มีไซส์ ${item.size}` }, 400);
+      }
+      if (matchedSize) {
+        item.size = matchedSize;
       }
 
       let sizeStock = {};
@@ -1214,8 +1218,17 @@ app.post('/api/admin/orders/status', async (c) => {
     }
 
     const finalAdminNotes = (adminNotes !== undefined) ? adminNotes : (order.admin_notes || '');
+
+    // ทำการอัปเดตสถานะออเดอร์ก่อน และตรวจสอบว่ามีการเปลี่ยนแปลงจริงหรือไม่ (ป้องกัน race condition และการคืนสต็อกซ้ำ)
+    const updateRes = await db.prepare("UPDATE orders SET status = ?, admin_notes = ? WHERE order_id = ? AND status = ?")
+      .bind(newStatus, finalAdminNotes, orderId, oldStatus)
+      .run();
+
+    if (!updateRes.meta || updateRes.meta.changes === 0) {
+      return c.json({ success: false, message: 'ไม่สามารถเปลี่ยนสถานะได้ (คำสั่งซื้ออาจถูกเปลี่ยนแปลงไปก่อนหน้านี้แล้ว)' }, 409);
+    }
+
     const batchOps = [
-      db.prepare("UPDATE orders SET status = ?, admin_notes = ? WHERE order_id = ? AND status = ?").bind(newStatus, finalAdminNotes, orderId, oldStatus),
       db.prepare("UPDATE payments SET verify_status = ?, admin_notes = ? WHERE order_id = ?").bind(newStatus, finalAdminNotes, orderId)
     ];
 
