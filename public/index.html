@@ -4380,7 +4380,7 @@
 
     // ==================== APP UPDATE CHECKER ====================
     function promptManualAppUpdate() {
-      const CURRENT_LATEST_VERSION = 'v2.3.19';
+      const CURRENT_LATEST_VERSION = 'v2.3.20';
       Swal.fire({
         icon: 'info',
         title: 'อัปเดตแอปพลิเคชัน',
@@ -4399,8 +4399,8 @@
 
     async function checkAppUpdateNotification() {
       const isAndroidNative = (window.AndroidNative && typeof window.AndroidNative.isAndroidNativeApp === 'function');
-      const CURRENT_LATEST_VERSION = 'v2.3.19';
-      const CURRENT_LATEST_BUILD = 33;
+      const CURRENT_LATEST_VERSION = 'v2.3.20';
+      const CURRENT_LATEST_BUILD = 34;
       const DISMISS_KEY = 'bba_update_dismissed_' + CURRENT_LATEST_VERSION;
 
       if (isAndroidNative) {
@@ -4460,11 +4460,10 @@
                   <div class="pt-1 text-slate-700 leading-relaxed">
                     <b>รายการปรับปรุงในเวอร์ชัน ${CURRENT_LATEST_VERSION}:</b>
                     <ul class="list-disc list-inside mt-1 space-y-1 text-slate-600 text-xs">
-                      <li>เพิ่มการขออนุญาตสิทธิ์การใช้งานกล้องในแอปพลิเคชัน (Camera Permission) บน Android และ macOS</li>
-                      <li>อัปเกรดระบบสแกน QR Code บนเว็บ ตรวจจับกล้องและมีเมนูสลับกล้องอัตโนมัติ</li>
-                      <li>เพิ่มปุ่มเลือกไฟล์รูปภาพ QR Code จากในเครื่องเพื่อสแกนรับเสื้อได้ทันที</li>
-                      <li>ขยายขนาด QR Code ใบเสร็จเป็น 128x128 พร้อมระดับความคมชัดสูง สแกนติดง่ายและเร็วขึ้น</li>
-                      <li>เพิ่ม QR Code ประจำคำสั่งซื้อ พร้อมระบบค้นหารวดเร็วและระบบตรวจจับสลิปซ้ำ</li>
+                      <li>รองรับ Windows ARM64 (Surface / Snapdragon X) และ Windows x64 พร้อมอัปเดตอัตโนมัติ</li>
+                      <li>ปรับปรุงการแสดงและตัดสต็อกแยกตามไซส์สินค้าอย่างแม่นยำ</li>
+                      <li>อนุญาตให้คลิกขวาและคลุมเลือกคัดลอกข้อความบนเว็บเบราว์เซอร์ได้ตามปกติ</li>
+                      <li>ยกระดับความปลอดภัยคำนวณราคาและจำกัดขนาด/ประเภทไฟล์สลิปฝั่งเซิร์ฟเวอร์</li>
                     </ul>
                   </div>
                 </div>
@@ -4490,13 +4489,13 @@
     function handleMobileAccountClick() {
       const isAndroidNative = (window.AndroidNative && typeof window.AndroidNative.isAndroidNativeApp === 'function');
       let isOldVersion = false;
-      const curVer = 'v2.3.19';
+      const curVer = 'v2.3.20';
       if (isAndroidNative) {
         let build = 0;
         if (typeof window.AndroidNative.getAppVersionCode === 'function') {
           try { build = Number(window.AndroidNative.getAppVersionCode()) || 0; } catch (e) {}
         }
-        if (build > 0 && build < 33) isOldVersion = true;
+        if (build > 0 && build < 34) isOldVersion = true;
       }
 
       const hasAdminPin = Boolean(localStorage.getItem('bba_admin_pin') || sessionStorage.getItem('bba_admin_pin'));
@@ -4713,7 +4712,7 @@
           console.log('[AutoUpdater] Check result:', update);
 
           if (update) {
-            const newVersion = update.version || 'v2.3.19';
+            const newVersion = update.version || 'v2.3.20';
             if (statusText) statusText.innerText = `พบเวอร์ชันใหม่ (${newVersion})!`;
             if (detailText) detailText.innerText = 'กำลังดาวน์โหลดและติดตั้งอัปเดตอัตโนมัติ...';
             if (progressBar) progressBar.style.width = '30%';
