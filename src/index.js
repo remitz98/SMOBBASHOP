@@ -78,7 +78,8 @@ function normalizeStudentId(val) {
 
 async function verifyAdminPin(db, pin) {
   const row = await db.prepare("SELECT value FROM settings WHERE key = 'AdminPIN'").first();
-  const stored = row ? String(row.value).trim() : '1234';
+  if (!row || !row.value) return false;
+  const stored = String(row.value).trim();
   return await verifyPin(stored, pin);
 }
 
@@ -568,13 +569,24 @@ async function sendStudentFcmNotification(env, { studentId, title, body, orderId
   }
 }
 
-function parseDataUrl(dataUrl) {
+function parseDataUrl(dataUrl, maxBytes = 5 * 1024 * 1024) {
   if (!dataUrl || typeof dataUrl !== 'string') return null;
   const match = dataUrl.match(/^data:([^;]+);base64,(.+)$/);
   if (!match) return null;
-  const contentType = match[1];
+  const contentType = match[1].toLowerCase().trim();
   const base64Data = match[2];
+
+  // ป้องกันการอัปโหลดไฟล์อันตราย (อนุญาตเฉพาะรูปภาพ JPEG, PNG, WebP)
+  const ALLOWED_MIME = ['image/jpeg', 'image/png', 'image/webp'];
+  if (!ALLOWED_MIME.includes(contentType)) {
+    return null;
+  }
+
   const buffer = Buffer.from(base64Data, 'base64');
+  // จำกัดขนาดไฟล์
+  if (buffer.length > maxBytes) {
+    return null;
+  }
   return { contentType, buffer };
 }
 
@@ -808,12 +820,25 @@ app.post('/api/orders', async (c) => {
     const prodMap = new Map(prods.map(p => [p.product_id, p]));
 
     for (const item of items) {
+      const qty = parseInt(item.qty, 10);
+      if (isNaN(qty) || qty <= 0 || qty > 100) {
+        return c.json({ success: false, message: 'จำนวนสินค้าต้องเป็นตัวเลข 1-100 ตัว' }, 400);
+      }
+      item.qty = qty;
+
       const prod = prodMap.get(item.productId);
       if (!prod) {
         return c.json({ success: false, message: `ไม่พบสินค้ารหัส ${item.productId}` }, 400);
       }
       if (prod.status === 'ปิดรับการสั่งจอง') {
         return c.json({ success: false, message: `สินค้า "${prod.name}" ปิดรับการสั่งจองแล้ว` }, 400);
+      }
+
+      // ตรวจสอบความถูกต้องของไซส์
+      const validSizes = prod.sizes ? prod.sizes.split(',').map(s => s.trim().toUpperCase()).filter(Boolean) : [];
+      const itemSize = String(item.size || '').trim().toUpperCase();
+      if (validSizes.length > 0 && !validSizes.includes(itemSize)) {
+        return c.json({ success: false, message: `สินค้า "${prod.name}" ไม่มีไซส์ ${item.size}` }, 400);
       }
 
       let sizeStock = {};
@@ -841,23 +866,29 @@ app.post('/api/orders', async (c) => {
     const uniqueSuffix = crypto.randomUUID().replace(/-/g, '').slice(0, 8).toUpperCase();
     const orderId = `${datePrefix}-${uniqueSuffix}`;
 
-    // คำนวณยอดเงินรวม
+    // คำนวณยอดเงินรวม (ดึงราคาจากฐานข้อมูลเสมอ ห้ามเชื่อราคาจากเบราว์เซอร์)
     let calculatedTotal = 0;
     const itemsSummaryArr = [];
 
     items.forEach(it => {
-      const basePrice = Number(it.price) || 0;
+      const prod = prodMap.get(it.productId);
+      const basePrice = Number(prod ? prod.price : 0) || 0;
       let extraPrice = 0;
-      const sz = String(it.size || '').toUpperCase();
+      const sz = String(it.size || '').toUpperCase().trim();
       if (sz === '2XL' || sz === 'XXL') extraPrice = 20;
       else if (sz === '3XL' || sz === 'XXXL') extraPrice = 40;
       else if (sz === '4XL' || sz === 'XXXXL') extraPrice = 60;
+      else if (sz === '5XL' || sz === 'XXXXXL') extraPrice = 80;
+      else if (sz === '6XL' || sz === 'XXXXXXL') extraPrice = 100;
+      else if (sz === '7XL' || sz === 'XXXXXXXL') extraPrice = 120;
 
       const unitPrice = basePrice + extraPrice;
+      it.price = unitPrice;
       const subtotal = unitPrice * it.qty;
       calculatedTotal += subtotal;
 
-      itemsSummaryArr.push(`${it.name} [ไซส์ ${it.size}, สี ${it.color}] x ${it.qty}`);
+      const prodName = prod ? prod.name : it.name;
+      itemsSummaryArr.push(`${prodName} [ไซส์ ${it.size}, สี ${it.color}] x ${it.qty}`);
     });
 
     const itemsSummary = itemsSummaryArr.join(', ');
@@ -868,6 +899,10 @@ app.post('/api/orders', async (c) => {
     let parsedSlip = null;
     if (slipBase64) {
       try {
+        parsedSlip = parseDataUrl(slipBase64);
+        if (!parsedSlip || !parsedSlip.buffer) {
+          return c.json({ success: false, message: 'ไฟล์สลิปต้องเป็นรูปภาพ (JPG, PNG, WebP) และขนาดไม่เกิน 5MB' }, 400);
+        }
         parsedSlip = parseDataUrl(slipBase64);
         if (parsedSlip && parsedSlip.buffer) {
           const hashBuf = await crypto.subtle.digest('SHA-256', parsedSlip.buffer);
@@ -1174,9 +1209,13 @@ app.post('/api/admin/orders/status', async (c) => {
     if (!order) return c.json({ success: false, message: 'ไม่พบคำสั่งซื้อนี้' }, 404);
 
     const oldStatus = order.status;
+    if (oldStatus === newStatus) {
+      return c.json({ success: true, message: `คำสั่งซื้อเป็นสถานะ ${newStatus} อยู่แล้ว` });
+    }
+
     const finalAdminNotes = (adminNotes !== undefined) ? adminNotes : (order.admin_notes || '');
     const batchOps = [
-      db.prepare("UPDATE orders SET status = ?, admin_notes = ? WHERE order_id = ?").bind(newStatus, finalAdminNotes, orderId),
+      db.prepare("UPDATE orders SET status = ?, admin_notes = ? WHERE order_id = ? AND status = ?").bind(newStatus, finalAdminNotes, orderId, oldStatus),
       db.prepare("UPDATE payments SET verify_status = ?, admin_notes = ? WHERE order_id = ?").bind(newStatus, finalAdminNotes, orderId)
     ];
 
@@ -1579,6 +1618,17 @@ app.get('/api/images/*', async (c) => {
     const headers = new Headers();
     object.writeHttpMetadata(headers);
     headers.set('etag', object.httpEtag);
+    // Security headers: ป้องกันการ execute script / HTML ผ่าน R2
+    headers.set('X-Content-Type-Options', 'nosniff');
+    headers.set('Content-Security-Policy', "default-src 'none'; sandbox");
+
+    // ตรวจสอบ Content-Type ให้ปลอดภัยเสมอ
+    const rawCt = (headers.get('Content-Type') || '').toLowerCase().trim();
+    const safeCt = ['image/jpeg', 'image/png', 'image/webp', 'image/gif'].find(t => rawCt.startsWith(t));
+    if (!safeCt) {
+      headers.set('Content-Type', 'application/octet-stream');
+    }
+
     // แคชรูปภาพ 7 วัน ทั้งที่เบราว์เซอร์และ Cloudflare Edge CDN
     headers.set('Cache-Control', 'public, max-age=604800, immutable');
 

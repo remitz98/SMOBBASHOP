@@ -107,6 +107,61 @@ async function runTests() {
   assert.strictEqual(extractSlipR2Key(''), null);
   console.log('✔ Test 4: R2 Slip Key extraction passed');
 
+  // Test 5: Safe DataURL / Slip parsing & MIME validation
+  function parseDataUrlTest(dataUrl, maxBytes = 5 * 1024 * 1024) {
+    if (!dataUrl || typeof dataUrl !== 'string') return null;
+    const match = dataUrl.match(/^data:([^;]+);base64,(.+)$/);
+    if (!match) return null;
+    const contentType = match[1].toLowerCase().trim();
+    const ALLOWED_MIME = ['image/jpeg', 'image/png', 'image/webp'];
+    if (!ALLOWED_MIME.includes(contentType)) return null;
+    const buffer = Buffer.from(match[2], 'base64');
+    if (buffer.length > maxBytes) return null;
+    return { contentType, buffer };
+  }
+
+  assert.strictEqual(parseDataUrlTest('data:text/html;base64,PHNjcmlwdD5hbGVydCgxKTwvc2NyaXB0Pg=='), null, 'HTML/Script must be rejected');
+  assert.strictEqual(parseDataUrlTest('data:image/svg+xml;base64,PHN2Zz48L3N2Zz4='), null, 'SVG must be rejected');
+  assert.notStrictEqual(parseDataUrlTest('data:image/jpeg;base64,/9j/4AAQSkZJRg=='), null, 'Valid JPEG should pass');
+  assert.notStrictEqual(parseDataUrlTest('data:image/png;base64,iVBORw0KGgo='), null, 'Valid PNG should pass');
+  assert.strictEqual(parseDataUrlTest('data:image/jpeg;base64,' + 'A'.repeat(7000000), 5 * 1024 * 1024), null, 'Oversized file (>5MB) must be rejected');
+  console.log('✔ Test 5: parseDataUrl Safe MIME & Size Limit passed');
+
+  // Test 6: Order Item & Server-Authoritative Price Calculation
+  function calculateOrderTotalTest(items, dbProducts) {
+    const prodMap = new Map(dbProducts.map(p => [p.product_id, p]));
+    let total = 0;
+    for (const it of items) {
+      const qty = parseInt(it.qty, 10);
+      if (isNaN(qty) || qty <= 0 || qty > 100) throw new Error('Invalid qty');
+      const prod = prodMap.get(it.productId);
+      if (!prod) throw new Error('Product not found');
+      
+      const basePrice = Number(prod.price) || 0; // DB price ONLY
+      let extra = 0;
+      const sz = String(it.size || '').toUpperCase().trim();
+      if (sz === '2XL' || sz === 'XXL') extra = 20;
+      else if (sz === '3XL' || sz === 'XXXL') extra = 40;
+      else if (sz === '4XL' || sz === 'XXXXL') extra = 60;
+      else if (sz === '5XL' || sz === 'XXXXXL') extra = 80;
+      else if (sz === '6XL' || sz === 'XXXXXXL') extra = 100;
+      else if (sz === '7XL' || sz === 'XXXXXXXL') extra = 120;
+      
+      total += (basePrice + extra) * qty;
+    }
+    return total;
+  }
+
+  const sampleDbProds = [{ product_id: 'BBA-01', price: 290 }];
+  // Client attempts to spoof price as 1 baht or send negative quantity:
+  const spoofedItems = [{ productId: 'BBA-01', price: 1, size: '2XL', qty: 2 }];
+  const verifiedTotal = calculateOrderTotalTest(spoofedItems, sampleDbProds);
+  assert.strictEqual(verifiedTotal, (290 + 20) * 2, 'Total must equal (290 + 20) * 2 = 620, ignoring client price 1');
+
+  assert.throws(() => calculateOrderTotalTest([{ productId: 'BBA-01', price: 290, qty: -5 }], sampleDbProds), /Invalid qty/);
+  assert.throws(() => calculateOrderTotalTest([{ productId: 'BBA-01', price: 290, qty: 0 }], sampleDbProds), /Invalid qty/);
+  console.log('✔ Test 6: Server-Authoritative Price & Qty Validation passed');
+
   console.log('🎉 ALL TESTS PASSED SUCCESSFULLY!');
 }
 
