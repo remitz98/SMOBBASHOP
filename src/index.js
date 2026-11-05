@@ -342,7 +342,8 @@ async function sendNotificationEmail(env, { to, subject, htmlBody }) {
       const res = await fetch(gasUrl, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ to, subject, htmlBody })
+        body: JSON.stringify({ to, subject, htmlBody }),
+        redirect: 'follow'
       });
       if (res.ok) {
         return { success: true, method: 'Google Apps Script Webhook' };
