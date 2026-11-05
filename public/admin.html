@@ -795,6 +795,9 @@
             <span id="realtimeStatusText">Realtime เชื่อมต่อ...</span>
           </div>
 
+          <button onclick="openEmailSettingsModal()" class="px-3.5 py-2 rounded-xl bg-white border border-slate-200 text-xs font-semibold text-indigo-700 hover:bg-indigo-50 transition flex items-center gap-1.5 shadow-sm">
+            <i class="fa-solid fa-envelope"></i> ตั้งค่าอีเมลผู้ส่ง
+          </button>
           <button onclick="loadAdminData()" class="px-3.5 py-2 rounded-xl bg-white border border-slate-200 text-xs font-semibold text-slate-700 hover:bg-slate-50 transition flex items-center gap-1.5 shadow-sm">
             <i class="fa-solid fa-rotate-right"></i> รีเฟรช
           </button>
@@ -2869,12 +2872,12 @@
               </select>
             </div>
 
-            <div id="modalNotifyEmailContainer" class="p-2.5 rounded-lg bg-emerald-50 border border-emerald-200 hidden">
+            <div id="modalNotifyEmailContainer" class="p-2.5 rounded-lg bg-emerald-50 border border-emerald-200">
               <label class="flex items-center gap-2 text-xs text-emerald-900 cursor-pointer select-none">
-                <input type="checkbox" id="modalNotifyEmailCheck" class="rounded border-emerald-400 text-emerald-600 focus:ring-emerald-500">
-                <span class="font-medium">ส่งอีเมลแจ้งเตือนนักศึกษาว่าพร้อมรับเสื้อ</span>
+                <input type="checkbox" id="modalNotifyEmailCheck" class="rounded border-emerald-400 text-emerald-600 focus:ring-emerald-500" checked>
+                <span class="font-medium">ส่งอีเมลแจ้งเตือนนักศึกษาสำหรับการเปลี่ยนสถานะนี้</span>
               </label>
-              <p class="text-[10px] text-emerald-700 mt-1 pl-5">* หากเป็นการแก้ไขย้อนสถานะที่แอดมินกดผิด ไม่จำเป็นต้องติ๊กส่งอีเมลซ้ำ</p>
+              <p class="text-[10px] text-emerald-700 mt-1 pl-5">* หากเป็นการแก้ไขย้อนสถานะที่แอดมินกดผิด สามารถยกเลิกการติ๊กเพื่อไม่ส่งอีเมลได้</p>
             </div>
 
             <div>
@@ -2888,25 +2891,10 @@
         cancelButtonText: 'ยกเลิก',
         confirmButtonColor: '#4338ca',
         didOpen: () => {
-          const sel = document.getElementById('modalNewStatusSelect');
-          const emailBox = document.getElementById('modalNotifyEmailContainer');
           const emailCheck = document.getElementById('modalNotifyEmailCheck');
-          const updateEmailBox = () => {
-            if (sel && emailBox) {
-              if (sel.value === 'พร้อมรับเสื้อที่ห้องสโมสร') {
-                emailBox.classList.remove('hidden');
-                if (curr === 'รับเสื้อแล้ว') {
-                  if (emailCheck) emailCheck.checked = false;
-                } else {
-                  if (emailCheck) emailCheck.checked = true;
-                }
-              } else {
-                emailBox.classList.add('hidden');
-              }
-            }
-          };
-          if (sel) sel.addEventListener('change', updateEmailBox);
-          updateEmailBox();
+          if (emailCheck && curr === 'รับเสื้อแล้ว') {
+            emailCheck.checked = false;
+          }
         }
       }).then(result => {
         if (result.isConfirmed) {
@@ -3053,6 +3041,196 @@
       } catch (err) {
         Swal.close();
         Swal.fire('ข้อผิดพลาด', err.message, 'error');
+      }
+    }
+
+    // ==================== ADMIN EMAIL SETTINGS ====================
+    async function openEmailSettingsModal() {
+      Swal.fire({
+        title: 'กำลังโหลดข้อมูลการตั้งค่า...',
+        allowOutsideClick: false,
+        didOpen: () => Swal.showLoading()
+      });
+
+      try {
+        const res = await fetch(API_BASE + '/api/admin/settings', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ pin: adminTokenPin })
+        });
+        const data = await res.json();
+        Swal.close();
+
+        if (!data || !data.success) {
+          Swal.fire('ข้อผิดพลาด', data?.message || 'ไม่สามารถโหลดการตั้งค่าได้', 'error');
+          return;
+        }
+
+        const settingsList = data.settings || [];
+        const settingsMap = Object.fromEntries(settingsList.map(s => [s.key, s.value]));
+
+        const smtpUser = settingsMap.SmtpUser || '';
+        const smtpPass = settingsMap.SmtpPass || '';
+        const smtpHost = settingsMap.SmtpHost || 'smtp.gmail.com';
+        const smtpPort = settingsMap.SmtpPort || '465';
+
+        Swal.fire({
+          title: '<div class="flex items-center justify-center gap-2 text-indigo-900 text-lg font-bold"><i class="fa-solid fa-envelope-open-text text-indigo-600"></i> ตั้งค่าอีเมลผู้ส่ง (Gmail SMTP)</div>',
+          html: `
+            <div class="text-left text-xs space-y-3.5 p-1">
+              <div class="p-3 rounded-xl bg-indigo-50/70 border border-indigo-100 text-[11px] text-indigo-900 leading-relaxed">
+                <b>📌 คำแนะนำการตั้งค่า Gmail:</b><br>
+                1. เปิดยืนยันตัวตน 2 ขั้นตอน (2-Step Verification) ในบัญชี Google ของสโมสร<br>
+                2. เข้าไปสร้าง <a href="https://myaccount.google.com/apppasswords" target="_blank" class="underline text-indigo-700 font-bold">App Password (รหัสผ่านสำหรับแอป)</a> 16 หลัก แล้วนำมากรอกด้านล่าง
+              </div>
+
+              <div>
+                <label class="block font-semibold text-slate-700 mb-1">อีเมลผู้ส่ง (Gmail Address):</label>
+                <input type="email" id="modalSmtpUser" value="${escapeHtml(smtpUser)}" placeholder="เช่น smobba.ubru@gmail.com" class="w-full p-2.5 border border-slate-300 rounded-lg text-xs font-mono focus:ring-1 focus:ring-indigo-500 focus:outline-none">
+              </div>
+
+              <div>
+                <label class="block font-semibold text-slate-700 mb-1">รหัสผ่านแอป Google (16 หลัก App Password):</label>
+                <div class="relative">
+                  <input type="password" id="modalSmtpPass" value="${escapeHtml(smtpPass)}" placeholder="รหัสผ่านสำหรับแอป 16 ตัวอักษร" class="w-full p-2.5 border border-slate-300 rounded-lg text-xs font-mono focus:ring-1 focus:ring-indigo-500 focus:outline-none pr-10">
+                  <button type="button" onclick="togglePassVisibility('modalSmtpPass', this)" class="absolute right-2.5 top-2.5 text-slate-400 hover:text-slate-600">
+                    <i class="fa-solid fa-eye text-xs"></i>
+                  </button>
+                </div>
+                <p class="text-[10px] text-slate-500 mt-1">* ใช้ App Password 16 ตัวอักษรจาก Google Account (ไม่ใช่รหัสผ่านล็อกอิน Gmail ปกติ)</p>
+              </div>
+
+              <div class="grid grid-cols-2 gap-2.5">
+                <div>
+                  <label class="block font-semibold text-slate-700 mb-1">SMTP Host:</label>
+                  <input type="text" id="modalSmtpHost" value="${escapeHtml(smtpHost)}" class="w-full p-2 border border-slate-300 rounded-lg text-xs font-mono">
+                </div>
+                <div>
+                  <label class="block font-semibold text-slate-700 mb-1">SMTP Port:</label>
+                  <input type="number" id="modalSmtpPort" value="${escapeHtml(smtpPort)}" class="w-full p-2 border border-slate-300 rounded-lg text-xs font-mono">
+                </div>
+              </div>
+
+              <div class="pt-3 border-t border-slate-200">
+                <label class="block font-semibold text-slate-700 mb-1">ทดสอบส่งอีเมลระบบ:</label>
+                <div class="flex gap-2">
+                  <input type="email" id="modalTestEmailInput" placeholder="กรอกอีเมลของคุณเพื่อลองส่ง" class="flex-1 p-2 border border-slate-300 rounded-lg text-xs">
+                  <button type="button" id="btnTestEmail" onclick="executeTestEmailSend()" class="px-3.5 py-2 bg-indigo-50 text-indigo-700 hover:bg-indigo-100 rounded-lg font-semibold text-xs transition shrink-0 flex items-center gap-1.5 border border-indigo-200">
+                    <i class="fa-solid fa-paper-plane"></i> ลองส่ง
+                  </button>
+                </div>
+                <div id="testEmailResult" class="text-[11px] mt-1.5 hidden"></div>
+              </div>
+            </div>
+          `,
+          showCancelButton: true,
+          confirmButtonText: '<i class="fa-solid fa-floppy-disk mr-1"></i> บันทึกการตั้งค่า',
+          cancelButtonText: 'ปิดหน้าต่าง',
+          confirmButtonColor: '#4338ca',
+          preConfirm: async () => {
+            const user = document.getElementById('modalSmtpUser')?.value.trim();
+            const pass = document.getElementById('modalSmtpPass')?.value.trim();
+            const host = document.getElementById('modalSmtpHost')?.value.trim() || 'smtp.gmail.com';
+            const port = document.getElementById('modalSmtpPort')?.value.trim() || '465';
+
+            if (!user) {
+              Swal.showValidationMessage('กรุณาระบุอีเมลผู้ส่ง');
+              return false;
+            }
+
+            try {
+              const saveRes = await fetch(API_BASE + '/api/admin/settings', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                  pin: adminTokenPin,
+                  settings: {
+                    SmtpUser: user,
+                    SmtpPass: pass,
+                    SmtpHost: host,
+                    SmtpPort: port
+                  }
+                })
+              });
+              const saveJson = await saveRes.json();
+              if (!saveJson.success) {
+                Swal.showValidationMessage(saveJson.message || 'บันทึกไม่สำเร็จ');
+                return false;
+              }
+              return true;
+            } catch (err) {
+              Swal.showValidationMessage('เกิดข้อผิดพลาด: ' + err.message);
+              return false;
+            }
+          }
+        }).then(result => {
+          if (result.isConfirmed) {
+            Swal.fire('บันทึกสำเร็จ', 'อัปเดตข้อมูลอีเมลผู้ส่งเรียบร้อยแล้ว', 'success');
+          }
+        });
+      } catch (err) {
+        Swal.fire('ข้อผิดพลาด', err.message, 'error');
+      }
+    }
+
+    function togglePassVisibility(inputId, btn) {
+      const inp = document.getElementById(inputId);
+      if (!inp) return;
+      if (inp.type === 'password') {
+        inp.type = 'text';
+        btn.innerHTML = '<i class="fa-solid fa-eye-slash text-xs"></i>';
+      } else {
+        inp.type = 'password';
+        btn.innerHTML = '<i class="fa-solid fa-eye text-xs"></i>';
+      }
+    }
+
+    async function executeTestEmailSend() {
+      const to = document.getElementById('modalTestEmailInput')?.value.trim();
+      const resBox = document.getElementById('testEmailResult');
+      const btn = document.getElementById('btnTestEmail');
+      if (!to || !to.includes('@')) {
+        if (resBox) {
+          resBox.className = 'text-[11px] mt-1.5 text-rose-600 block';
+          resBox.innerText = '❌ กรุณากรอกอีเมลปลายทางให้ถูกต้อง';
+        }
+        return;
+      }
+
+      if (btn) btn.disabled = true;
+      if (resBox) {
+        resBox.className = 'text-[11px] mt-1.5 text-slate-500 block';
+        resBox.innerText = '⏳ กำลังส่งอีเมลทดสอบ...';
+      }
+
+      try {
+        const res = await fetch(API_BASE + '/api/admin/email/test', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            pin: adminTokenPin,
+            to: to
+          })
+        });
+        const data = await res.json();
+        if (data.success) {
+          if (resBox) {
+            resBox.className = 'text-[11px] mt-1.5 text-emerald-600 font-semibold block';
+            resBox.innerText = '✔ ' + data.message;
+          }
+        } else {
+          if (resBox) {
+            resBox.className = 'text-[11px] mt-1.5 text-rose-600 block';
+            resBox.innerText = '❌ ' + (data.message || 'ส่งไม่สำเร็จ');
+          }
+        }
+      } catch (err) {
+        if (resBox) {
+          resBox.className = 'text-[11px] mt-1.5 text-rose-600 block';
+          resBox.innerText = '❌ เกิดข้อผิดพลาด: ' + err.message;
+        }
+      } finally {
+        if (btn) btn.disabled = false;
       }
     }
 

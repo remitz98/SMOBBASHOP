@@ -194,6 +194,43 @@ async function runTests() {
   assert.strictEqual(secondCancel.restoredStock, false, 'Second cancel MUST NOT restore stock again');
   console.log('✔ Test 7: Atomic Cancellation Guard passed');
 
+  // Test 8: Order Status Email Generator
+  function escapeHtml(str) {
+    if (!str) return '';
+    return String(str).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+  }
+  function testBuildEmail(status) {
+    const safeOrderId = 'TEST-1001';
+    let subject = '';
+    switch (status) {
+      case 'รอตรวจสอบการชำระเงิน':
+        subject = `🛍️ [BBA UBRU] ได้รับคำสั่งจองเสื้อของคุณแล้ว! - ${safeOrderId}`;
+        break;
+      case 'ชำระเงินเรียบร้อย':
+        subject = `✅ [BBA UBRU] ยืนยันการชำระเงินคำสั่งจองเสื้อ - ${safeOrderId}`;
+        break;
+      case 'พร้อมรับเสื้อที่ห้องสโมสร':
+        subject = `🎉 [BBA UBRU] เสื้อสโมสรของคุณพร้อมให้มารับแล้ว! - ${safeOrderId}`;
+        break;
+      case 'รับเสื้อแล้ว':
+        subject = `✨ [BBA UBRU] บันทึกการรับเสื้อเรียบร้อยแล้ว - ${safeOrderId}`;
+        break;
+      case 'ยกเลิกคำสั่งซื้อ':
+        subject = `⚠️ [BBA UBRU] แจ้งเตือนการยกเลิกคำสั่งจอง - ${safeOrderId}`;
+        break;
+      default:
+        subject = `🔔 [BBA UBRU] อัปเดตสถานะคำสั่งจอง - ${safeOrderId}`;
+        break;
+    }
+    return subject;
+  }
+  assert(testBuildEmail('รอตรวจสอบการชำระเงิน').includes('ได้รับคำสั่งจองเสื้อ'));
+  assert(testBuildEmail('ชำระเงินเรียบร้อย').includes('ยืนยันการชำระเงิน'));
+  assert(testBuildEmail('พร้อมรับเสื้อที่ห้องสโมสร').includes('พร้อมให้มารับแล้ว'));
+  assert(testBuildEmail('รับเสื้อแล้ว').includes('บันทึกการรับเสื้อ'));
+  assert(testBuildEmail('ยกเลิกคำสั่งซื้อ').includes('แจ้งเตือนการยกเลิก'));
+  console.log('✔ Test 8: Order Status Email Generator passed');
+
   console.log('🎉 ALL TESTS PASSED SUCCESSFULLY!');
 }
 

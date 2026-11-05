@@ -134,39 +134,120 @@ async function restoreOrderStock(db, itemsJson, batchOps) {
   }
 }
 
-function buildReadyPickupEmailHtml({
+function buildOrderStatusEmailHtml({
   name,
   studentId,
   orderId,
   itemsSummary,
   total,
+  status,
   pickupLocation,
-  clubSchedule
+  clubSchedule,
+  adminNotes
 }) {
   const safeName = escapeHtml(name || 'นักศึกษา');
   const safeStudentId = escapeHtml(studentId || '-');
-  const safeOrderId = escapeHtml(orderId);
+  const safeOrderId = escapeHtml(orderId || '-');
   const safePickup = escapeHtml(pickupLocation || 'ห้องสโมสรนักศึกษา คณะบริหารธุรกิจและการจัดการ มรภ.อุบลฯ');
   const safeSchedule = escapeHtml(clubSchedule || 'วันจันทร์ - ศุกร์ เวลา 09:00 - 16:30 น.');
-  const safeItemsSummary = escapeHtml(itemsSummary).replace(/\n/g, '<br>');
+  const safeItemsSummary = escapeHtml(itemsSummary || '-').replace(/\n/g, '<br>');
   const safeTotal = Number(total || 0).toLocaleString();
+  const safeNotes = adminNotes ? escapeHtml(adminNotes) : '';
 
-  const badgeColor = '#059669';
-  const badgeText = 'พร้อมรับเสื้อที่ห้องสโมสร';
-  const headline = 'เสื้อสโมสร BBA UBRU ของคุณพร้อมให้มารับแล้ว!';
-  const description = 'ข่าวดี! เสื้อสโมสรนักศึกษาที่คุณสั่งจองไว้พร้อมให้มารับแล้ว สามารถเดินทางมารับเสื้อได้ที่ห้องสโมสรนักศึกษา คณะบริหารธุรกิจและการจัดการ ตามรายละเอียดด้านล่างนี้ได้เลยครับ/ค่ะ';
-  const highlightBox = `
-    <div style="background-color: #ecfdf5; border: 2px solid #a7f3d0; border-radius: 12px; padding: 16px; margin: 20px 0;">
-      <h4 style="color: #065f46; margin-top: 0; margin-bottom: 8px; font-size: 15px;">📍 ข้อมูลจุดรับเสื้อ:</h4>
-      <p style="margin: 4px 0; color: #047857; font-size: 13px;"><b>สถานที่:</b> ${safePickup}</p>
-      <p style="margin: 4px 0; color: #047857; font-size: 13px;"><b>เวลาทำการ:</b> ${safeSchedule}</p>
-      <p style="margin: 8px 0 0 0; color: #065f46; font-size: 12px; font-weight: bold;">
-        * กรุณานำบัตรประจำตัวนักศึกษา หรือแสดงอีเมลนี้ต่อกรรมการสโมสรเพื่อรับเสื้อ
-      </p>
-    </div>
-  `;
+  let badgeColor = '#6366f1';
+  let badgeText = status || 'รอตรวจสอบการชำระเงิน';
+  let headline = 'อัปเดตสถานะคำสั่งจองเสื้อสโมสร BBA UBRU';
+  let description = `คำสั่งจอง ${safeOrderId} ของคุณได้รับการอัปเดตสถานะเป็น "${escapeHtml(badgeText)}" เรียบร้อยแล้ว`;
+  let highlightBox = '';
+  let subject = `🔔 [BBA UBRU] อัปเดตสถานะคำสั่งจอง (${badgeText}) - ${safeOrderId}`;
 
-  return `<!DOCTYPE html>
+  switch (status) {
+    case 'รอตรวจสอบการชำระเงิน':
+      badgeColor = '#d97706';
+      badgeText = 'รอตรวจสอบการชำระเงิน';
+      headline = 'ได้รับคำสั่งจองเสื้อสโมสร BBA UBRU เรียบร้อยแล้ว!';
+      description = 'สโมสรนักศึกษาได้รับคำสั่งจองและหลักฐานการชำระเงินของคุณแล้ว กำลังอยู่ในระหว่างการตรวจสอบสลิปและข้อมูลคำสั่งจอง';
+      highlightBox = `
+        <div style="background-color: #fffbeb; border: 2px solid #fde68a; border-radius: 12px; padding: 16px; margin: 20px 0;">
+          <h4 style="color: #92400e; margin-top: 0; margin-bottom: 8px; font-size: 15px;">⏳ คำสั่งจองอยู่ระหว่างรอตรวจสอบ</h4>
+          <p style="margin: 4px 0; color: #b45309; font-size: 13px;">เมื่อแอดมินตรวจสอบยอดเงินและสลิปเรียบร้อยแล้ว ระบบจะส่งอีเมลแจ้งเตือนการยืนยันยอดชำระเงินให้ทราบในลำดับถัดไปครับ/ค่ะ</p>
+        </div>
+      `;
+      subject = `🛍️ [BBA UBRU] ได้รับคำสั่งจองเสื้อของคุณแล้ว! - ${safeOrderId}`;
+      break;
+
+    case 'ชำระเงินเรียบร้อย':
+      badgeColor = '#0284c7';
+      badgeText = 'ชำระเงินเรียบร้อย';
+      headline = 'การชำระเงินของคุณได้รับการยืนยันเรียบร้อยแล้ว!';
+      description = 'สโมสรนักศึกษาได้ตรวจสอบสลิปและยืนยันยอดเงินคำสั่งซื้อของคุณเรียบร้อยแล้ว ขณะนี้อยู่ในขั้นตอนจัดเตรียมสินค้าตามรอบ';
+      highlightBox = `
+        <div style="background-color: #f0f9ff; border: 2px solid #bae6fd; border-radius: 12px; padding: 16px; margin: 20px 0;">
+          <h4 style="color: #0369a1; margin-top: 0; margin-bottom: 8px; font-size: 15px;">✅ ยืนยันการชำระเงินสำเร็จ</h4>
+          <p style="margin: 4px 0; color: #0284c7; font-size: 13px;">เมื่อเสื้อสโมสรพร้อมรับที่ห้องสโมสรนักศึกษา ระบบจะส่งอีเมลแจ้งจุดนัดรับเสื้อและช่วงเวลาเปิดรับให้ทราบทันทีครับ/ค่ะ</p>
+        </div>
+      `;
+      subject = `✅ [BBA UBRU] ยืนยันการชำระเงินคำสั่งจองเสื้อ - ${safeOrderId}`;
+      break;
+
+    case 'พร้อมรับเสื้อที่ห้องสโมสร':
+      badgeColor = '#059669';
+      badgeText = 'พร้อมรับเสื้อที่ห้องสโมสร';
+      headline = 'เสื้อสโมสร BBA UBRU ของคุณพร้อมให้มารับแล้ว!';
+      description = 'ข่าวดี! เสื้อสโมสรนักศึกษาที่คุณสั่งจองไว้พร้อมให้มารับแล้ว สามารถเดินทางมารับเสื้อได้ที่ห้องสโมสรนักศึกษา คณะบริหารธุรกิจและการจัดการ ตามรายละเอียดด้านล่างนี้ได้เลยครับ/ค่ะ';
+      highlightBox = `
+        <div style="background-color: #ecfdf5; border: 2px solid #a7f3d0; border-radius: 12px; padding: 16px; margin: 20px 0;">
+          <h4 style="color: #065f46; margin-top: 0; margin-bottom: 8px; font-size: 15px;">📍 ข้อมูลจุดรับเสื้อ:</h4>
+          <p style="margin: 4px 0; color: #047857; font-size: 13px;"><b>สถานที่:</b> ${safePickup}</p>
+          <p style="margin: 4px 0; color: #047857; font-size: 13px;"><b>เวลาทำการ:</b> ${safeSchedule}</p>
+          <p style="margin: 8px 0 0 0; color: #065f46; font-size: 12px; font-weight: bold;">
+            * กรุณานำบัตรประจำตัวนักศึกษา หรือแสดงหน้าใบเสร็จ/QR Code ในแอปต่อกรรมการสโมสรเพื่อรับเสื้อ
+          </p>
+        </div>
+      `;
+      subject = `🎉 [BBA UBRU] เสื้อสโมสรของคุณพร้อมให้มารับแล้ว! - ${safeOrderId}`;
+      break;
+
+    case 'รับเสื้อแล้ว':
+      badgeColor = '#4338ca';
+      badgeText = 'รับเสื้อแล้ว';
+      headline = 'บันทึกการส่งมอบเสื้อสโมสรเรียบร้อยแล้ว!';
+      description = `สโมสรนักศึกษาได้ทำการบันทึกการส่งมอบเสื้อตามคำสั่งจอง ${safeOrderId} เสร็จสมบูรณ์แล้ว ขอขอบคุณที่ร่วมสนับสนุนกิจกรรมของสโมสรนักศึกษา คณะบริหารธุรกิจและการจัดการ มรภ.อุบลฯ ครับ/ค่ะ`;
+      highlightBox = `
+        <div style="background-color: #eef2ff; border: 2px solid #c7d2fe; border-radius: 12px; padding: 16px; margin: 20px 0;">
+          <h4 style="color: #3730a3; margin-top: 0; margin-bottom: 8px; font-size: 15px;">✨ ได้รับเสื้อเรียบร้อยแล้ว</h4>
+          <p style="margin: 4px 0; color: #4338ca; font-size: 13px;">หากพบปัญหาเกี่ยวกับไซส์หรือตำหนิของเสื้อ กรุณาติดต่อกรรมการสโมสรได้ที่ห้องสโมสรนักศึกษา</p>
+        </div>
+      `;
+      subject = `✨ [BBA UBRU] บันทึกการรับเสื้อเรียบร้อยแล้ว - ${safeOrderId}`;
+      break;
+
+    case 'ยกเลิกคำสั่งซื้อ':
+      badgeColor = '#dc2626';
+      badgeText = 'ยกเลิกคำสั่งซื้อ';
+      headline = 'คำสั่งจองเสื้อของคุณถูกยกเลิก';
+      description = `คำสั่งจองเสื้อ ${safeOrderId} ได้ถูกยกเลิกแล้ว ${safeNotes ? `<br><b>หมายเหตุ:</b> ${safeNotes}` : ''}`;
+      highlightBox = `
+        <div style="background-color: #fef2f2; border: 2px solid #fecaca; border-radius: 12px; padding: 16px; margin: 20px 0;">
+          <h4 style="color: #991b1b; margin-top: 0; margin-bottom: 8px; font-size: 15px;">⚠️ คำสั่งจองถูกยกเลิก</h4>
+          <p style="margin: 4px 0; color: #b91c1c; font-size: 13px;">หากมีข้อสงสัยหรือต้องการสอบถามเพิ่มเติม สามารถติดต่อกรรมการสโมสรนักศึกษาได้โดยตรงครับ/ค่ะ</p>
+        </div>
+      `;
+      subject = `⚠️ [BBA UBRU] แจ้งเตือนการยกเลิกคำสั่งจอง - ${safeOrderId}`;
+      break;
+
+    default:
+      if (safeNotes) {
+        highlightBox = `
+          <div style="background-color: #f8fafc; border: 1px solid #cbd5e1; border-radius: 12px; padding: 14px; margin: 20px 0;">
+            <p style="margin: 0; color: #475569; font-size: 13px;"><b>หมายเหตุ:</b> ${safeNotes}</p>
+          </div>
+        `;
+      }
+      break;
+  }
+
+  const htmlBody = `<!DOCTYPE html>
 <html>
 <head><meta charset="utf-8"></head>
 <body style="font-family: 'Segoe UI', Tahoma, Arial, sans-serif; background-color: #f8fafc; margin: 0; padding: 24px; color: #1e293b;">
@@ -228,6 +309,12 @@ function buildReadyPickupEmailHtml({
   </div>
 </body>
 </html>`;
+
+  return { subject, htmlBody };
+}
+
+function buildReadyPickupEmailHtml(params) {
+  return buildOrderStatusEmailHtml({ ...params, status: 'พร้อมรับเสื้อที่ห้องสโมสร' }).htmlBody;
 }
 
 async function sendNotificationEmail(env, { to, subject, htmlBody }) {
@@ -1072,6 +1159,45 @@ app.post('/api/orders', async (c) => {
       console.error('Failed to trigger Admin FCM notification:', fcmErr);
     }
 
+    // ส่งอีเมลยืนยันการรับคำสั่งซื้อไปยังอีเมลนักศึกษา (Non-blocking)
+    if (studentEmail && studentEmail.includes('@')) {
+      const emailTask = async () => {
+        try {
+          const { results: setRows } = await db.prepare(
+            "SELECT key, value FROM settings WHERE key IN ('ClubLocation', 'ClubSchedule')"
+          ).all();
+          const settingsMap = Object.fromEntries(setRows.map(r => [r.key, r.value]));
+          const loc = pickupLocation || settingsMap.ClubLocation || 'ห้องสโมสรนักศึกษา คณะบริหารธุรกิจและการจัดการ มรภ.อุบลฯ';
+          const sch = settingsMap.ClubSchedule || 'วันจันทร์ - ศุกร์ เวลา 09:00 - 16:30 น.';
+
+          const { subject, htmlBody } = buildOrderStatusEmailHtml({
+            name: customerName,
+            studentId,
+            orderId,
+            itemsSummary,
+            total: calculatedTotal,
+            status: 'รอตรวจสอบการชำระเงิน',
+            pickupLocation: loc,
+            clubSchedule: sch
+          });
+
+          await sendNotificationEmail(c.env, {
+            to: studentEmail,
+            subject,
+            htmlBody
+          });
+        } catch (mailErr) {
+          console.error('[OrderEmail] Confirmation email error:', mailErr);
+        }
+      };
+
+      if (c.executionCtx && typeof c.executionCtx.waitUntil === 'function') {
+        c.executionCtx.waitUntil(emailTask());
+      } else {
+        emailTask();
+      }
+    }
+
     return c.json({
       success: true,
       message: 'บันทึกคำสั่งซื้อสำเร็จ',
@@ -1269,9 +1395,9 @@ app.post('/api/admin/orders/status', async (c) => {
 
     await db.batch(batchOps);
 
-    // ส่งอีเมลแจ้งเตือนนักศึกษาเมื่อเปลี่ยนสถานะเป็น 'พร้อมรับเสื้อที่ห้องสโมสร'
+    // ส่งอีเมลแจ้งเตือนนักศึกษาเมื่อเปลี่ยนสถานะคำสั่งซื้อ (ทุกสถานะ)
     let emailNotice = '';
-    if (newStatus === 'พร้อมรับเสื้อที่ห้องสโมสร' && notifyEmail !== false) {
+    if (notifyEmail !== false) {
       const studentEmail = String(order.student_email || '').trim();
       if (studentEmail && studentEmail.includes('@')) {
         try {
@@ -1283,15 +1409,16 @@ app.post('/api/admin/orders/status', async (c) => {
           const pickupLocation = order.pickup_location || settingsMap.ClubLocation || 'ห้องสโมสรนักศึกษา คณะบริหารธุรกิจและการจัดการ มรภ.อุบลฯ';
           const clubSchedule = settingsMap.ClubSchedule || 'วันจันทร์ - ศุกร์ เวลา 09:00 - 16:30 น.';
 
-          const subject = `🎉 [BBA UBRU] เสื้อสโมสรของคุณพร้อมให้มารับแล้ว! - ${order.order_id}`;
-          const htmlBody = buildReadyPickupEmailHtml({
+          const { subject, htmlBody } = buildOrderStatusEmailHtml({
             name: order.customer_name,
             studentId: order.student_id,
             orderId: order.order_id,
             itemsSummary: order.items_summary,
             total: order.total_amount,
+            status: newStatus,
             pickupLocation: pickupLocation,
-            clubSchedule: clubSchedule
+            clubSchedule: clubSchedule,
+            adminNotes: finalAdminNotes
           });
 
           const mailRes = await sendNotificationEmail(c.env, {
@@ -1301,7 +1428,7 @@ app.post('/api/admin/orders/status', async (c) => {
           });
 
           if (mailRes.success) {
-            emailNotice = `\n(ส่งอีเมลแจ้งพร้อมรับเสื้อไปยัง ${studentEmail} เรียบร้อยแล้ว)`;
+            emailNotice = `\n(ส่งอีเมลแจ้งสถานะ "${newStatus}" ไปยัง ${studentEmail} เรียบร้อยแล้ว)`;
           } else {
             emailNotice = `\n(บันทึกสถานะแล้ว แต่ยังส่งอีเมลไม่สำเร็จ: ${mailRes.reason})`;
           }
