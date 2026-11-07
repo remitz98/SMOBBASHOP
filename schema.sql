@@ -16,6 +16,7 @@ CREATE TABLE IF NOT EXISTS products (
   description TEXT NOT NULL DEFAULT '',
   status TEXT NOT NULL DEFAULT 'พร้อมจำหน่าย',
   size_guide TEXT NOT NULL DEFAULT '',
+  discount_tiers TEXT NOT NULL DEFAULT '[]',
   created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
   updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
 );

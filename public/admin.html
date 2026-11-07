@@ -1443,6 +1443,24 @@
                       class="w-full px-3.5 py-2 rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-indigo-500 text-xs"></textarea>
           </div>
 
+          <!-- Tiered Pricing / Bulk Discount -->
+          <div class="sm:col-span-2 p-3.5 bg-rose-50/70 border border-rose-200 rounded-xl">
+            <div class="flex items-center justify-between mb-1.5">
+              <label class="block text-rose-900 font-bold text-xs flex items-center gap-1.5">
+                <i class="fa-solid fa-tags text-rose-600"></i> โปรโมชั่นส่วนลดตามจำนวนสั่งซื้อ (Bulk Discount):
+              </label>
+              <button type="button" onclick="addAdminDiscountTierRow()" class="text-[11px] font-semibold text-rose-700 hover:text-rose-900 bg-white border border-rose-300 px-2.5 py-1 rounded-lg shadow-xs hover:bg-rose-50 transition">
+                <i class="fa-solid fa-plus text-[10px]"></i> เพิ่มขั้นส่วนลด
+              </button>
+            </div>
+            <p class="text-[10px] text-rose-600 mb-2 leading-relaxed">
+              * กำหนดส่วนลดเมื่อลูกค้าสั่งซื้อสินค้านี้ถึงจำนวนที่กำหนด (เช่น สั่งตั้งแต่ 2 ตัวขึ้นไป ลด 3%, สั่งตั้งแต่ 5 ตัวขึ้นไป ลด 10%)
+            </p>
+            <div id="adminDiscountTiersList" class="space-y-2">
+              <!-- Tier rows rendered here -->
+            </div>
+          </div>
+
           <div class="sm:col-span-2">
             <label class="block text-slate-700 font-semibold mb-1">คำอธิบายรายละเอียดสินค้า:</label>
             <textarea id="prodFormDesc" rows="3" placeholder="ระบุเนื้อผ้า คุณสมบัติ หรือรายละเอียดของเสื้อ..." 
@@ -3497,6 +3515,44 @@
       adminDeleteProduct(pid, pname);
     }
 
+    function renderAdminDiscountTiers(tiers) {
+      const container = document.getElementById('adminDiscountTiersList');
+      if (!container) return;
+      container.innerHTML = '';
+      let list = tiers;
+      if (typeof list === 'string') {
+        try { list = JSON.parse(list); } catch (e) { list = []; }
+      }
+      if (Array.isArray(list) && list.length > 0) {
+        list.forEach(t => addAdminDiscountTierRow(t.minQty, t.discountPercent));
+      } else {
+        container.innerHTML = '<div class="text-[11px] text-slate-400 italic py-1" id="noDiscountTierNotice">ยังไม่มีการกำหนดส่วนลดตามจำนวน</div>';
+      }
+    }
+
+    function addAdminDiscountTierRow(minQty = '', discountPercent = '') {
+      const container = document.getElementById('adminDiscountTiersList');
+      if (!container) return;
+      const notice = document.getElementById('noDiscountTierNotice');
+      if (notice) notice.remove();
+
+      const row = document.createElement('div');
+      row.className = 'discount-tier-row flex items-center gap-2 bg-white p-2 rounded-lg border border-rose-200 text-xs shadow-2xs';
+      row.innerHTML = `
+        <span class="text-slate-600 font-medium">สั่งตั้งแต่</span>
+        <input type="number" min="1" max="999" placeholder="2" value="${minQty !== undefined ? minQty : ''}" class="tier-min-qty w-16 p-1.5 border border-slate-300 rounded-lg text-center font-bold text-slate-800 focus:ring-1 focus:ring-rose-500">
+        <span class="text-slate-600 font-medium">ตัวขึ้นไป</span>
+        <span class="text-slate-300">|</span>
+        <span class="text-slate-600 font-medium">ลด</span>
+        <input type="number" min="0.1" max="100" step="0.5" placeholder="3" value="${discountPercent !== undefined ? discountPercent : ''}" class="tier-discount-pct w-16 p-1.5 border border-slate-300 rounded-lg text-center font-bold text-rose-600 focus:ring-1 focus:ring-rose-500">
+        <span class="text-slate-600 font-bold">%</span>
+        <button type="button" onclick="this.closest('.discount-tier-row').remove(); if(document.querySelectorAll('.discount-tier-row').length===0) renderAdminDiscountTiers([]);" class="ml-auto text-slate-400 hover:text-rose-600 p-1 text-xs">
+          <i class="fa-solid fa-trash-can"></i>
+        </button>
+      `;
+      container.appendChild(row);
+    }
+
     function openAddProductModal() {
       document.getElementById('prodFormMode').value = 'add';
       document.getElementById('adminProductModalTitle').textContent = 'เพิ่มสินค้าใหม่เข้าระบบ';
@@ -3515,6 +3571,8 @@
       document.getElementById('prodFormStatus').value = 'พร้อมจำหน่าย';
       const sgEl = document.getElementById('prodFormSizeGuide');
       if (sgEl) sgEl.value = '';
+
+      renderAdminDiscountTiers([]);
 
       currentFormSizeStock = { 'S': 20, 'M': 20, 'L': 20, 'XL': 20, '2XL': 10, '3XL': 10 };
       renderAdminSizeStockInputs();
@@ -3549,6 +3607,8 @@
       document.getElementById('prodFormStatus').value = p.status || 'พร้อมจำหน่าย';
       const sgEl = document.getElementById('prodFormSizeGuide');
       if (sgEl) sgEl.value = p.sizeGuide || '';
+
+      renderAdminDiscountTiers(p.discountTiers || []);
 
       currentFormSizeStock = {};
       const prodSizes = Array.isArray(p.sizes) ? p.sizes : String(p.sizes || '').split(',').map(s => s.trim()).filter(Boolean);
@@ -3618,6 +3678,17 @@
       });
       const calculatedTotalStock = Object.values(cleanSizeStock).reduce((acc, v) => acc + (Number(v) || 0), 0);
 
+      const tierRows = document.querySelectorAll('.discount-tier-row');
+      const discountTiers = [];
+      tierRows.forEach(row => {
+        const minQty = parseInt(row.querySelector('.tier-min-qty')?.value, 10);
+        const discountPercent = parseFloat(row.querySelector('.tier-discount-pct')?.value);
+        if (minQty > 0 && discountPercent > 0 && discountPercent <= 100) {
+          discountTiers.push({ minQty, discountPercent });
+        }
+      });
+      discountTiers.sort((a, b) => a.minQty - b.minQty);
+
       const payload = {
         pin: adminTokenPin,
         mode: mode,
@@ -3633,7 +3704,8 @@
         images: (typeof adminFormImages !== 'undefined' && Array.isArray(adminFormImages)) ? adminFormImages : [],
         description: description,
         status: status,
-        sizeGuide: sizeGuide
+        sizeGuide: sizeGuide,
+        discountTiers: discountTiers
       };
 
       const btn = document.getElementById('btnSaveAdminProd');

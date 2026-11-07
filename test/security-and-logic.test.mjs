@@ -231,6 +231,114 @@ async function runTests() {
   assert(testBuildEmail('ยกเลิกคำสั่งซื้อ').includes('แจ้งเตือนการยกเลิก'));
   console.log('✔ Test 8: Order Status Email Generator passed');
 
+  // Test 9: Tiered Pricing / Bulk Discount Calculation
+  function calculateTieredDiscount(items, dbProducts) {
+    const prodMap = new Map(dbProducts.map(p => [p.product_id, p]));
+    const productQtyMap = {};
+    const productSubtotalMap = {};
+    let grossTotal = 0;
+
+    for (const it of items) {
+      const prod = prodMap.get(it.productId);
+      if (!prod) continue;
+      const basePrice = Number(prod.price) || 0;
+      let extra = 0;
+      const sz = String(it.size || '').toUpperCase().trim();
+      if (sz === '2XL' || sz === 'XXL') extra = 20;
+      else if (sz === '3XL' || sz === 'XXXL') extra = 40;
+      const unitPrice = basePrice + extra;
+      const subtotal = unitPrice * it.qty;
+      grossTotal += subtotal;
+
+      productQtyMap[it.productId] = (productQtyMap[it.productId] || 0) + it.qty;
+      productSubtotalMap[it.productId] = (productSubtotalMap[it.productId] || 0) + subtotal;
+    }
+
+    let totalDiscount = 0;
+    for (const [pid, totalQty] of Object.entries(productQtyMap)) {
+      const prod = prodMap.get(pid);
+      if (!prod || !prod.discount_tiers) continue;
+      let tiers = prod.discount_tiers;
+      if (typeof tiers === 'string') {
+        try { tiers = JSON.parse(tiers); } catch (e) { tiers = []; }
+      }
+      if (!Array.isArray(tiers) || tiers.length === 0) continue;
+
+      let bestTier = null;
+      for (const t of tiers) {
+        const minQ = Number(t.minQty);
+        const pct = Number(t.discountPercent);
+        if (minQ > 0 && pct > 0 && pct <= 100 && totalQty >= minQ) {
+          if (!bestTier || minQ > bestTier.minQty) {
+            bestTier = { minQty: minQ, discountPercent: pct };
+          }
+        }
+      }
+
+      if (bestTier) {
+        const pSubtotal = productSubtotalMap[pid] || 0;
+        const discountAmt = Math.round(pSubtotal * (bestTier.discountPercent / 100));
+        totalDiscount += discountAmt;
+      }
+    }
+
+    return { grossTotal, totalDiscount, netTotal: Math.max(0, grossTotal - totalDiscount) };
+  }
+
+  const tieredProducts = [
+    {
+      product_id: 'SHIRT-A',
+      price: 300,
+      sizes: 'S, M, L, XL, 2XL',
+      discount_tiers: JSON.stringify([
+        { minQty: 2, discountPercent: 3 },
+        { minQty: 5, discountPercent: 10 }
+      ])
+    },
+    {
+      product_id: 'SHIRT-B',
+      price: 200,
+      sizes: 'S, M, L',
+      discount_tiers: '[]'
+    }
+  ];
+
+  // Case 9.1: 1 item of SHIRT-A -> no discount
+  const singleItem = [{ productId: 'SHIRT-A', qty: 1, size: 'M' }];
+  const res1 = calculateTieredDiscount(singleItem, tieredProducts);
+  assert.strictEqual(res1.grossTotal, 300);
+  assert.strictEqual(res1.totalDiscount, 0);
+  assert.strictEqual(res1.netTotal, 300);
+
+  // Case 9.2: 2 items of SHIRT-A (M + L) -> 3% off (300*2 = 600, 3% = 18 discount)
+  const twoItems = [
+    { productId: 'SHIRT-A', qty: 1, size: 'M' },
+    { productId: 'SHIRT-A', qty: 1, size: 'L' }
+  ];
+  const res2 = calculateTieredDiscount(twoItems, tieredProducts);
+  assert.strictEqual(res2.grossTotal, 600);
+  assert.strictEqual(res2.totalDiscount, 18); // 600 * 3%
+  assert.strictEqual(res2.netTotal, 582);
+
+  // Case 9.3: 5 items of SHIRT-A -> 10% off (300*5 = 1500, 10% = 150 discount)
+  const fiveItems = [{ productId: 'SHIRT-A', qty: 5, size: 'XL' }];
+  const res3 = calculateTieredDiscount(fiveItems, tieredProducts);
+  assert.strictEqual(res3.grossTotal, 1500);
+  assert.strictEqual(res3.totalDiscount, 150);
+  assert.strictEqual(res3.netTotal, 1350);
+
+  // Case 9.4: SHIRT-A (2 items) + SHIRT-B (1 item) -> only SHIRT-A gets 3% discount
+  const mixedCart = [
+    { productId: 'SHIRT-A', qty: 2, size: 'M' }, // 600 * 3% = 18
+    { productId: 'SHIRT-B', qty: 1, size: 'M' }  // 200 * 0% = 0
+  ];
+  const res4 = calculateTieredDiscount(mixedCart, tieredProducts);
+  assert.strictEqual(res4.grossTotal, 800);
+  assert.strictEqual(res4.totalDiscount, 18);
+  assert.strictEqual(res4.netTotal, 782);
+
+  console.log('✔ Test 9: Tiered Pricing / Bulk Discount Calculation passed');
+
   console.log('🎉 ALL TESTS PASSED SUCCESSFULLY!');
 }
 

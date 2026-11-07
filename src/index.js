@@ -699,6 +699,10 @@ app.get('/api/store', async (c) => {
       let sizeStock = {};
       try { sizeStock = JSON.parse(p.size_stock || '{}'); } catch (e) {}
 
+      let discountTiers = [];
+      try { discountTiers = JSON.parse(p.discount_tiers || '[]'); } catch (e) {}
+      if (!Array.isArray(discountTiers)) discountTiers = [];
+
       return {
         productId: p.product_id,
         name: p.name,
@@ -711,7 +715,8 @@ app.get('/api/store', async (c) => {
         imageUrl: p.image_url || 'https://placehold.co/400x500?text=BBA+Shirt',
         description: p.description || '',
         status: p.status || 'พร้อมจำหน่าย',
-        sizeGuide: p.size_guide || ''
+        sizeGuide: p.size_guide || '',
+        discountTiers: discountTiers
       };
     });
 
@@ -961,6 +966,8 @@ app.post('/api/orders', async (c) => {
     // คำนวณยอดเงินรวม (ดึงราคาจากฐานข้อมูลเสมอ ห้ามเชื่อราคาจากเบราว์เซอร์)
     let calculatedTotal = 0;
     const itemsSummaryArr = [];
+    const productQuantities = {};
+    const productSubtotals = {};
 
     items.forEach(it => {
       const prod = prodMap.get(it.productId);
@@ -977,11 +984,42 @@ app.post('/api/orders', async (c) => {
       const unitPrice = basePrice + extraPrice;
       it.price = unitPrice;
       const subtotal = unitPrice * it.qty;
-      calculatedTotal += subtotal;
+
+      productQuantities[it.productId] = (productQuantities[it.productId] || 0) + it.qty;
+      productSubtotals[it.productId] = (productSubtotals[it.productId] || 0) + subtotal;
 
       const prodName = prod ? prod.name : it.name;
       itemsSummaryArr.push(`${prodName} [ไซส์ ${it.size}, สี ${it.color}] x ${it.qty}`);
     });
+
+    const grossTotal = Object.values(productSubtotals).reduce((sum, v) => sum + v, 0);
+    let totalDiscount = 0;
+
+    // คำนวณส่วนลดโปรโมชั่นตามจำนวนสั่งซื้อ (Tiered Pricing / Bulk Discount)
+    for (const [pId, totalQty] of Object.entries(productQuantities)) {
+      const prod = prodMap.get(pId);
+      if (!prod) continue;
+      let tiers = [];
+      try { tiers = JSON.parse(prod.discount_tiers || '[]'); } catch (e) {}
+      if (!Array.isArray(tiers) || tiers.length === 0) continue;
+
+      const validTiers = tiers
+        .filter(t => Number(t.minQty) > 0 && Number(t.discountPercent) > 0 && Number(t.discountPercent) <= 100)
+        .sort((a, b) => Number(b.minQty) - Number(a.minQty));
+
+      const matchedTier = validTiers.find(t => totalQty >= Number(t.minQty));
+      if (matchedTier) {
+        const pct = Number(matchedTier.discountPercent);
+        const pSubtotal = productSubtotals[pId] || 0;
+        const discountAmt = Math.round(pSubtotal * (pct / 100));
+        totalDiscount += discountAmt;
+      }
+    }
+
+    calculatedTotal = Math.max(0, grossTotal - totalDiscount);
+    if (totalDiscount > 0) {
+      itemsSummaryArr.push(`(ส่วนลดโปรโมชั่น -฿${totalDiscount.toLocaleString()})`);
+    }
 
     const itemsSummary = itemsSummaryArr.join(', ');
     const paymentId = `PAY-${orderId}`;
@@ -1304,6 +1342,9 @@ app.post('/api/admin/data', async (c) => {
       products: products.map(p => {
         let sizeStock = {};
         try { sizeStock = JSON.parse(p.size_stock || '{}'); } catch (e) {}
+        let discountTiers = [];
+        try { discountTiers = JSON.parse(p.discount_tiers || '[]'); } catch (e) {}
+        if (!Array.isArray(discountTiers)) discountTiers = [];
         return {
           productId: p.product_id,
           name: p.name,
@@ -1316,7 +1357,8 @@ app.post('/api/admin/data', async (c) => {
           imageUrl: p.image_url,
           description: p.description,
           status: p.status,
-          sizeGuide: p.size_guide
+          sizeGuide: p.size_guide,
+          discountTiers: discountTiers
         };
       }),
       categories: categories.map(c => c.name)
@@ -1645,19 +1687,33 @@ app.post('/api/admin/products', async (c) => {
     let imageUrl = imageUrlArr.filter(Boolean).join(' ||| ');
     if (!imageUrl) imageUrl = 'https://placehold.co/400x500?text=BBA+Shirt';
 
+    let discountTiersStr = '[]';
+    if (body.discountTiers !== undefined) {
+      if (typeof body.discountTiers === 'string') {
+        try {
+          const parsed = JSON.parse(body.discountTiers);
+          discountTiersStr = Array.isArray(parsed) ? JSON.stringify(parsed) : '[]';
+        } catch (e) {
+          discountTiersStr = '[]';
+        }
+      } else if (Array.isArray(body.discountTiers)) {
+        discountTiersStr = JSON.stringify(body.discountTiers);
+      }
+    }
+
     if (mode === 'add') {
       await db.prepare(`
-        INSERT INTO products (product_id, name, category, price, sizes, colors, stock, size_stock, image_url, description, status, size_guide)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-      `).bind(productId, name, category, price, sizes, colors, stock, sizeStock, imageUrl, description, status, sizeGuide).run();
+        INSERT INTO products (product_id, name, category, price, sizes, colors, stock, size_stock, image_url, description, status, size_guide, discount_tiers)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      `).bind(productId, name, category, price, sizes, colors, stock, sizeStock, imageUrl, description, status, sizeGuide, discountTiersStr).run();
 
       return c.json({ success: true, message: `เพิ่มสินค้า ${name} (${productId}) สำเร็จ` });
     } else {
       await db.prepare(`
         UPDATE products
-        SET name = ?, category = ?, price = ?, sizes = ?, colors = ?, stock = ?, size_stock = ?, image_url = ?, description = ?, status = ?, size_guide = ?, updated_at = CURRENT_TIMESTAMP
+        SET name = ?, category = ?, price = ?, sizes = ?, colors = ?, stock = ?, size_stock = ?, image_url = ?, description = ?, status = ?, size_guide = ?, discount_tiers = ?, updated_at = CURRENT_TIMESTAMP
         WHERE product_id = ?
-      `).bind(name, category, price, sizes, colors, stock, sizeStock, imageUrl, description, status, sizeGuide, productId).run();
+      `).bind(name, category, price, sizes, colors, stock, sizeStock, imageUrl, description, status, sizeGuide, discountTiersStr, productId).run();
 
       return c.json({ success: true, message: `บันทึกข้อมูลสินค้า ${name} สำเร็จ` });
     }

@@ -1388,6 +1388,14 @@
               <p id="modalProductDesc" class="text-xs sm:text-sm text-slate-500 mt-1.5 leading-relaxed"></p>
               <div class="text-2xl sm:text-3xl font-extrabold text-indigo-700 mt-2" id="modalProductPrice"></div>
 
+              <!-- Discount Tiers Promo Box -->
+              <div id="modalDiscountTiersBox" class="hidden mt-2.5 p-3 bg-rose-50/80 border border-rose-200 rounded-xl text-xs text-rose-950">
+                <div class="font-bold text-rose-800 mb-1 flex items-center gap-1.5">
+                  <i class="fa-solid fa-tags text-rose-600"></i> โปรโมชั่นส่วนลดพิเศษตามจำนวน:
+                </div>
+                <div class="text-rose-900 text-[11px] leading-relaxed" id="modalDiscountTiersText"></div>
+              </div>
+
               <!-- Pickup info card -->
               <div class="mt-3 p-3 bg-indigo-50/70 border border-indigo-100 rounded-xl text-xs text-indigo-950 flex items-start gap-2">
                 <i class="fa-solid fa-location-dot text-indigo-600 mt-0.5 text-xs"></i>
@@ -1540,7 +1548,12 @@
           </div>
         </div>
 
-        <div class="flex justify-between text-base font-bold text-slate-900 pt-2 border-t border-slate-200">
+        <div id="cartDiscountRow" class="hidden flex justify-between items-center text-xs text-rose-600 font-semibold bg-rose-50/80 px-2.5 py-1.5 rounded-lg border border-rose-100">
+          <span><i class="fa-solid fa-tags text-[11px] mr-1"></i> ส่วนลดโปรโมชั่น:</span>
+          <span id="cartDiscountAmount">-฿0</span>
+        </div>
+
+        <div class="flex justify-between text-base font-bold text-slate-900 pt-1 border-t border-slate-200">
           <span>ยอดรวมสุทธิ:</span>
           <span id="cartTotal" class="text-xl text-indigo-700 font-extrabold">฿0</span>
         </div>
@@ -1574,6 +1587,7 @@
           <div>
             <div class="text-xs text-slate-500">ยอดที่ต้องชำระ:</div>
             <div id="checkoutSummaryItems" class="text-xs text-slate-700 font-medium"></div>
+            <div id="checkoutDiscountDetail" class="text-[11px] text-emerald-600 font-semibold mt-0.5 hidden"></div>
           </div>
           <div class="text-right">
             <span class="text-xs text-slate-400 block">ยอดรวมสุทธิ</span>
@@ -2839,10 +2853,23 @@
           btnHtml = '<button onclick="openProductModal(\'' + safeId + '\')" class="px-3 py-1.5 rounded-xl text-xs font-semibold bg-slate-900 text-white hover:bg-indigo-700 transition flex items-center gap-1 shadow-sm"><i class="fa-solid fa-shirt text-[11px]"></i> เลือกจอง</button>';
         }
 
+        let promoBadge = '';
+        let tiers = p.discountTiers;
+        if (typeof tiers === 'string') {
+          try { tiers = JSON.parse(tiers); } catch (e) { tiers = []; }
+        }
+        if (Array.isArray(tiers) && tiers.length > 0) {
+          const maxPct = Math.max(0, ...tiers.map(t => Number(t.discountPercent) || 0));
+          if (maxPct > 0) {
+            promoBadge = '<span class="absolute bottom-2.5 left-2.5 px-2 py-0.5 rounded-md text-[10px] font-bold bg-rose-600/95 backdrop-blur text-white shadow-sm flex items-center gap-1 z-10"><i class="fa-solid fa-tags text-[9px]"></i> ซื้อหลายตัวลดสูงสุด ' + maxPct + '%</span>';
+          }
+        }
+
         return '<div class="bg-white rounded-2xl overflow-hidden border border-slate-200 shadow-sm hover:shadow-md transition flex flex-col group">' +
           '<div class="relative overflow-hidden aspect-[4/5] bg-slate-100 cursor-pointer" onclick="openProductModal(\'' + safeId + '\')">' +
             '<img loading="lazy" decoding="async" src="' + cardImg + '" alt="' + safeName + '" class="w-full h-full object-cover group-hover:scale-105 transition duration-300" onerror="this.onerror=null; this.src=\'https://placehold.co/400x500?text=BBA+Shirt\';">' +
             '<span class="product-category-badge absolute top-2.5 left-2.5 px-2 py-0.5 rounded-md text-[11px] font-semibold bg-white/90 backdrop-blur text-slate-800 shadow-sm">' + safeCat + '</span>' +
+            promoBadge +
             overlayBadge +
           '</div>' +
           '<div class="p-3.5 sm:p-4 flex flex-col flex-1 justify-between">' +
@@ -2960,6 +2987,27 @@
       document.getElementById('modalProductTitle').textContent = p.name;
       document.getElementById('modalProductDesc').textContent = p.description;
       updateModalPrice();
+
+      const tiersBox = document.getElementById('modalDiscountTiersBox');
+      const tiersText = document.getElementById('modalDiscountTiersText');
+      if (tiersBox && tiersText) {
+        let tiers = p.discountTiers;
+        if (typeof tiers === 'string') {
+          try { tiers = JSON.parse(tiers); } catch (e) { tiers = []; }
+        }
+        if (Array.isArray(tiers) && tiers.length > 0) {
+          const sorted = [...tiers].filter(t => Number(t.minQty) > 0 && Number(t.discountPercent) > 0).sort((a, b) => Number(a.minQty) - Number(b.minQty));
+          if (sorted.length > 0) {
+            const tierStrs = sorted.map(t => `สั่ง <b>${t.minQty}</b> ตัวขึ้นไป ลด <b>${t.discountPercent}%</b>`);
+            tiersText.innerHTML = tierStrs.join(' &nbsp;•&nbsp; ');
+            tiersBox.classList.remove('hidden');
+          } else {
+            tiersBox.classList.add('hidden');
+          }
+        } else {
+          tiersBox.classList.add('hidden');
+        }
+      }
 
       const sizeGuideBox = document.getElementById('modalSizeGuideBox');
       const sizeGuideContent = document.getElementById('modalSizeGuideContent');
@@ -3393,6 +3441,65 @@
       });
     }
 
+    function calculateCartDiscount(cartItems, productsList) {
+      if (!Array.isArray(cartItems) || cartItems.length === 0) {
+        return { grossTotal: 0, totalDiscount: 0, netTotal: 0, discountSummary: '' };
+      }
+      let grossTotal = 0;
+      const productQtyMap = {};
+      const productSubtotalMap = {};
+
+      for (const item of cartItems) {
+        const itemSub = Number(item.subtotal) || ((Number(item.price) || 0) * (Number(item.qty) || 1));
+        const itemQty = Number(item.qty) || 1;
+        grossTotal += itemSub;
+        const pid = item.productId;
+        productQtyMap[pid] = (productQtyMap[pid] || 0) + itemQty;
+        productSubtotalMap[pid] = (productSubtotalMap[pid] || 0) + itemSub;
+      }
+
+      let totalDiscount = 0;
+      const appliedDiscounts = [];
+
+      for (const pid of Object.keys(productQtyMap)) {
+        const prod = Array.isArray(productsList) ? productsList.find(p => p.productId === pid) : null;
+        if (!prod || !prod.discountTiers) continue;
+        let tiers = prod.discountTiers;
+        if (typeof tiers === 'string') {
+          try { tiers = JSON.parse(tiers); } catch (e) { tiers = []; }
+        }
+        if (!Array.isArray(tiers) || tiers.length === 0) continue;
+
+        const totalQty = productQtyMap[pid];
+        const pSubtotal = productSubtotalMap[pid];
+
+        let bestTier = null;
+        for (const t of tiers) {
+          const minQ = Number(t.minQty);
+          const pct = Number(t.discountPercent);
+          if (minQ > 0 && pct > 0 && pct <= 100 && totalQty >= minQ) {
+            if (!bestTier || minQ > bestTier.minQty) {
+              bestTier = { minQty: minQ, discountPercent: pct };
+            }
+          }
+        }
+
+        if (bestTier) {
+          const discountAmt = Math.round(pSubtotal * (bestTier.discountPercent / 100));
+          totalDiscount += discountAmt;
+          appliedDiscounts.push(`${prod.name || 'สินค้า'} สั่ง ${totalQty} ตัว ลด ${bestTier.discountPercent}% (-฿${discountAmt.toLocaleString()})`);
+        }
+      }
+
+      const netTotal = Math.max(0, grossTotal - totalDiscount);
+      return {
+        grossTotal,
+        totalDiscount,
+        netTotal,
+        discountSummary: appliedDiscounts.join(', ')
+      };
+    }
+
     function updateCartUI() {
       const badge = document.getElementById('cartCountBadge');
       const badgeMobile = document.getElementById('cartCountBadgeMobile');
@@ -3428,10 +3535,11 @@
         return;
       }
 
-      let grandTotal = 0;
+      const { grossTotal, totalDiscount, netTotal } = calculateCartDiscount(cart, allProducts);
+      const discountRow = document.getElementById('cartDiscountRow');
+      const discountEl = document.getElementById('cartDiscountAmount');
 
       container.innerHTML = cart.map((item, idx) => {
-        grandTotal += Number(item.subtotal) || 0;
         const safeName = escapeHtml(item.name);
         const safeSize = escapeHtml(item.size);
         const safeColor = escapeHtml(item.color);
@@ -3456,7 +3564,14 @@
         '</div>';
       }).join('');
 
-      totalEl.textContent = '฿' + grandTotal.toLocaleString();
+      if (totalDiscount > 0) {
+        if (discountRow) discountRow.classList.remove('hidden');
+        if (discountEl) discountEl.textContent = '-฿' + totalDiscount.toLocaleString();
+      } else {
+        if (discountRow) discountRow.classList.add('hidden');
+      }
+
+      totalEl.textContent = '฿' + netTotal.toLocaleString();
     }
 
     function updateCartItemQty(index, delta) {
@@ -3542,11 +3657,20 @@
 
       closeCartDrawer();
 
-      let grandTotal = cart.reduce((sum, item) => sum + (Number(item.subtotal) || 0), 0);
+      const { grossTotal, totalDiscount, netTotal, discountSummary } = calculateCartDiscount(cart, allProducts);
       const totalQty = cart.reduce((s, i) => s + (Number(i.qty) || 0), 0);
 
       document.getElementById('checkoutSummaryItems').textContent = cart.length + ' แบบเสื้อ (รวม ' + totalQty + ' ตัว)';
-      document.getElementById('checkoutTotalAmount').textContent = '฿' + grandTotal.toLocaleString();
+      const discDetailEl = document.getElementById('checkoutDiscountDetail');
+      if (totalDiscount > 0) {
+        if (discDetailEl) {
+          discDetailEl.textContent = 'โปรโมชั่น: ' + discountSummary + ' [ยอดเดิม ฿' + grossTotal.toLocaleString() + ']';
+          discDetailEl.classList.remove('hidden');
+        }
+      } else if (discDetailEl) {
+        discDetailEl.classList.add('hidden');
+      }
+      document.getElementById('checkoutTotalAmount').textContent = '฿' + netTotal.toLocaleString();
 
       document.getElementById('custStudentId').value = currentStudent.studentId || '';
       document.getElementById('custName').value = currentStudent.name || '';
@@ -3686,7 +3810,7 @@
       if (isSubmittingOrder) return;
       isSubmittingOrder = true;
 
-      const grandTotal = cart.reduce((sum, item) => sum + (Number(item.subtotal) || 0), 0);
+      const { netTotal: grandTotal } = calculateCartDiscount(cart, allProducts);
       const cartSnapshot = JSON.parse(JSON.stringify(cart));
 
       if (!currentOrderRequestId) {
