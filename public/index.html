@@ -1645,10 +1645,19 @@
           </h4>
 
           <div class="bg-indigo-50/70 border border-indigo-200 rounded-2xl p-4 flex flex-col sm:flex-row items-center gap-4">
-            <div class="text-center bg-white p-2.5 rounded-xl shadow-sm border border-indigo-100 shrink-0">
-              <img id="promptPayQrImg" src="" alt="PromptPay QR" class="w-36 h-36 mx-auto object-contain"
-                   onerror="this.classList.add('hidden');">
-              <span class="text-[10px] text-slate-400 block mt-1">สแกนจ่ายด้วย Mobile Banking</span>
+            <div onclick="openQrModal()" class="text-center bg-white p-2.5 rounded-xl shadow-sm border border-indigo-100 shrink-0 cursor-pointer group hover:border-indigo-300 hover:shadow-md transition relative" title="คลิกเพื่อขยายดู QR จอใหญ่">
+              <div class="relative overflow-hidden rounded-lg">
+                <img id="promptPayQrImg" src="" alt="PromptPay QR" class="w-36 h-36 mx-auto object-contain transition duration-200 group-hover:scale-105"
+                     onerror="this.classList.add('hidden');">
+                <div class="absolute inset-0 bg-slate-900/10 opacity-0 group-hover:opacity-100 transition flex items-center justify-center">
+                  <span class="bg-slate-900/80 text-white text-[10px] px-2 py-0.5 rounded-md shadow backdrop-blur flex items-center gap-1">
+                    <i class="fa-solid fa-expand text-[9px]"></i> ขยาย
+                  </span>
+                </div>
+              </div>
+              <span class="text-[11px] text-indigo-700 font-semibold block mt-1.5 flex items-center justify-center gap-1 group-hover:underline">
+                <i class="fa-solid fa-expand text-[10px]"></i> แตะดู QR จอใหญ่
+              </span>
             </div>
 
             <div class="space-y-2 text-center sm:text-left flex-1">
@@ -3744,6 +3753,48 @@
         position: 'top',
         timer: 1500,
         showConfirmButton: false
+      });
+    }
+
+    function openQrModal() {
+      const qrImg = document.getElementById('promptPayQrImg');
+      const qrSrc = (qrImg && qrImg.src) || 'https://i.postimg.cc/x87kMgRK/unnamed.jpg';
+      const ppNumber = document.getElementById('promptPayDisplay') ? document.getElementById('promptPayDisplay').textContent : (storeSettings.promptPay || '004999245434427');
+      const bankDetails = document.getElementById('bankDetailsDisplay') ? document.getElementById('bankDetailsDisplay').innerHTML : '';
+
+      Swal.fire({
+        title: 'QR Code ชำระเงิน (พร้อมเพย์)',
+        html: `
+          <div class="space-y-3 pt-2">
+            <div class="bg-white p-3 sm:p-4 rounded-2xl border border-slate-200 inline-block shadow-md max-w-full">
+              <img src="${qrSrc}" alt="PromptPay QR Code" class="w-64 h-64 sm:w-80 sm:h-80 mx-auto object-contain rounded-xl select-none">
+            </div>
+            <div class="text-xs text-slate-600 bg-slate-50 p-2.5 rounded-xl border border-slate-200/80">
+              <div class="font-semibold text-slate-800 mb-0.5">หมายเลขพร้อมเพย์สโมสร:</div>
+              <div class="font-mono text-base font-bold text-indigo-700 tracking-wider">${escapeHtml(ppNumber)}</div>
+              ${bankDetails ? `<div class="text-[11px] text-slate-500 mt-1">${bankDetails}</div>` : ''}
+            </div>
+            <p class="text-[11px] text-slate-400">
+              * สแกนด้วยแอปพลิเคชัน Mobile Banking หรือบันทึกรูปภาพเพื่อสแกนชำระเงิน
+            </p>
+          </div>
+        `,
+        showConfirmButton: true,
+        confirmButtonText: '<i class="fa-solid fa-download mr-1"></i> ดาวน์โหลดรูป QR',
+        showCancelButton: true,
+        cancelButtonText: 'ปิดหน้าต่าง',
+        confirmButtonColor: '#4338ca',
+        cancelButtonColor: '#64748b'
+      }).then(res => {
+        if (res.isConfirmed) {
+          const a = document.createElement('a');
+          a.href = qrSrc;
+          a.download = 'PromptPay-QR-SMOBBA.jpg';
+          a.target = '_blank';
+          document.body.appendChild(a);
+          a.click();
+          document.body.removeChild(a);
+        }
       });
     }
 
