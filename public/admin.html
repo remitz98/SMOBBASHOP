@@ -1375,9 +1375,9 @@
 
           <div>
             <label class="block text-slate-700 font-semibold mb-1">ราคาปกติ (บาท): <span class="text-rose-500">*</span></label>
-            <input type="number" id="prodFormPrice" min="0" placeholder="เช่น 350" 
+            <input type="number" id="prodFormPrice" min="0" step="any" placeholder="เช่น 279 หรือ 279.50" 
                    class="w-full px-3.5 py-2 rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-indigo-500 text-xs">
-            <span class="text-[10px] text-slate-400 mt-0.5 block">* ไซส์ 2XL+ ระบบจะบวกเพิ่ม 20฿ อัตโนมัติ</span>
+            <span class="text-[10px] text-slate-400 mt-0.5 block">* ไซส์ 2XL+ ระบบจะบวกเพิ่ม 20฿ อัตโนมัติ (รองรับทศนิยม)</span>
           </div>
 
           <div>
@@ -1784,6 +1784,15 @@
         .replace(/>/g, '&gt;')
         .replace(/"/g, '&quot;')
         .replace(/'/g, '&#039;');
+    }
+
+    // Helper: Currency & decimal formatting
+    function formatMoney(amount) {
+      const num = Number(amount) || 0;
+      if (num % 1 === 0) {
+        return num.toLocaleString('th-TH');
+      }
+      return num.toLocaleString('th-TH', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
     }
 
     // Helper: จัดการรหัส PIN 4 หลัก ไม่ให้เลข 0 ด้านหน้าหายไป
@@ -3864,7 +3873,7 @@
             '</div>' +
           '</td>' +
           '<td class="p-3.5 text-xs text-slate-600">' + safeCat + '</td>' +
-          '<td class="p-3.5 font-bold text-slate-800">฿' + Number(p.price).toLocaleString() + '</td>' +
+          '<td class="p-3.5 font-bold text-slate-800">฿' + formatMoney(p.price) + '</td>' +
           '<td class="p-3.5">' +
             '<span class="inline-block px-2.5 py-0.5 rounded-full font-bold text-xs ' + (p.stock <= 5 ? 'bg-rose-100 text-rose-700' : 'bg-slate-100 text-slate-800') + '">' + p.stock + ' ตัว</span>' +
             sizeStockBadges +

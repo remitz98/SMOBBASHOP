@@ -277,12 +277,14 @@ async function runTests() {
 
       if (bestTier) {
         const pSubtotal = productSubtotalMap[pid] || 0;
-        const discountAmt = Math.round(pSubtotal * (bestTier.discountPercent / 100));
+        const discountAmt = Math.round((pSubtotal * (bestTier.discountPercent / 100)) * 100) / 100;
         totalDiscount += discountAmt;
       }
     }
 
-    return { grossTotal, totalDiscount, netTotal: Math.max(0, grossTotal - totalDiscount) };
+    totalDiscount = Math.round(totalDiscount * 100) / 100;
+    const netTotal = Math.round(Math.max(0, grossTotal - totalDiscount) * 100) / 100;
+    return { grossTotal: Math.round(grossTotal * 100) / 100, totalDiscount, netTotal };
   }
 
   const tieredProducts = [
@@ -337,7 +339,41 @@ async function runTests() {
   assert.strictEqual(res4.totalDiscount, 18);
   assert.strictEqual(res4.netTotal, 782);
 
-  console.log('✔ Test 9: Tiered Pricing / Bulk Discount Calculation passed');
+  // Case 9.5: Decimal discount test (User's exact scenario: Price 279, 2 items, 3% discount)
+  // 279 * 2 = 558. Discount 3% = 16.74 (NOT rounded to 17!)
+  // Net Total = 541.26 (NOT rounded to 541!)
+  const shirt279 = [
+    {
+      product_id: 'SHIRT-279',
+      price: 279,
+      sizes: 'SS, S, M, L, XL',
+      discount_tiers: JSON.stringify([{ minQty: 2, discountPercent: 3 }])
+    }
+  ];
+  const order279 = [{ productId: 'SHIRT-279', qty: 2, size: 'M' }];
+  const res5 = calculateTieredDiscount(order279, shirt279);
+  assert.strictEqual(res5.grossTotal, 558);
+  assert.strictEqual(res5.totalDiscount, 16.74, 'Discount must be exact decimal 16.74, not rounded to integer 17');
+  assert.strictEqual(res5.netTotal, 541.26, 'Net total must be exact decimal 541.26, not rounded to integer 541');
+
+  // Case 9.6: Decimal product price test (Price 279.50, 2 items, 3% discount)
+  // 279.50 * 2 = 559. Discount 3% = 16.77
+  // Net Total = 542.23
+  const shirtDecimal = [
+    {
+      product_id: 'SHIRT-DEC',
+      price: 279.50,
+      sizes: 'M, L',
+      discount_tiers: JSON.stringify([{ minQty: 2, discountPercent: 3 }])
+    }
+  ];
+  const orderDec = [{ productId: 'SHIRT-DEC', qty: 2, size: 'M' }];
+  const res6 = calculateTieredDiscount(orderDec, shirtDecimal);
+  assert.strictEqual(res6.grossTotal, 559);
+  assert.strictEqual(res6.totalDiscount, 16.77);
+  assert.strictEqual(res6.netTotal, 542.23);
+
+  console.log('✔ Test 9: Tiered Pricing & Exact Decimal Precision passed');
 
   console.log('🎉 ALL TESTS PASSED SUCCESSFULLY!');
 }

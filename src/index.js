@@ -981,9 +981,9 @@ app.post('/api/orders', async (c) => {
       else if (sz === '6XL' || sz === 'XXXXXXL') extraPrice = 100;
       else if (sz === '7XL' || sz === 'XXXXXXXL') extraPrice = 120;
 
-      const unitPrice = basePrice + extraPrice;
+      const unitPrice = Math.round((basePrice + extraPrice) * 100) / 100;
       it.price = unitPrice;
-      const subtotal = unitPrice * it.qty;
+      const subtotal = Math.round((unitPrice * it.qty) * 100) / 100;
 
       productQuantities[it.productId] = (productQuantities[it.productId] || 0) + it.qty;
       productSubtotals[it.productId] = (productSubtotals[it.productId] || 0) + subtotal;
@@ -992,10 +992,10 @@ app.post('/api/orders', async (c) => {
       itemsSummaryArr.push(`${prodName} [ไซส์ ${it.size}, สี ${it.color}] x ${it.qty}`);
     });
 
-    const grossTotal = Object.values(productSubtotals).reduce((sum, v) => sum + v, 0);
+    const grossTotal = Math.round(Object.values(productSubtotals).reduce((sum, v) => sum + v, 0) * 100) / 100;
     let totalDiscount = 0;
 
-    // คำนวณส่วนลดโปรโมชั่นตามจำนวนสั่งซื้อ (Tiered Pricing / Bulk Discount)
+    // คำนวณส่วนลดโปรโมชั่นตามจำนวนสั่งซื้อ (Tiered Pricing / Bulk Discount) - รองรับทศนิยม ไม่ปัดเศษจำนวนเต็ม
     for (const [pId, totalQty] of Object.entries(productQuantities)) {
       const prod = prodMap.get(pId);
       if (!prod) continue;
@@ -1011,14 +1011,16 @@ app.post('/api/orders', async (c) => {
       if (matchedTier) {
         const pct = Number(matchedTier.discountPercent);
         const pSubtotal = productSubtotals[pId] || 0;
-        const discountAmt = Math.round(pSubtotal * (pct / 100));
+        const discountAmt = Math.round((pSubtotal * (pct / 100)) * 100) / 100;
         totalDiscount += discountAmt;
       }
     }
 
-    calculatedTotal = Math.max(0, grossTotal - totalDiscount);
+    totalDiscount = Math.round(totalDiscount * 100) / 100;
+    calculatedTotal = Math.round(Math.max(0, grossTotal - totalDiscount) * 100) / 100;
     if (totalDiscount > 0) {
-      itemsSummaryArr.push(`(ส่วนลดโปรโมชั่น -฿${totalDiscount.toLocaleString()})`);
+      const discDisplay = (totalDiscount % 1 === 0) ? totalDiscount.toLocaleString('th-TH') : totalDiscount.toFixed(2);
+      itemsSummaryArr.push(`(ส่วนลดโปรโมชั่น -฿${discDisplay})`);
     }
 
     const itemsSummary = itemsSummaryArr.join(', ');

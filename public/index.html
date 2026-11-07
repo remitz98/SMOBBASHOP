@@ -1345,8 +1345,8 @@
   </div>
 
   <!-- Modal 2: ดูรายละเอียดเสื้อ & เลือกไซส์/สี (Product Detail Modal) -->
-  <div id="productModal" class="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-sm items-center justify-center p-3 sm:p-4 pb-16 sm:pb-4 overflow-y-auto" style="display: none;">
-    <div class="bg-white rounded-2xl sm:rounded-3xl max-w-4xl w-full my-auto overflow-hidden shadow-2xl animate-fade-in relative mb-16 sm:mb-0">
+  <div id="productModal" class="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-3 sm:p-4 overflow-y-auto" style="display: none;">
+    <div class="bg-white rounded-2xl sm:rounded-3xl max-w-4xl w-full m-auto overflow-hidden shadow-2xl animate-fade-in relative">
       
       <!-- Close Button -->
       <button onclick="closeProductModal()" class="absolute top-3.5 right-3.5 z-20 w-8 h-8 rounded-full bg-slate-100 hover:bg-slate-200 text-slate-500 hover:text-slate-800 flex items-center justify-center transition">
@@ -1938,6 +1938,15 @@
         .replace(/>/g, '&gt;')
         .replace(/"/g, '&quot;')
         .replace(/'/g, '&#039;');
+    }
+
+    // Helper: Currency & decimal formatting (ไม่ปัดเศษทศนิยม แต่ถ้าเป็นจำนวนเต็มไม่แสดง .00)
+    function formatMoney(amount) {
+      const num = Number(amount) || 0;
+      if (num % 1 === 0) {
+        return num.toLocaleString('th-TH');
+      }
+      return num.toLocaleString('th-TH', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
     }
 
     // ==================== THEME (DARK / LIGHT MODE) ====================
@@ -2876,7 +2885,7 @@
             '<div><h3 class="font-bold text-slate-900 text-sm sm:text-base line-clamp-1 group-hover:text-indigo-700 transition cursor-pointer" onclick="openProductModal(\'' + safeId + '\')">' + safeName + '</h3>' +
             '<p class="text-xs text-slate-400 mt-0.5 line-clamp-1">' + safeDesc + '</p></div>' +
             '<div class="mt-3 pt-3 border-t border-slate-100 flex items-center justify-between">' +
-              '<div><span class="text-xs text-slate-400 block leading-tight">ราคาเริ่มต้น</span><span class="font-extrabold text-base sm:text-lg text-slate-900">฿' + Number(p.price).toLocaleString() + '</span></div>' +
+              '<div><span class="text-xs text-slate-400 block leading-tight">ราคาเริ่มต้น</span><span class="font-extrabold text-base sm:text-lg text-slate-900">฿' + formatMoney(p.price) + '</span></div>' +
               btnHtml +
             '</div>' +
           '</div>' +
@@ -2952,10 +2961,10 @@
     function updateModalPrice() {
       if (!selectedProduct) return;
       const extra = getSizeExtraCharge(selectedSize);
-      const currentPrice = selectedProduct.price + extra;
+      const currentPrice = (Number(selectedProduct.price) || 0) + extra;
       const priceEl = document.getElementById('modalProductPrice');
       if (priceEl) {
-        priceEl.innerHTML = '฿' + currentPrice.toLocaleString() + (extra > 0 ? ' <span class="text-xs text-amber-600 font-semibold">(ไซส์ ' + escapeHtml(selectedSize) + ' + ' + extra + '฿)</span>' : '');
+        priceEl.innerHTML = '฿' + formatMoney(currentPrice) + (extra > 0 ? ' <span class="text-xs text-amber-600 font-semibold">(ไซส์ ' + escapeHtml(selectedSize) + ' + ' + extra + '฿)</span>' : '');
       }
     }
 
@@ -3031,7 +3040,11 @@
       renderModalSizeOptions();
       updateModalStockDisplay();
 
-      document.getElementById('productModal').style.display = 'flex';
+      const modalEl = document.getElementById('productModal');
+      if (modalEl) {
+        modalEl.scrollTop = 0;
+        modalEl.style.display = 'flex';
+      }
       setMobileBottomNavVisible(false);
     }
 
@@ -3485,13 +3498,15 @@
         }
 
         if (bestTier) {
-          const discountAmt = Math.round(pSubtotal * (bestTier.discountPercent / 100));
+          const discountAmt = Math.round((pSubtotal * (bestTier.discountPercent / 100)) * 100) / 100;
           totalDiscount += discountAmt;
-          appliedDiscounts.push(`${prod.name || 'สินค้า'} สั่ง ${totalQty} ตัว ลด ${bestTier.discountPercent}% (-฿${discountAmt.toLocaleString()})`);
+          appliedDiscounts.push(`${prod.name || 'สินค้า'} สั่ง ${totalQty} ตัว ลด ${bestTier.discountPercent}% (-฿${formatMoney(discountAmt)})`);
         }
       }
 
-      const netTotal = Math.max(0, grossTotal - totalDiscount);
+      totalDiscount = Math.round(totalDiscount * 100) / 100;
+      grossTotal = Math.round(grossTotal * 100) / 100;
+      const netTotal = Math.round(Math.max(0, grossTotal - totalDiscount) * 100) / 100;
       return {
         grossTotal,
         totalDiscount,
@@ -3551,7 +3566,7 @@
           '<div class="flex-1 min-w-0">' +
             '<h4 class="font-bold text-xs sm:text-sm text-slate-800 line-clamp-1">' + safeName + '</h4>' +
             '<p class="text-[11px] text-slate-500 mt-0.5">ไซส์: <span class="font-semibold text-slate-700">' + safeSize + '</span> | สี: <span class="font-semibold text-slate-700">' + safeColor + '</span></p>' +
-            '<div class="text-xs font-bold text-indigo-700 mt-1">฿' + item.price.toLocaleString() + ' x ' + item.qty + ' = ฿' + item.subtotal.toLocaleString() + '</div>' +
+            '<div class="text-xs font-bold text-indigo-700 mt-1">฿' + formatMoney(item.price) + ' x ' + item.qty + ' = ฿' + formatMoney(item.subtotal) + '</div>' +
             '<div class="flex items-center justify-between mt-2">' +
               '<div class="flex items-center border border-slate-200 rounded-lg bg-white">' +
                 '<button onclick="updateCartItemQty(' + idx + ', -1)" class="w-6 h-6 flex items-center justify-center text-slate-600 font-bold hover:bg-slate-100">-</button>' +
@@ -3566,12 +3581,12 @@
 
       if (totalDiscount > 0) {
         if (discountRow) discountRow.classList.remove('hidden');
-        if (discountEl) discountEl.textContent = '-฿' + totalDiscount.toLocaleString();
+        if (discountEl) discountEl.textContent = '-฿' + formatMoney(totalDiscount);
       } else {
         if (discountRow) discountRow.classList.add('hidden');
       }
 
-      totalEl.textContent = '฿' + netTotal.toLocaleString();
+      totalEl.textContent = '฿' + formatMoney(netTotal);
     }
 
     function updateCartItemQty(index, delta) {
@@ -3664,13 +3679,13 @@
       const discDetailEl = document.getElementById('checkoutDiscountDetail');
       if (totalDiscount > 0) {
         if (discDetailEl) {
-          discDetailEl.textContent = 'โปรโมชั่น: ' + discountSummary + ' [ยอดเดิม ฿' + grossTotal.toLocaleString() + ']';
+          discDetailEl.textContent = 'โปรโมชั่น: ' + discountSummary + ' [ยอดเดิม ฿' + formatMoney(grossTotal) + ']';
           discDetailEl.classList.remove('hidden');
         }
       } else if (discDetailEl) {
         discDetailEl.classList.add('hidden');
       }
-      document.getElementById('checkoutTotalAmount').textContent = '฿' + netTotal.toLocaleString();
+      document.getElementById('checkoutTotalAmount').textContent = '฿' + formatMoney(netTotal);
 
       document.getElementById('custStudentId').value = currentStudent.studentId || '';
       document.getElementById('custName').value = currentStudent.name || '';
@@ -3961,9 +3976,9 @@
               '<div class="font-semibold">' + escapeHtml(item.name || 'เสื้อสโมสร') + '</div>' +
               '<div class="text-[11px] text-slate-400">ไซส์: <span class="font-bold text-slate-600">' + escapeHtml(item.size || '-') + '</span> | สี: <span class="font-bold text-slate-600">' + escapeHtml(item.color || '-') + '</span></div>' +
             '</td>' +
-            '<td class="p-2 sm:p-2.5 text-right font-mono text-slate-700">฿' + price.toLocaleString() + '</td>' +
+            '<td class="p-2 sm:p-2.5 text-right font-mono text-slate-700">฿' + formatMoney(price) + '</td>' +
             '<td class="p-2 sm:p-2.5 text-center font-bold text-slate-800">' + qty + '</td>' +
-            '<td class="p-2 sm:p-2.5 text-right font-bold text-indigo-700 font-mono">฿' + subtotal.toLocaleString() + '</td>' +
+            '<td class="p-2 sm:p-2.5 text-right font-bold text-indigo-700 font-mono">฿' + formatMoney(subtotal) + '</td>' +
           '</tr>';
         }).join('');
       } else if (orderData.itemsSummary) {
@@ -3982,7 +3997,7 @@
 
       setVal('receiptTotalQty', totalQty);
       const grandTotalVal = Number(orderData.totalAmount || calculatedSum);
-      setVal('receiptGrandTotal', '฿' + grandTotalVal.toLocaleString());
+      setVal('receiptGrandTotal', '฿' + formatMoney(grandTotalVal));
 
       const totalItemCount = (orderData.items && Array.isArray(orderData.items)) ? orderData.items.length : ((orderData.itemsSummary && String(orderData.itemsSummary).split('\n').filter(Boolean).length) || 0);
       const countBadge = document.getElementById('receiptItemCountBadge');
@@ -4452,7 +4467,7 @@
               '<div><span class="font-medium text-slate-500">รายการเสื้อ:</span> <div class="max-h-44 overflow-y-auto whitespace-pre-line mt-1 p-2 bg-white rounded-lg border border-slate-200 text-slate-700 font-normal">' + safeItems + '</div></div>' +
               '<div class="pt-1.5 font-bold text-slate-900 border-t border-slate-200 flex justify-between">' +
                 '<span>ยอดชำระ:</span>' +
-                '<span class="text-indigo-700 font-extrabold text-sm">฿' + Number(ord.totalAmount).toLocaleString() + '</span>' +
+                '<span class="text-indigo-700 font-extrabold text-sm">฿' + formatMoney(ord.totalAmount) + '</span>' +
               '</div>' +
             '</div>' +
           '</div>';
