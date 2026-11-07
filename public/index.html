@@ -3715,7 +3715,7 @@
       const cleanPromptPay = promptPayStr.replace(/[^0-9]/g, '');
       const qrImg = document.getElementById('promptPayQrImg');
       if (cleanPromptPay) {
-        qrImg.src = 'https://i.postimg.cc/x87kMgRK/unnamed.jpg';
+        qrImg.src = 'promptpay-qr.jpg';
         qrImg.classList.remove('hidden');
       } else {
         qrImg.classList.add('hidden');
@@ -3758,7 +3758,7 @@
 
     function openQrModal() {
       const qrImg = document.getElementById('promptPayQrImg');
-      const qrSrc = (qrImg && qrImg.src) || 'https://i.postimg.cc/x87kMgRK/unnamed.jpg';
+      const qrSrc = (qrImg && qrImg.src) || 'promptpay-qr.jpg';
       const ppNumber = document.getElementById('promptPayDisplay') ? document.getElementById('promptPayDisplay').textContent : (storeSettings.promptPay || '004999245434427');
       const bankDetails = document.getElementById('bankDetailsDisplay') ? document.getElementById('bankDetailsDisplay').innerHTML : '';
 
@@ -3785,15 +3785,27 @@
         cancelButtonText: 'ปิดหน้าต่าง',
         confirmButtonColor: '#4338ca',
         cancelButtonColor: '#64748b'
-      }).then(res => {
+      }).then(async res => {
         if (res.isConfirmed) {
-          const a = document.createElement('a');
-          a.href = qrSrc;
-          a.download = 'PromptPay-QR-SMOBBA.jpg';
-          a.target = '_blank';
-          document.body.appendChild(a);
-          a.click();
-          document.body.removeChild(a);
+          try {
+            const resp = await fetch(qrSrc);
+            const blob = await resp.blob();
+            const blobUrl = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = blobUrl;
+            a.download = 'PromptPay-QR-SMOBBA.jpg';
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            setTimeout(() => URL.revokeObjectURL(blobUrl), 1000);
+          } catch (e) {
+            const a = document.createElement('a');
+            a.href = qrSrc;
+            a.download = 'PromptPay-QR-SMOBBA.jpg';
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+          }
         }
       });
     }
