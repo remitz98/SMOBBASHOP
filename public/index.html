@@ -3272,7 +3272,7 @@
         }
         cart[existingIndex].qty = potentialQty;
         cart[existingIndex].stock = availableForSize;
-        cart[existingIndex].subtotal = cart[existingIndex].qty * cart[existingIndex].price;
+        cart[existingIndex].subtotal = Math.round((cart[existingIndex].qty * cart[existingIndex].price) * 100) / 100;
       } else {
         cart.push({
           productId: selectedProduct.productId,
@@ -3281,7 +3281,7 @@
           color: selectedColor,
           price: finalPrice,
           qty: modalQty,
-          subtotal: modalQty * finalPrice,
+          subtotal: Math.round((modalQty * finalPrice) * 100) / 100,
           imageUrl: selectedProduct.imageUrl,
           stock: availableForSize
         });
@@ -3418,7 +3418,7 @@
         }
         cart[existingIndex].qty = potentialQty;
         cart[existingIndex].stock = availableForSize;
-        cart[existingIndex].subtotal = cart[existingIndex].qty * cart[existingIndex].price;
+        cart[existingIndex].subtotal = Math.round((cart[existingIndex].qty * cart[existingIndex].price) * 100) / 100;
       } else {
         cart.push({
           productId: selectedProduct.productId,
@@ -3427,7 +3427,7 @@
           color: selectedColor,
           price: finalPrice,
           qty: modalQty,
-          subtotal: modalQty * finalPrice,
+          subtotal: Math.round((modalQty * finalPrice) * 100) / 100,
           imageUrl: selectedProduct.imageUrl,
           stock: availableForSize
         });
@@ -3435,22 +3435,26 @@
 
       saveCartToStorage();
       updateCartUI();
-      closeProductModal();
 
-      const extraText = extra > 0 ? ' (+ ' + extra + '฿)' : '';
+      // แสดง Toast แจ้งเตือนแบบไม่บังหน้าจอ และไม่ปิดหน้าต่าง เพื่อให้เลือกสั่งไซส์อื่นต่อได้ทันที
+      const extraText = extra > 0 ? ` (+${extra}฿)` : '';
+      const btn = document.getElementById('btnModalAddToCart');
+      if (btn) {
+        const origText = btn.innerHTML;
+        btn.innerHTML = '<i class="fa-solid fa-check text-emerald-400"></i> เพิ่มลงรายการแล้ว!';
+        setTimeout(() => {
+          if (btn) btn.innerHTML = origText;
+        }, 1200);
+      }
+
       Swal.fire({
+        toast: true,
+        position: 'top',
         icon: 'success',
-        title: 'เพิ่มลงรายการจองแล้ว',
-        html: '<b>' + escapeHtml(selectedProduct.name) + '</b><br><span class="text-xs text-slate-500">ไซส์ ' + escapeHtml(selectedSize) + extraText + ' | สี ' + escapeHtml(selectedColor) + ' จำนวน ' + modalQty + ' ตัว</span>',
-        showCancelButton: true,
-        confirmButtonText: '<i class="fa-solid fa-bag-shopping"></i> ดูรายการจอง',
-        cancelButtonText: 'เลือกเสื้อต่อ',
-        confirmButtonColor: '#4338ca',
-        cancelButtonColor: '#64748b'
-      }).then(res => {
-        if (res.isConfirmed) {
-          openCartDrawer();
-        }
+        title: `เพิ่มไซส์ ${escapeHtml(selectedSize)}${extraText} (${modalQty} ตัว) ลงรายการจองแล้ว`,
+        showConfirmButton: false,
+        timer: 1600,
+        timerProgressBar: true
       });
     }
 
