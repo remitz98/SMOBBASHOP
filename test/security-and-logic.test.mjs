@@ -276,8 +276,8 @@ async function runTests() {
       }
 
       if (bestTier) {
-        const pSubtotal = productSubtotalMap[pid] || 0;
-        const discountAmt = Math.round((pSubtotal * (bestTier.discountPercent / 100)) * 100) / 100;
+        const pBaseSubtotal = (Number(prod.price) || 0) * totalQty;
+        const discountAmt = Math.round((pBaseSubtotal * (bestTier.discountPercent / 100)) * 100) / 100;
         totalDiscount += discountAmt;
       }
     }
@@ -372,6 +372,22 @@ async function runTests() {
   assert.strictEqual(res6.grossTotal, 559);
   assert.strictEqual(res6.totalDiscount, 16.77);
   assert.strictEqual(res6.netTotal, 542.23);
+
+  // Case 9.7: Discount calculated on base price only, size surcharge is NOT discounted
+  // Price 279, 3% discount for 2 items.
+  // Order: 1 x 2XL (279 + 20 = 299), 1 x 3XL (279 + 40 = 319)
+  // Gross total: 299 + 319 = 618
+  // Base subtotal: 279 * 2 = 558
+  // Discount (3%): 558 * 0.03 = 16.74 (NOT on 618 * 0.03 = 18.54!)
+  // Net total: 618 - 16.74 = 601.26
+  const orderWithSurcharges = [
+    { productId: 'SHIRT-279', qty: 1, size: '2XL' },
+    { productId: 'SHIRT-279', qty: 1, size: '3XL' }
+  ];
+  const res7 = calculateTieredDiscount(orderWithSurcharges, shirt279);
+  assert.strictEqual(res7.grossTotal, 618);
+  assert.strictEqual(res7.totalDiscount, 16.74, 'Discount must be calculated on base price only (558 * 3% = 16.74), excluding size surcharges');
+  assert.strictEqual(res7.netTotal, 601.26, 'Net total must be 618 - 16.74 = 601.26');
 
   console.log('✔ Test 9: Tiered Pricing & Exact Decimal Precision passed');
 

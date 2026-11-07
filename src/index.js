@@ -1010,8 +1010,9 @@ app.post('/api/orders', async (c) => {
       const matchedTier = validTiers.find(t => totalQty >= Number(t.minQty));
       if (matchedTier) {
         const pct = Number(matchedTier.discountPercent);
-        const pSubtotal = productSubtotals[pId] || 0;
-        const discountAmt = Math.round((pSubtotal * (pct / 100)) * 100) / 100;
+        // ส่วนลดคิดเฉพาะราคาปกติของสินค้า (Base Price) ไม่รวมราคาบวกเพิ่มไซส์พิเศษ
+        const pBaseSubtotal = (Number(prod.price) || 0) * totalQty;
+        const discountAmt = Math.round((pBaseSubtotal * (pct / 100)) * 100) / 100;
         totalDiscount += discountAmt;
       }
     }

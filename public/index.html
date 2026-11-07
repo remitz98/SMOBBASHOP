@@ -3502,7 +3502,10 @@
         }
 
         if (bestTier) {
-          const discountAmt = Math.round((pSubtotal * (bestTier.discountPercent / 100)) * 100) / 100;
+          // ส่วนลดคิดเฉพาะราคาปกติของสินค้า (Base Price) ไม่รวมราคาบวกเพิ่มไซส์พิเศษ
+          const pBasePrice = Number(prod.price) || 0;
+          const pBaseSubtotal = pBasePrice * totalQty;
+          const discountAmt = Math.round((pBaseSubtotal * (bestTier.discountPercent / 100)) * 100) / 100;
           totalDiscount += discountAmt;
           appliedDiscounts.push(`${prod.name || 'สินค้า'} สั่ง ${totalQty} ตัว ลด ${bestTier.discountPercent}% (-฿${formatMoney(discountAmt)})`);
         }
