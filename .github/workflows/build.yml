@@ -232,6 +232,6 @@ jobs:
             echo "Creating release $TAG..."
             gh release create "$TAG" \
               --title "SMO BBA SHOP $TAG (Windows x64/ARM64 & Android APK)" \
-              --notes "เวอร์ชัน $TAG: 1. รองรับ Windows ARM64 (Surface / Snapdragon X / Copilot+ PC) และ Windows x64 2. รองรับ Android APK (ARM64 & x86_64) พร้อมระบบอัปเดตอัตโนมัติ" \
+              --notes "เวอร์ชัน $TAG: 1. ระบบโปรโมชั่นส่วนลดตามจำนวนสินค้า (Bulk Tiered Discount) 2. คำนวณราคาทศนิยม 2 ตำแหน่ง แยกบวกเพิ่มไซส์พิเศษ 3. ปรับ UI จองเสื้อและพรีวิว/บันทึก QR Code 4. ตัวติดตั้ง Windows x64/ARM64 และ Android APK พร้อมระบบอัปเดตอัตโนมัติ" \
               "${FILES[@]}"
           fi
